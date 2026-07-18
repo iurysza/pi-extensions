@@ -1,6 +1,6 @@
 {
 	"name": "@howaboua/pi-cache-hit-predictor",
-	"version": "0.0.0",
+	"version": "0.0.1",
 	"description": "Predicts reusable prompt-cache prefixes when Pi switches model or reasoning lanes.",
 	"type": "module",
 	"license": "MIT",
