@@ -1,0 +1,6 @@
+The shader in this project is derived from claude-terminal-face by isoden:
+https://github.com/isoden/claude-terminal-face
+
+The original work and this derivative are distributed under the MIT License.
+The Pi lifecycle integration, Ghostty path switching, Herdr routing, state
+variants, and later visual changes were added for pi-ghost-in-the-machine.

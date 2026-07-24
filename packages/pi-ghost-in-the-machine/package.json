@@ -1,0 +1,62 @@
+{
+  "name": "pi-ghost-in-the-machine",
+  "version": "0.1.0",
+  "description": "A Ghostty face that reacts to Pi lifecycle states",
+  "license": "MIT",
+  "author": "Iury Souza",
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "ghostty",
+    "shader",
+    "herdr",
+    "lifecycle"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iurysza/pi-ghost-in-the-machine.git"
+  },
+  "bugs": "https://github.com/iurysza/pi-ghost-in-the-machine/issues",
+  "homepage": "https://github.com/iurysza/pi-ghost-in-the-machine#readme",
+  "type": "module",
+  "main": "src/index.ts",
+  "pi": {
+    "extensions": [
+      "src/index.ts"
+    ]
+  },
+  "files": [
+    "src",
+    "scripts",
+    "shaders",
+    "herdr-plugin.toml",
+    "AGENTS.md",
+    "ai-artifacts/AGENT_ONBOARDING.md",
+    "ai-artifacts/ARCHITECTURE.md",
+    "ai-artifacts/SEMANTIC_MAP.md",
+    "ai-artifacts/docs",
+    "assets",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "scripts": {
+    "check": "tsc --noEmit && bash -n scripts/*.sh && npm run check:generated",
+    "check:generated": "npm run generate && git diff --exit-code -- shaders/variants",
+    "build": "tsc -p tsconfig.json",
+    "test": "npm run build && node --test dist/tests/*.test.js",
+    "generate": "bash scripts/generate-variants.sh",
+    "prepack": "npm run build"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": ">=0.80.4"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "^0.80.10",
+    "@types/node": "^24.12.4",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=22.19.0"
+  }
+}

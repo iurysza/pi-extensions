@@ -1,0 +1,10 @@
+id = "ghost-in-the-machine"
+name = "Ghost in the Machine"
+version = "0.1.0"
+min_herdr_version = "0.7.4"
+description = "Route the focused Pi pane lifecycle face into Ghostty."
+platforms = ["macos", "linux"]
+
+[[events]]
+on = "pane.focused"
+command = ["bash", "scripts/ghost-state.sh", "focus"]
