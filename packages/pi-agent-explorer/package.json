@@ -1,0 +1,14 @@
+{
+  "name": "pi-agent-explorer",
+  "version": "0.1.0",
+  "description": "Explore Pi's loaded resources in a read-only Neovim snapshot.",
+  "license": "MIT",
+  "keywords": ["pi-package", "pi", "herdr", "neovim"],
+  "files": ["extensions", "herdr", "README.md", "LICENSE"],
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*"
+  },
+  "pi": {
+    "extensions": ["./extensions/agent-explorer.ts"]
+  }
+}

@@ -1,0 +1,14 @@
+id = "pi-agent-explorer"
+name = "Pi Agent Explorer"
+version = "0.1.0"
+min_herdr_version = "0.7.4"
+description = "Open Pi Agent Explorer snapshots in a modal Neovim popup."
+platforms = ["linux", "macos"]
+
+[[panes]]
+id = "explorer"
+title = "Pi Agent Explorer"
+placement = "popup"
+width = "80%"
+height = "80%"
+command = ["bash", "-c", "exec \"$HERDR_PLUGIN_ROOT/open-agent-explorer.sh\""]
