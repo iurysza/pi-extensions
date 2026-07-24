@@ -1,0 +1,53 @@
+{
+  "name": "@iurysza/pi-extensions",
+  "version": "0.0.0",
+  "description": "Pi extension packages maintained by Iury Souza.",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "check": "npm run check:catalog && npm run check:packs",
+    "check:catalog": "node scripts/check-catalog.mjs",
+    "check:packs": "node scripts/check-packs.mjs",
+    "pack:check": "npm run check:packs",
+    "prepublishOnly": "node scripts/refuse-root-publish.mjs"
+  },
+  "pi": {
+    "extensions": [
+      "./packages/pi-ext/extensions/custom-footer/custom-footer.ts",
+      "./packages/pi-ext/extensions/review/review.ts",
+      "./packages/pi-ext/extensions/leader-key/index.ts",
+      "./packages/pi-ext/extensions/permissions/permissions.ts",
+      "./packages/pi-ext/extensions/session-query/session-query.ts",
+      "./packages/pi-ext/extensions/ask-user-question/index.ts",
+      "./packages/pi-ext/extensions/tool-pills/index.ts",
+      "./packages/pi-ext/extensions/split-fork/index.ts",
+      "./packages/pi-ext/extensions/superconductor/index.ts",
+      "./packages/pi-ext/extensions/session-store/index.ts",
+      "./packages/pi-ext/extensions/cmux/index.ts",
+      "./packages/pi-ext/extensions/handoff/index.ts",
+      "./packages/pi-ext/extensions/session-snap/index.ts",
+      "./packages/pi-ext/extensions/pi-telescope/index.ts",
+      "./packages/pi-ext/extensions/pi-sem/index.ts",
+      "./packages/pi-agent-explorer/extensions/agent-explorer.ts",
+      "./packages/pi-token-tank/src/index.ts",
+      "./packages/pi-context-audit/src/index.ts",
+      "./packages/pi-tmux-title/src/index.ts",
+      "./packages/pi-secret-env/src/index.ts"
+    ],
+    "skills": [
+      "./packages/pi-ext/skills/commit",
+      "./packages/pi-ext/skills/github",
+      "./packages/pi-ext/skills/visit-webpage",
+      "./packages/pi-ext/skills/web-search",
+      "./packages/pi-ext/skills/session-query",
+      "./packages/pi-ext/skills/sem",
+      "./packages/pi-ext/skills/pr-review-comments"
+    ],
+    "themes": [
+      "./packages/pi-ext/themes"
+    ]
+  }
+}
