@@ -1,0 +1,101 @@
+{
+  "name": "@iurysza/pi-ext",
+  "version": "0.1.0",
+  "description": "An attributed fork of tomsej/pi-ext with additional Pi workflows and integrations.",
+  "keywords": [
+    "pi-package",
+    "pi-extension"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "files": [
+    "extensions",
+    "skills",
+    "themes",
+    "prompts",
+    ".pi/taskflows",
+    "README.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md"
+  ],
+  "dependencies": {
+    "@benvargas/pi-claude-code-use": "^1.0.1",
+    "@shikijs/cli": "^4.0.2",
+    "@sting8k/pi-vcc": "^0.3.5",
+    "@tintinweb/pi-tasks": "^0.4.2",
+    "better-sqlite3": "^12.10.0",
+    "diff": "^7.0.0",
+    "pi-taskflow": "^0.1.5"
+  },
+  "optionalDependencies": {
+    "@ataraxy-labs/sem": "^0.3.21"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-agent-core": "*",
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*",
+    "typebox": "*"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-agent-core": "^0.80.10",
+    "@earendil-works/pi-ai": "^0.80.10",
+    "@earendil-works/pi-coding-agent": "^0.80.10",
+    "@earendil-works/pi-tui": "^0.80.10",
+    "typebox": "^1.1.32",
+    "typescript": "^7.0.2"
+  },
+  "allowScripts": {
+    "@ataraxy-labs/sem@0.3.21": true,
+    "@google/genai@1.52.0": true,
+    "better-sqlite3@12.11.1": true,
+    "koffi@2.15.2": true,
+    "protobufjs@7.5.4": true,
+    "protobufjs@7.6.4": true
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "sem:evaluate": "node extensions/pi-sem/bin/sem-eval.mjs",
+    "test": "npm run test:pi-sem && node --test tests/leader-key/favourite-models.test.mjs",
+    "test:pi-sem": "node --test tests/pi-sem/core.test.mjs tests/review/sem-guidance.test.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "pack:check": "node scripts/check-pack.mjs",
+    "check": "npm test && npm run typecheck && npm run pack:check",
+    "flows:install": "mkdir -p ~/.pi/agent/taskflows && cp .pi/taskflows/*.json ~/.pi/agent/taskflows/ && ls ~/.pi/agent/taskflows/"
+  },
+  "pi": {
+    "extensions": [
+      "./extensions/custom-footer/custom-footer.ts",
+      "./extensions/review/review.ts",
+      "./extensions/leader-key/index.ts",
+      "./extensions/permissions/permissions.ts",
+      "./extensions/session-query/session-query.ts",
+      "./extensions/ask-user-question/index.ts",
+      "./extensions/tool-pills/index.ts",
+      "./extensions/split-fork/index.ts",
+      "./extensions/superconductor/index.ts",
+      "./extensions/session-store/index.ts",
+      "./extensions/cmux/index.ts",
+      "./extensions/handoff/index.ts",
+      "./extensions/session-snap/index.ts",
+      "./extensions/pi-telescope/index.ts",
+      "./extensions/pi-sem/index.ts"
+    ],
+    "skills": [
+      "./skills/commit",
+      "./skills/github",
+      "./skills/visit-webpage",
+      "./skills/web-search",
+      "./skills/session-query",
+      "./skills/sem",
+      "./skills/pr-review-comments"
+    ],
+    "themes": [
+      "./themes"
+    ]
+  }
+}

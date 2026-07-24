@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "strict": false,
+    "types": ["node"],
+    "paths": {
+      "@sting8k/pi-vcc/src/core/*": ["./types/pi-vcc-core.d.ts"]
+    }
+  },
+  "include": ["extensions/**/*.ts", "types/**/*.d.ts"]
+}
