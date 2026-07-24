@@ -11,6 +11,8 @@
     "@ataraxy-labs/sem@0.3.24": true,
     "@google/genai@1.52.0": true,
     "better-sqlite3@12.11.1": true,
+    "esbuild@0.28.1": true,
+    "fsevents@2.3.3": true,
     "koffi@2.16.3": true,
     "protobufjs@7.6.4": true,
     "protobufjs@7.6.5": true
@@ -44,9 +46,9 @@
       "./packages/pi-agent-explorer/extensions/agent-explorer.ts",
       "./packages/pi-token-tank/src/index.ts",
       "./packages/pi-context-audit/src/index.ts",
-      "./packages/pi-tmux-title/src/index.ts",
       "./packages/pi-secret-env/src/index.ts",
-      "./packages/pi-ghost-in-the-machine/src/index.ts"
+      "./packages/pi-ghost-in-the-machine/src/index.ts",
+      "./packages/artifact-explorer/index.ts"
     ],
     "skills": [
       "./packages/pi-ext/skills/commit",

@@ -1,0 +1,57 @@
+{
+  "name": "@iurysza/artifact-explorer",
+  "version": "0.1.0",
+  "description": "Open each repository's ai-artifacts directory as an isolated Obsidian vault.",
+  "license": "MIT",
+  "author": "Iury Souza",
+  "type": "module",
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "pi",
+    "obsidian",
+    "artifacts"
+  ],
+  "files": [
+    "index.ts",
+    "lib",
+    "workspace-overlay",
+    "config.json.example",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iurysza/pi-extensions.git",
+    "directory": "packages/artifact-explorer"
+  },
+  "bugs": {
+    "url": "https://github.com/iurysza/pi-extensions/issues"
+  },
+  "homepage": "https://github.com/iurysza/pi-extensions/tree/main/packages/artifact-explorer#readme",
+  "scripts": {
+    "check": "npm run typecheck && npm test",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "^0.80.10",
+    "@types/node": "^24.12.4",
+    "tsx": "^4.19.0",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "pi": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}
