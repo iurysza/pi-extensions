@@ -14,20 +14,17 @@
     "extensions",
     "skills",
     "themes",
-    "prompts",
     ".pi/taskflows",
     "README.md",
     "LICENSE",
     "THIRD_PARTY_NOTICES.md"
   ],
   "dependencies": {
-    "@benvargas/pi-claude-code-use": "^1.0.1",
     "@shikijs/cli": "^4.0.2",
     "@sting8k/pi-vcc": "^0.3.5",
     "@tintinweb/pi-tasks": "^0.4.2",
     "better-sqlite3": "^12.10.0",
-    "diff": "^7.0.0",
-    "pi-taskflow": "^0.1.5"
+    "diff": "^7.0.0"
   },
   "optionalDependencies": {
     "@ataraxy-labs/sem": "^0.3.21"
@@ -48,16 +45,25 @@
     "typescript": "^7.0.2"
   },
   "allowScripts": {
-    "@ataraxy-labs/sem@0.3.21": true,
+    "@ataraxy-labs/sem@0.3.24": true,
     "@google/genai@1.52.0": true,
     "better-sqlite3@12.11.1": true,
-    "koffi@2.15.2": true,
-    "protobufjs@7.5.4": true,
-    "protobufjs@7.6.4": true
+    "koffi@2.16.3": true,
+    "protobufjs@7.6.4": true,
+    "protobufjs@7.6.5": true
   },
   "publishConfig": {
     "access": "public"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iurysza/pi-extensions.git",
+    "directory": "packages/pi-ext"
+  },
+  "bugs": {
+    "url": "https://github.com/iurysza/pi-extensions/issues"
+  },
+  "homepage": "https://github.com/iurysza/pi-extensions/tree/main/packages/pi-ext#readme",
   "scripts": {
     "sem:evaluate": "node extensions/pi-sem/bin/sem-eval.mjs",
     "test": "npm run test:pi-sem && node --test tests/leader-key/favourite-models.test.mjs",

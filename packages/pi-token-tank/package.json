@@ -1,5 +1,5 @@
 {
-  "name": "pi-token-tank",
+  "name": "@iurysza/pi-token-tank",
   "version": "0.6.2",
   "description": "Token Tank — provider-aware subscription quota status for Pi",
   "license": "MIT",
@@ -18,10 +18,13 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/iurysza/pi-token-tank.git"
+    "url": "git+https://github.com/iurysza/pi-extensions.git",
+    "directory": "packages/pi-token-tank"
   },
-  "bugs": "https://github.com/iurysza/pi-token-tank/issues",
-  "homepage": "https://github.com/iurysza/pi-token-tank#readme",
+  "bugs": {
+    "url": "https://github.com/iurysza/pi-extensions/issues"
+  },
+  "homepage": "https://github.com/iurysza/pi-extensions/tree/main/packages/pi-token-tank#readme",
   "type": "module",
   "main": "src/index.ts",
   "pi": {
@@ -35,6 +38,9 @@
     "README.md",
     "LICENSE"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "check": "tsc --noEmit",
     "build": "tsc -p tsconfig.json",

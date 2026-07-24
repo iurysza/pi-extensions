@@ -7,11 +7,12 @@ catalog while each child package remains independently publishable as
 
 ## Status
 
-Phase 2 bootstrap. The workspace has no imported packages yet, so Git
-installation is not supported until the package imports and installation checks
-are complete.
+All six packages are present. The three former standalone repositories retain
+unsquashed subtree history; the three local extensions were copied from clean,
+committed source files. Git installation remains unadvertised until isolated
+installation validation is complete.
 
-Planned packages:
+Packages:
 
 - `@iurysza/pi-ext` — attributed fork of `tomsej/pi-ext`
 - `@iurysza/pi-context-audit`
@@ -31,22 +32,50 @@ npm ci
 npm run check
 ```
 
-`check-catalog` protects the private root and validates the bootstrap resource
-catalog. `check-packs` dry-runs every publishable workspace tarball. Both become
-stricter as packages land; no child lockfile is allowed.
+`check-catalog` validates the private root, child metadata, resource union,
+source namespaces, paths, and the single-lockfile rule. `check-packs` performs a
+read-only dry run of every publishable tarball and rejects development leakage.
 
-## Source snapshots before bootstrap
+## Upstream synchronization
 
-| Source | Branch / SHA | State |
+The first `pi-ext` subtree import came from `iurysza/pi-ext`. Future source syncs
+come from `tomsej/pi-ext`:
+
+```sh
+scripts/sync-pi-ext.sh
+```
+
+The script must run from a clean repository root, pulls without `--squash`, and
+then runs catalog, legal, install, typecheck, test, and pack checks. Merge
+conflicts are deliberately left visible for human resolution.
+
+## Imported sources
+
+| Package | Source | Imported SHA |
 | --- | --- | --- |
-| `pi-ext` | `main` / `08d03577f0be043c1fc5f4bd169d8d9550b5a2b8` | clean, Phase 1 merged |
-| `pi-agent-explorer` | `main` / `139de6ef2eccf900edef968d5fe156de1cd9e369` | clean |
-| `pi-token-tank` | `main` / `70b61502de8dd8440cf8dcef948f84a0f3235ba9` | clean |
-| `agents` | `main` / `5bb5aa42dbf020287ba2e78b0b5e8c03aba58e01` | dirty and behind remote; not touched |
+| `pi-ext` | `https://github.com/iurysza/pi-ext` `main` | `08d03577f0be043c1fc5f4bd169d8d9550b5a2b8` |
+| `pi-agent-explorer` | `https://github.com/iurysza/pi-agent-explorer` `main` | `139de6ef2eccf900edef968d5fe156de1cd9e369` |
+| `pi-token-tank` | `https://github.com/iurysza/pi-token-tank` `main` | `1f7b4977f3bae45272aba4a2d74aabdd889cee37` |
 
-The three source repositories will be imported with `git subtree`, preserving
-history. Never use Git submodules. The original repositories and local agent
-extensions remain untouched until later migration phases prove parity.
+Token Tank's recorded local source was clean at `70b6150`; GitHub `main` had two
+new descendant commits. The newer `1f7b497` snapshot was explicitly approved
+for import.
+
+The repositories were imported with `git subtree` without `--squash`. Never use
+Git submodules. Future `pi-ext` source synchronization comes from
+`https://github.com/tomsej/pi-ext`.
+
+## Extracted sources
+
+| Package | Source path | Source commit |
+| --- | --- | --- |
+| `pi-context-audit` | `agents/pi/agent/extensions/context-audit.ts` | `8651d8d73928f96e29d4618e3aace772aef5cbc6` |
+| `pi-tmux-title` | `agents/pi/agent/extensions/pi-tmux-kebab-title.ts` | `466f46ae1834a0ad66c4909186494d31b9a8dbdd` |
+| `pi-secret-env` | `agents/pi/agent/extensions/secret-env.ts` | `cd71561e8ae282c89c44ac1965e96a7cf5db0217` |
+
+The dirty, behind-remote `agents` repository was not modified. Original local
+extensions and all old repositories remain available until migration parity is
+proven.
 
 ## Licensing and provenance
 

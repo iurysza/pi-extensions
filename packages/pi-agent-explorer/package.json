@@ -1,14 +1,40 @@
 {
-  "name": "pi-agent-explorer",
+  "name": "@iurysza/pi-agent-explorer",
   "version": "0.1.0",
   "description": "Explore Pi's loaded resources in a read-only Neovim snapshot.",
   "license": "MIT",
-  "keywords": ["pi-package", "pi", "herdr", "neovim"],
-  "files": ["extensions", "herdr", "README.md", "LICENSE"],
+  "type": "module",
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "pi",
+    "herdr",
+    "neovim"
+  ],
+  "files": [
+    "extensions",
+    "herdr",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iurysza/pi-extensions.git",
+    "directory": "packages/pi-agent-explorer"
+  },
+  "bugs": {
+    "url": "https://github.com/iurysza/pi-extensions/issues"
+  },
+  "homepage": "https://github.com/iurysza/pi-extensions/tree/main/packages/pi-agent-explorer#readme",
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": "*"
   },
   "pi": {
-    "extensions": ["./extensions/agent-explorer.ts"]
+    "extensions": [
+      "./extensions/agent-explorer.ts"
+    ]
   }
 }
