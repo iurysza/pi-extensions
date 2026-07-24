@@ -1,85 +1,41 @@
 # Pi Extensions
 
-Private workspace and public Git bundle for Pi extensions maintained by Iury
-Souza. The root package is never published. It exposes one explicit Pi resource
-catalog while each child package remains independently publishable as
-`@iurysza/*`.
+A working collection of extensions, skills, and themes for [Pi](https://pi.dev),
+the terminal coding agent. These are focused tools rather than a single
+all-or-nothing setup: install the packages that fit your workflow.
 
-## Status
+| Package | Description |
+| --- | --- |
+| [@iurysza/pi-ext](packages/pi-ext) | Command palette, review tooling, session workflows, TUI polish, and Pi integrations. |
+| [@iurysza/pi-token-tank](packages/pi-token-tank) | Subscription quota gauges for OpenAI Codex, Kimi, GitHub Copilot, and Cursor. |
+| [@iurysza/pi-agent-explorer](packages/pi-agent-explorer) | Read-only Neovim snapshot of Pi's loaded runtime. |
+| [@iurysza/pi-context-audit](packages/pi-context-audit) | Inspect prompt, tool-schema, context, and MCP overhead. |
+| [@iurysza/pi-tmux-title](packages/pi-tmux-title) | Keep Pi and tmux window titles aligned with the session. |
+| [@iurysza/pi-secret-env](packages/pi-secret-env) | Load shared credentials while blocking and redacting secret access. |
 
-All six packages are present. The three former standalone repositories retain
-unsquashed subtree history; the three local extensions were copied from clean,
-committed source files. Git installation remains unadvertised until isolated
-installation validation is complete.
+## Install
 
-Packages:
+Install any package with Pi:
 
-- `@iurysza/pi-ext` — attributed fork of `tomsej/pi-ext`
-- `@iurysza/pi-context-audit`
-- `@iurysza/pi-agent-explorer`
-- `@iurysza/pi-token-tank`
-- `@iurysza/pi-tmux-title`
-- `@iurysza/pi-secret-env`
+```bash
+pi install npm:@iurysza/pi-token-tank
+```
 
-The root `pi.extensions`, `pi.skills`, and `pi.themes` fields deliberately list
-the prefixed union of all child manifests. Pi does not recursively discover
-workspace manifests.
+Restart Pi or run `/reload` after installation. Each package README covers its
+configuration and requirements.
 
 ## Development
 
-```sh
+```bash
 npm ci
 npm run check
 ```
 
-`check-catalog` validates the private root, child metadata, resource union,
-source namespaces, paths, and the single-lockfile rule. `check-packs` performs a
-read-only dry run of every publishable tarball and rejects development leakage.
+The repository is an npm workspace. The root package is private; each package
+under [`packages/`](packages) is independently publishable.
 
-## Upstream synchronization
+## License
 
-The first `pi-ext` subtree import came from `iurysza/pi-ext`. Future source syncs
-come from `tomsej/pi-ext`:
-
-```sh
-scripts/sync-pi-ext.sh
-```
-
-The script must run from a clean repository root, pulls without `--squash`, and
-then runs catalog, legal, install, typecheck, test, and pack checks. Merge
-conflicts are deliberately left visible for human resolution.
-
-## Imported sources
-
-| Package | Source | Imported SHA |
-| --- | --- | --- |
-| `pi-ext` | `https://github.com/iurysza/pi-ext` `main` | `08d03577f0be043c1fc5f4bd169d8d9550b5a2b8` |
-| `pi-agent-explorer` | `https://github.com/iurysza/pi-agent-explorer` `main` | `139de6ef2eccf900edef968d5fe156de1cd9e369` |
-| `pi-token-tank` | `https://github.com/iurysza/pi-token-tank` `main` | `1f7b4977f3bae45272aba4a2d74aabdd889cee37` |
-
-Token Tank's recorded local source was clean at `70b6150`; GitHub `main` had two
-new descendant commits. The newer `1f7b497` snapshot was explicitly approved
-for import.
-
-The repositories were imported with `git subtree` without `--squash`. Never use
-Git submodules. Future `pi-ext` source synchronization comes from
-`https://github.com/tomsej/pi-ext`.
-
-## Extracted sources
-
-| Package | Source path | Source commit |
-| --- | --- | --- |
-| `pi-context-audit` | `agents/pi/agent/extensions/context-audit.ts` | `8651d8d73928f96e29d4618e3aace772aef5cbc6` |
-| `pi-tmux-title` | `agents/pi/agent/extensions/pi-tmux-kebab-title.ts` | `466f46ae1834a0ad66c4909186494d31b9a8dbdd` |
-| `pi-secret-env` | `agents/pi/agent/extensions/secret-env.ts` | `cd71561e8ae282c89c44ac1965e96a7cf5db0217` |
-
-The dirty, behind-remote `agents` repository was not modified. Original local
-extensions and all old repositories remain available until migration parity is
-proven.
-
-## Licensing and provenance
-
-The root [LICENSE](LICENSE) covers only Iury-owned packages. `packages/pi-ext`
-is excluded from that ownership claim: it retains its own MIT license, component
-licenses, and [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) obligations.
-See the root [third-party notices](THIRD_PARTY_NOTICES.md) for the boundary.
+The root [MIT license](LICENSE) covers Iury-owned packages. `pi-ext` retains
+its own [license](packages/pi-ext/LICENSE) and
+[third-party notices](packages/pi-ext/THIRD_PARTY_NOTICES.md).

@@ -1,46 +1,48 @@
-# @iurysza/pi-secret-env
+# pi-secret-env
 
-Pi extension that loads shared AI credentials from
-`~/.config/ai/secrets.env` while preventing agents from reading the file or
-printing loaded values.
+Load shared credentials into Pi without handing the agent an easy way to read
+or print them. Secret Env reads a local env file, injects its values into Pi and
+user shell commands, then blocks direct access and redacts final tool output.
 
-It:
+## Install
 
-- injects loaded values into Pi and user `!` / `!!` commands;
-- blocks secret-file paths in shell and file-tool calls;
-- blocks direct environment dumps such as `env`, `printenv`, `export -p`, and
-  `set`;
-- redacts loaded values and `KEY=value` pairs from final text tool results.
+```bash
+pi install npm:@iurysza/pi-secret-env
+```
 
-Missing or unreadable env files are ignored so normal command execution remains
-available. Protected path checks remain fail-closed. The package never ships an
-env file or secret fixture.
+Restart Pi or run `/reload` after installation.
 
-File format:
+## Setup
+
+Create `~/.config/ai/secrets.env` with mode `600`:
 
 ```env
-KEY=value
-OTHER_KEY="quoted value"
-# comments allowed
+OPENAI_API_KEY="..."
+OTHER_KEY=value
+# comments are allowed
 ```
 
-Keep the real file mode at `600`. Final-result redaction cannot guarantee that a
-streaming or partial renderer never briefly displays output, so do not ask tools
-to print credentials.
+The extension accepts normal `KEY=value` entries and quoted values. A missing
+or unreadable file changes nothing: Pi continues normally.
 
-## Development
+## Protection
 
-```sh
-npm run check
-npm pack --dry-run
-```
+Secret Env:
 
-Tests use inline fake values only.
+- blocks reads of the configured secret file through shell and file tools;
+- blocks direct environment dumps such as `env`, `printenv`, `export -p`, and
+  `set`;
+- redacts loaded values and `KEY=value` pairs from final text tool results; and
+- makes loaded values available to Pi and user `!` or `!!` commands.
 
-## Provenance
+This is a guardrail, not a sandbox. Streaming or partial renderers can expose
+output before final-result redaction runs. Never ask a tool to print a
+credential, and do not put secrets in project files or command-line arguments.
 
-Extracted from `agents/pi/agent/extensions/secret-env.ts` at source commit
-`cd71561e8ae282c89c44ac1965e96a7cf5db0217`.
+## Requirements
+
+- Pi
+- Node.js 22.19 or newer
 
 ## License
 

@@ -1,35 +1,42 @@
-# @iurysza/pi-context-audit
+# pi-context-audit
 
-Pi extension that measures the current system prompt, active and available tool
-schemas, context files, skills, MCP cache, context usage, and the last captured
-provider payload.
+See where Pi's context goes. Context Audit measures the active system prompt,
+tool schemas, context files, skills, MCP cache, context usage, and the last
+captured provider payload.
 
-Run:
+## Install
+
+```bash
+pi install npm:@iurysza/pi-context-audit
+```
+
+Restart Pi or run `/reload` after installation.
+
+## Run an audit
 
 ```text
 /context-audit [md|json] [open] [copy]
 ```
 
-Audits are written under Pi's agent cache directory. Markdown and JSON audit
-generation are portable. The optional `open` and `copy` actions call macOS
-`open` and `pbcopy`, respectively.
+Audits are written to Pi's agent cache directory. `md` and `json` choose the
+output format; `open` and `copy` use macOS `open` and `pbcopy` when available.
 
-The extension records size metadata and serialized schemas; review generated
-audits before sharing because provider payload summaries may describe the
-current session.
+## What it captures
 
-## Development
+- System prompt and context-file size
+- Active and available tool schemas
+- Skills, commands, and MCP cache metadata
+- Context-window usage
+- Size metadata for the latest captured provider payload
 
-```sh
-npm run check
-npm pack --dry-run
-```
+Audits contain serialized schemas and may summarize the current session. Review
+them before sharing.
 
-## Provenance
+## Requirements
 
-Extracted from
-`agents/pi/agent/extensions/context-audit.ts` at source commit
-`8651d8d73928f96e29d4618e3aace772aef5cbc6`.
+- Pi
+- Node.js 22.19 or newer
+- macOS only for `open` and `copy`
 
 ## License
 
