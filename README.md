@@ -7,6 +7,7 @@ all-or-nothing setup: install the packages that fit your workflow.
 | Package | Description |
 | --- | --- |
 | [@iurysza/pi-ext](packages/pi-ext) | Command palette, review tooling, session workflows, TUI polish, and Pi integrations. |
+| [@iurysza/pi-ghost-in-the-machine](packages/pi-ghost-in-the-machine) | Reactive Ghostty shader face for Pi lifecycle states. |
 | [@iurysza/pi-token-tank](packages/pi-token-tank) | Subscription quota gauges for OpenAI Codex, Kimi, GitHub Copilot, and Cursor. |
 | [@iurysza/pi-agent-explorer](packages/pi-agent-explorer) | Read-only Neovim snapshot of Pi's loaded runtime. |
 | [@iurysza/pi-context-audit](packages/pi-context-audit) | Inspect prompt, tool-schema, context, and MCP overhead. |
@@ -36,6 +37,6 @@ under [`packages/`](packages) is independently publishable.
 
 ## License
 
-The root [MIT license](LICENSE) covers Iury-owned packages. `pi-ext` retains
-its own [license](packages/pi-ext/LICENSE) and
-[third-party notices](packages/pi-ext/THIRD_PARTY_NOTICES.md).
+The root [MIT license](LICENSE) covers Iury-owned packages. `pi-ext` and
+`pi-ghost-in-the-machine` retain their own licenses and attribution notices.
+See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

@@ -18,9 +18,20 @@ test("Pi manifest loads the standalone extension", () => {
     files: string[];
   };
 
-  assert.equal(manifest.name, "pi-ghost-in-the-machine");
-  assert.deepEqual(manifest.pi.extensions, ["src/index.ts"]);
-  for (const required of ["src", "scripts", "shaders", "herdr-plugin.toml", "ai-artifacts/docs", "assets"]) {
+  assert.equal(manifest.name, "@iurysza/pi-ghost-in-the-machine");
+  assert.deepEqual(manifest.pi.extensions, ["./src/index.ts"]);
+  for (const required of [
+    "src",
+    "scripts/ghost-state.sh",
+    "scripts/setup.sh",
+    "scripts/sidebar-watcher.mjs",
+    "scripts/watch-sidebar.sh",
+    "shaders",
+    "herdr-plugin.toml",
+    "README.md",
+    "LICENSE",
+    "NOTICE",
+  ]) {
     assert.ok(manifest.files.includes(required), `missing package file entry: ${required}`);
   }
 });

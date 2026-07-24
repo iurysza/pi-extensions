@@ -44,14 +44,6 @@
     "typebox": "^1.1.32",
     "typescript": "^7.0.2"
   },
-  "allowScripts": {
-    "@ataraxy-labs/sem@0.3.24": true,
-    "@google/genai@1.52.0": true,
-    "better-sqlite3@12.11.1": true,
-    "koffi@2.16.3": true,
-    "protobufjs@7.6.4": true,
-    "protobufjs@7.6.5": true
-  },
   "publishConfig": {
     "access": "public"
   },

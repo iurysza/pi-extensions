@@ -8,5 +8,10 @@ It is explicitly excluded from the root ownership claim. Its own `LICENSE`,
 component licenses, and `THIRD_PARTY_NOTICES.md` govern that package and must
 remain with every distribution.
 
+`packages/pi-ghost-in-the-machine` contains a shader derived from
+[isoden/claude-terminal-face](https://github.com/isoden/claude-terminal-face).
+Its own `LICENSE` and `NOTICE` preserve the original copyright and attribution
+and must remain with every distribution.
+
 The root workspace is private and is not a distributable package. Each
 publishable child package carries its own license and package metadata.

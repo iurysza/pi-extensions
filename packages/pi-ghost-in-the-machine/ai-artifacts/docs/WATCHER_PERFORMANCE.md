@@ -2,7 +2,7 @@
 
 > A measured client-side trade-off, not a server-side victory claim.
 
-Equal 15s idle windows at a 50ms interval against `/Users/iurysouza/.config/herdr/herdr.sock`. Initial transition-controller work is excluded by a 750ms warmup. Process launches for the legacy watcher are derived from observed Herdr CLI calls: one `herdr`, two `jq`, and one `sleep` per poll.
+Equal 15s idle windows at a 50ms interval against `~/.config/herdr/herdr.sock`. Initial transition-controller work is excluded by a 750ms warmup. Process launches for the legacy watcher are derived from observed Herdr CLI calls: one `herdr`, two `jq`, and one `sleep` per poll.
 
 | Metric | Bash/CLI/JQ | Node/socket |
 | --- | ---: | ---: |

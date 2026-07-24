@@ -45,7 +45,8 @@
       "./packages/pi-token-tank/src/index.ts",
       "./packages/pi-context-audit/src/index.ts",
       "./packages/pi-tmux-title/src/index.ts",
-      "./packages/pi-secret-env/src/index.ts"
+      "./packages/pi-secret-env/src/index.ts",
+      "./packages/pi-ghost-in-the-machine/src/index.ts"
     ],
     "skills": [
       "./packages/pi-ext/skills/commit",

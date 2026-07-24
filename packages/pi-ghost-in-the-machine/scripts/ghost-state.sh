@@ -250,6 +250,7 @@ acquire_watcher_lock() {
 
 start_watcher() {
     local node_bin pid attempt
+    local -a watcher_args
     [[ "${HERDR_ENV:-}" == "1" ]] || return 0
     watcher_paths || return
     mkdir -p "$WATCH_DIR"
@@ -279,14 +280,22 @@ start_watcher() {
 
     rm -f "$WATCH_PID"
     printf '%s\n' "$WATCH_SOCKET" > "$WATCH_SOCKET_FILE"
-    HERDR_BIN_PATH="$HERDR_BIN" SIDEBAR_POLL_INTERVAL="${SIDEBAR_POLL_INTERVAL:-0.05}" \
-        nohup "$node_bin" "$WATCHER" \
-            --socket "$WATCH_SOCKET" \
-            --log "$WATCH_LOG" \
-            --pid-file "$WATCH_PID" \
-            --socket-file "$WATCH_SOCKET_FILE" \
-            --controller "${GHOST_CONTROLLER_PATH:-$ROOT/scripts/ghost-state.sh}" \
+    watcher_args=(
+        --socket "$WATCH_SOCKET"
+        --log "$WATCH_LOG"
+        --pid-file "$WATCH_PID"
+        --socket-file "$WATCH_SOCKET_FILE"
+        --controller "${GHOST_CONTROLLER_PATH:-$ROOT/scripts/ghost-state.sh}"
+    )
+    if [[ -t 0 || -t 1 || -t 2 ]]; then
+        HERDR_BIN_PATH="$HERDR_BIN" SIDEBAR_POLL_INTERVAL="${SIDEBAR_POLL_INTERVAL:-0.05}" \
+            nohup "$node_bin" "$WATCHER" "${watcher_args[@]}" \
             </dev/null >/dev/null 2>&1 &
+    else
+        HERDR_BIN_PATH="$HERDR_BIN" SIDEBAR_POLL_INTERVAL="${SIDEBAR_POLL_INTERVAL:-0.05}" \
+            "$node_bin" "$WATCHER" "${watcher_args[@]}" \
+            </dev/null >/dev/null 2>&1 &
+    fi
     pid=$!
 
     for attempt in $(seq 1 100); do

@@ -1,9 +1,11 @@
 {
-  "name": "pi-ghost-in-the-machine",
+  "name": "@iurysza/pi-ghost-in-the-machine",
   "version": "0.1.0",
-  "description": "A Ghostty face that reacts to Pi lifecycle states",
+  "description": "A Ghostty shader face that reacts to Pi lifecycle states.",
   "license": "MIT",
   "author": "Iury Souza",
+  "type": "module",
+  "main": "src/index.ts",
   "keywords": [
     "pi-package",
     "pi-extension",
@@ -12,39 +14,36 @@
     "herdr",
     "lifecycle"
   ],
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/iurysza/pi-ghost-in-the-machine.git"
-  },
-  "bugs": "https://github.com/iurysza/pi-ghost-in-the-machine/issues",
-  "homepage": "https://github.com/iurysza/pi-ghost-in-the-machine#readme",
-  "type": "module",
-  "main": "src/index.ts",
-  "pi": {
-    "extensions": [
-      "src/index.ts"
-    ]
-  },
   "files": [
     "src",
-    "scripts",
+    "scripts/ghost-state.sh",
+    "scripts/setup.sh",
+    "scripts/sidebar-watcher.mjs",
+    "scripts/watch-sidebar.sh",
     "shaders",
     "herdr-plugin.toml",
-    "AGENTS.md",
-    "ai-artifacts/AGENT_ONBOARDING.md",
-    "ai-artifacts/ARCHITECTURE.md",
-    "ai-artifacts/SEMANTIC_MAP.md",
-    "ai-artifacts/docs",
-    "assets",
     "README.md",
     "LICENSE",
     "NOTICE"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iurysza/pi-extensions.git",
+    "directory": "packages/pi-ghost-in-the-machine"
+  },
+  "bugs": {
+    "url": "https://github.com/iurysza/pi-extensions/issues"
+  },
+  "homepage": "https://github.com/iurysza/pi-extensions/tree/main/packages/pi-ghost-in-the-machine#readme",
   "scripts": {
-    "check": "tsc --noEmit && bash -n scripts/*.sh && npm run check:generated",
+    "check": "npm run typecheck && bash -n scripts/*.sh && npm run check:generated",
     "check:generated": "npm run generate && git diff --exit-code -- shaders/variants",
     "build": "tsc -p tsconfig.json",
     "test": "npm run build && node --test dist/tests/*.test.js",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
     "generate": "bash scripts/generate-variants.sh",
     "prepack": "npm run build"
   },
@@ -58,5 +57,10 @@
   },
   "engines": {
     "node": ">=22.19.0"
+  },
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ]
   }
 }
