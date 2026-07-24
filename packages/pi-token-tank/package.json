@@ -1,0 +1,57 @@
+{
+  "name": "pi-token-tank",
+  "version": "0.6.2",
+  "description": "Token Tank — provider-aware subscription quota status for Pi",
+  "license": "MIT",
+  "author": "Iury Souza",
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "quota",
+    "subscription",
+    "usage",
+    "footer",
+    "codex",
+    "kimi",
+    "copilot",
+    "cursor"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iurysza/pi-token-tank.git"
+  },
+  "bugs": "https://github.com/iurysza/pi-token-tank/issues",
+  "homepage": "https://github.com/iurysza/pi-token-tank#readme",
+  "type": "module",
+  "main": "src/index.ts",
+  "pi": {
+    "extensions": [
+      "src/index.ts"
+    ]
+  },
+  "files": [
+    "src",
+    "assets",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "check": "tsc --noEmit",
+    "build": "tsc -p tsconfig.json",
+    "test": "npm run build && node --test dist/tests/*.test.js",
+    "prepack": "npm run build"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "^0.80.9",
+    "@earendil-works/pi-tui": "^0.80.9",
+    "@types/node": "^24.12.4",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=22.19.0"
+  }
+}

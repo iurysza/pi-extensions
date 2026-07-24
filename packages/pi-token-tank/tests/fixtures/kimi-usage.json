@@ -1,0 +1,27 @@
+{
+  "user": {
+    "membership": {
+      "level": "LEVEL_ADVANCED"
+    }
+  },
+  "usage": {
+    "name": "Weekly usage",
+    "limit": 100,
+    "used": 43,
+    "reset_time": "2026-07-18T00:00:00.123456789Z"
+  },
+  "limits": [
+    {
+      "window": {
+        "duration": 300,
+        "timeUnit": "MINUTE"
+      },
+      "detail": {
+        "name": "5-hour window",
+        "limit": 50,
+        "remaining": 41,
+        "resetAt": "2026-07-12T16:00:00Z"
+      }
+    }
+  ]
+}

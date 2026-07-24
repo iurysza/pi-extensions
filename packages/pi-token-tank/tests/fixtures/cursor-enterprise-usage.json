@@ -1,0 +1,23 @@
+{
+  "billingCycleStart": "2026-07-01T00:00:00.000Z",
+  "billingCycleEnd": "2026-08-01T00:00:00.000Z",
+  "membershipType": "enterprise",
+  "limitType": "team",
+  "isUnlimited": false,
+  "individualUsage": {
+    "overall": {
+      "enabled": true,
+      "used": 7384,
+      "limit": 10000,
+      "remaining": 2616
+    }
+  },
+  "teamUsage": {
+    "pooled": {
+      "enabled": true,
+      "used": 12725135,
+      "limit": 28122000,
+      "remaining": 15396865
+    }
+  }
+}

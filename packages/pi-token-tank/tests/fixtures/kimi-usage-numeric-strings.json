@@ -1,0 +1,27 @@
+{
+  "user": {
+    "membership": {
+      "level": "LEVEL_PREMIUM"
+    }
+  },
+  "usage": {
+    "name": "Weekly usage",
+    "limit": "200",
+    "remaining": "114",
+    "resetTime": "1752687600"
+  },
+  "limits": [
+    {
+      "window": {
+        "duration": "300",
+        "timeUnit": "MINUTE"
+      },
+      "detail": {
+        "name": "5-hour window",
+        "limit": "80",
+        "used": "18",
+        "resets_at": "1752262800"
+      }
+    }
+  ]
+}
