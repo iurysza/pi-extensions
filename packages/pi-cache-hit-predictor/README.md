@@ -1,23 +1,25 @@
-# @howaboua/pi-cache-hit-predictor
+# @iurysza/pi-cache-hit-predictor
 
-Shows an inline cache-hit prediction when you switch Pi models or reasoning levels.
+Shows a cache-hit prediction when you switch Pi models or reasoning levels.
 
 ```text
 Cache hit prediction · gpt-5.6-sol · low: ~27k / ~104k (26%) cached
 ```
 
-The prediction is a UI-only transcript notification. It is not sent to the model and does not change the prompt. Back-to-back predictions update the same line while you cycle through models or reasoning levels.
+The prediction is UI-only. It is not sent to the model and does not change the prompt. It remains visible through aborts and failed requests, then clears after the first successful response on the predicted provider/API/model/reasoning lane.
+
+The package uses Pi's native `setStatus()` API when installed alone. If `@iurysza/pi-ext` is also installed, it advertises priority metadata so pi-ext can place the same status in its bounded auxiliary footer line.
 
 ## Install
 
 ```bash
-pi install npm:@howaboua/pi-cache-hit-predictor
+pi install npm:@iurysza/pi-cache-hit-predictor
 ```
 
 Try it for one session:
 
 ```bash
-pi -e npm:@howaboua/pi-cache-hit-predictor
+pi -e npm:@iurysza/pi-cache-hit-predictor
 ```
 
 ## How it works
@@ -31,8 +33,8 @@ This is an estimate, not provider preflight data. Provider expiry or eviction, c
 ## Local development
 
 ```bash
-bun install
-bun run check
-bun run pack:dry
+npm install
+npm run check
+npm pack --dry-run
 pi -e ./index.ts
 ```
