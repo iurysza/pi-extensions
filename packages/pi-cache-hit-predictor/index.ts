@@ -31,15 +31,15 @@ function predictionText(prediction: CachePrediction): string {
   const lane = `${prediction.lane.model} · ${prediction.lane.thinkingLevel}`;
   if (!prediction.hasLaneHistory) {
     const prompt = prediction.currentPromptTokens
-      ? ` of ~${formatTokens(prediction.currentPromptTokens)}`
+      ? ` 0%/~${formatTokens(prediction.currentPromptTokens)}`
       : "";
-    return `Cache hit prediction · ${lane}: cold lane (0%${prompt})`;
+    return `cache ${lane} · cold${prompt}`;
   }
 
   if (prediction.currentPromptTokens === null || prediction.percent === null) {
-    return `Cache hit prediction · ${lane}: ~${formatTokens(prediction.estimatedCacheTokens)} cached`;
+    return `cache ${lane} · ~${formatTokens(prediction.estimatedCacheTokens)}`;
   }
-  return `Cache hit prediction · ${lane}: ~${formatTokens(prediction.estimatedCacheTokens)} / ~${formatTokens(prediction.currentPromptTokens)} (${Math.round(prediction.percent)}%) cached`;
+  return `cache ${lane} · ~${formatTokens(prediction.estimatedCacheTokens)}/~${formatTokens(prediction.currentPromptTokens)} ${Math.round(prediction.percent)}%`;
 }
 
 function laneFor(model: ModelIdentity, thinkingLevel: string): CacheLane {
@@ -120,23 +120,18 @@ export default function cacheHitPredictor(pi: ExtensionAPI) {
 
   pi.on("message_end", async (event, ctx) => {
     if (event.message.role !== "assistant") return;
-    const selected = ctx.model;
-    recordAssistantUsage(
-      history,
-      event.message,
-      laneFor(
-        selected?.provider === event.message.provider
-          && selected.id === event.message.model
-          && selected.api === event.message.api
-          ? selected
-          : {
-              provider: event.message.provider,
-              api: event.message.api,
-              id: event.message.model,
-            },
-        pi.getThinkingLevel(),
-      ),
-    );
+    const responseLane = laneFor({
+      provider: event.message.provider,
+      api: event.message.api,
+      id: event.message.model,
+    }, pi.getThinkingLevel());
+    recordAssistantUsage(history, event.message, responseLane);
+    if (
+      displayedLane
+      && event.message.stopReason !== "aborted"
+      && event.message.stopReason !== "error"
+      && sameLane(displayedLane, responseLane)
+    ) clearPrediction(ctx);
   });
 
   pi.on("thinking_level_select", async (event, ctx) => {
@@ -154,11 +149,6 @@ export default function cacheHitPredictor(pi: ExtensionAPI) {
     schedulePrediction(ctx, event.model, pi.getThinkingLevel());
   });
 
-  pi.on("after_provider_response", async (event, ctx) => {
-    if (event.status < 200 || event.status >= 300 || !displayedLane || !ctx.model) return;
-    const destinationLane = laneFor(ctx.model, pi.getThinkingLevel());
-    if (sameLane(displayedLane, destinationLane)) clearPrediction(ctx);
-  });
 
   pi.on("session_shutdown", async (_event, ctx) => {
     if (pendingPredictionTimer) clearTimeout(pendingPredictionTimer);

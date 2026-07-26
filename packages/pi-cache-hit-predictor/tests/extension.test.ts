@@ -27,7 +27,7 @@ const branch = [
     id: "00000001",
     parentId: null,
     timestamp: new Date(1_000).toISOString(),
-    thinkingLevel: "low",
+    thinkingLevel: "high",
   },
   {
     type: "message",
@@ -104,6 +104,11 @@ function createHarness() {
 
 const waitForPrediction = () => new Promise((resolve) => setTimeout(resolve, 5));
 
+function assistantMessage(overrides: Record<string, unknown> = {}) {
+  const entry = branch[1] as Extract<SessionEntry, { type: "message" }>;
+  return { ...entry.message, ...overrides };
+}
+
 test("coalesces a model clamp into one footer status", async () => {
   const harness = createHarness();
   await harness.fire("session_start");
@@ -117,7 +122,22 @@ test("coalesces a model clamp into one footer status", async () => {
   assert.equal(harness.statuses.filter(Boolean).length, 1);
   assert.equal(
     harness.statuses.at(-1),
-    "Cache hit prediction · gpt-new · high: cold lane (0% of ~100k)",
+    "cache gpt-new · high · cold 0%/~100k",
+  );
+});
+
+test("renders a concise warm-lane footer status", async () => {
+  const harness = createHarness();
+  await harness.fire("session_start");
+  await harness.fire("model_select", {
+    model: oldModel,
+    previousModel: newModel,
+    source: "set",
+  });
+  await waitForPrediction();
+  assert.equal(
+    harness.statuses.at(-1),
+    "cache gpt-old · high · ~25k/~100k 25%",
   );
 });
 
@@ -131,15 +151,24 @@ test("clears only after a successful response on the predicted lane", async () =
   await waitForPrediction();
   const prediction = harness.statuses.at(-1);
 
-  await harness.fire("after_provider_response", { status: 500, headers: {} });
+  await harness.fire("message_end", {
+    message: assistantMessage({ model: newModel.id, stopReason: "error" }),
+  });
   assert.equal(harness.statuses.at(-1), prediction);
 
-  harness.ctx.model = oldModel as unknown as ExtensionContext["model"];
-  await harness.fire("after_provider_response", { status: 200, headers: {} });
+  await harness.fire("message_end", {
+    message: assistantMessage({ model: newModel.id, stopReason: "aborted" }),
+  });
   assert.equal(harness.statuses.at(-1), prediction);
 
-  harness.ctx.model = newModel as unknown as ExtensionContext["model"];
-  await harness.fire("after_provider_response", { status: 204, headers: {} });
+  await harness.fire("message_end", {
+    message: assistantMessage({ model: oldModel.id, stopReason: "stop" }),
+  });
+  assert.equal(harness.statuses.at(-1), prediction);
+
+  await harness.fire("message_end", {
+    message: assistantMessage({ model: newModel.id, stopReason: "stop" }),
+  });
   assert.equal(harness.statuses.at(-1), undefined);
 });
 

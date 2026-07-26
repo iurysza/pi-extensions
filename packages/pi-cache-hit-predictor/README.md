@@ -3,7 +3,7 @@
 Shows a cache-hit prediction when you switch Pi models or reasoning levels.
 
 ```text
-Cache hit prediction · gpt-5.6-sol · low: ~27k / ~104k (26%) cached
+cache gpt-5.6-sol · low · ~27k/~104k 26%
 ```
 
 The prediction is UI-only. It is not sent to the model and does not change the prompt. It remains visible through aborts and failed requests, then clears after the first successful response on the predicted provider/API/model/reasoning lane.
