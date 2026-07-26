@@ -15,10 +15,12 @@
 const vec2  CELL      = vec2(8.0, 17.0);
 const float FACE_SIZE = 0.126;             // 画面高に対する比（旧 0.14 から 10% 縮小）
 const float FACE_Y_FROM_TOP = 0.40;         // 顔中心の上端からの位置（画面高比）
-const float FACE_LEFT_GAP = 0.001;          // 最も左の描画点と画面左端の最小距離（画面幅比）
 const float FACE_BOUND_X = 1.25;            // drift/decorations 込みの顔空間左半径
-const float SIDEBAR_COLS = 29.0;            // herdr 展開サイドバーの幅（列）
-const float SIDEBAR_CELL_WIDTH = 16.0;      // sidebar 配置用の実セル幅（dense grid とは独立）
+const float ORIGINAL_SIDEBAR_COLS = 29.0;   // Mac/original 配置の sidebar 幅（列）
+const float ORIGINAL_CELL_WIDTH = 16.0;     // Mac/original 配置の実セル幅
+const float MAC_FACE_LEFT_GAP = 30.0;       // Mac の full footprint 左余白（px）
+const float ULTRAWIDE_MIN_WIDTH = 3200.0;   // 検証済み 3440px surface の識別境界
+const float ULTRAWIDE_CENTER_X = 144.0;     // 36 columns × 8px の sidebar 中央
 const vec3  FACE_COL  = vec3(0.36, 0.88, 0.79); // 通常時の顔色（idle パレットアンカーも兼ねる）
 const vec3  ERR_COL   = vec3(0.95, 0.36, 0.42); // 失敗時の顔色（err パレットアンカーも兼ねる）
 const vec3  THINK_COL = vec3(0.94, 0.76, 0.29); // 考える顔（調査/プランニング中）
@@ -617,13 +619,18 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 cellUV = fract(fragCoord / CELL);
     vec2 smp    = (cellId + 0.5) * CELL;
 
-    // 元の高さ基準サイズと sidebar 中心配置を保つ。drift/decorations を含む
-    // 左端だけは viewport の 0.1% より内側へ入らないよう、必要な場合のみ右へ寄せる。
+    // Ghostty 1.3.1 は display scale/sidebar geometry を直接公開しない。
+    // cursor geometry は focus/style で消えるため display 判定には使わない。検証済み
+    // surfaces は MacBook <=3024px、ultrawide=3440px なので viewport 幅で安定分類する。
     float faceScale = FACE_SIZE * iResolution.y;
-    float sidebarCenterX = SIDEBAR_CELL_WIDTH * SIDEBAR_COLS * 0.5;
-    float minCenterX = FACE_LEFT_GAP * iResolution.x + FACE_BOUND_X * faceScale;
+    bool ultrawideViewport = iResolution.x >= ULTRAWIDE_MIN_WIDTH;
+    float originalCenterX = ORIGINAL_CELL_WIDTH * ORIGINAL_SIDEBAR_COLS * 0.5;
+    float macMinCenterX = MAC_FACE_LEFT_GAP + FACE_BOUND_X * faceScale;
+    float faceCenterX = ultrawideViewport
+        ? ULTRAWIDE_CENTER_X
+        : max(originalCenterX, macMinCenterX);
     float centerYRatio = TOPDOWN_Y > 0.5 ? FACE_Y_FROM_TOP : 1.0 - FACE_Y_FROM_TOP;
-    vec2 faceCenter = vec2(max(sidebarCenterX, minCenterX), centerYRatio * iResolution.y);
+    vec2 faceCenter = vec2(faceCenterX, centerYRatio * iResolution.y);
     vec2 p = (smp - faceCenter) / faceScale;
     // TOPDOWN_Y=1（Ghostty）: fragCoord.y は既に下向き正なので反転不要。
     // TOPDOWN_Y=0（標準規約）: fragCoord.y は上向き正なので反転して下向き正にする。
