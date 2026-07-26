@@ -211,8 +211,8 @@ async function run(options) {
   let consecutiveFailures = 0;
   let totalLatencyMs = 0;
   let maxLatencyMs = 0;
-  let observedState;
-  let appliedState;
+  let observedTarget;
+  let appliedTarget;
   let nextActionAt = 0;
   let requestNumber = 0;
   let metricsStartedAt = performance.now();
@@ -270,12 +270,18 @@ async function run(options) {
         totalLatencyMs += latencyMs;
         maxLatencyMs = Math.max(maxLatencyMs, latencyMs);
         const state = layout.x <= 4 ? "collapsed" : "expanded";
-        if (state !== observedState) {
-          observedState = state;
+        // Focus is part of the expanded target: switching Pi panes must restore the
+        // newly focused pane's remembered lifecycle state even when sidebar
+        // visibility does not change. Collapsed mode remains one deduplicated target.
+        const target = state === "expanded"
+          ? `${state}:${layout.focusedPaneId ?? "unknown"}`
+          : state;
+        if (target !== observedTarget) {
+          observedTarget = target;
           nextActionAt = 0;
           log(`state=${state} area_x=${layout.x} area_width=${layout.width ?? "unknown"} focused_pane_id=${JSON.stringify(layout.focusedPaneId ?? "unknown")} latency_ms=${latencyMs.toFixed(3)} socket=${JSON.stringify(options.socketPath)}`);
         }
-        if (state !== appliedState && Date.now() >= nextActionAt) {
+        if (target !== appliedTarget && Date.now() >= nextActionAt) {
           const action = await runController(
             options.controller,
             state,
@@ -286,7 +292,7 @@ async function run(options) {
             (child) => { activeControllerChild = child; },
           );
           log(`action=ghost-${state} result=${action.ok ? "ok" : "error"} detail=${JSON.stringify(action.detail)}`);
-          if (action.ok) appliedState = state;
+          if (action.ok) appliedTarget = target;
           else nextActionAt = Date.now() + actionRetryMs;
         }
       } catch (error) {
