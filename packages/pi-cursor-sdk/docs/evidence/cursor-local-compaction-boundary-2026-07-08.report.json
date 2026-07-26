@@ -1,0 +1,296 @@
+{
+  "capturedAt": "2026-07-08T04:17:07Z",
+  "sourceArtifactDir": ".artifacts/compaction-boundary-three-turn-2026-07-08T04-17-07-848Z",
+  "sourceArtifactSha256": {
+    "report": "b8c1c81c550711251dd352d7ed531ce497eaab10a72d0948e49559695dce7756",
+    "beforeCompactSession": "77249acb3523ec101f94fbf91f9e50493a57ffb5d946892f82dfef21d68c6c4b",
+    "afterCompactSession": "a6d18461a3e8cf3edfdca8a57accc16120fbe766d3896f4f6bcd22c01d075fef",
+    "afterPostCompactPromptSession": "d36442be3d103858172a6352a31c238110b00c4c9ec2cf91d0cf62b9e6c4882a",
+    "afterPostCompactResumeSession": "a1762d9374588f0176189014d34a39d7d9cdce90825b16a93520ceb3d79261a5"
+  },
+  "model": "cursor/composer-2-5:slow",
+  "token": "COMPACT_BOUNDARY_1783484227852",
+  "sessionId": "compact-boundary-1783484227852",
+  "beforeCompact": {
+    "prepare": {
+      "firstKeptEntryId": "3ba82c37",
+      "messagesToSummarize": 2,
+      "turnPrefixMessages": 2,
+      "tokensBefore": 113244,
+      "isSplitTurn": true
+    },
+    "latestResumeHandles": [
+      {
+        "id": "158e75ac",
+        "parentId": "38143e87",
+        "agentId": "agent-9f5c78fb-458c-4225-9976-a95b22806221",
+        "compactionGeneration": 0,
+        "branchPathHash": "0870edb00653841e470cfd3c8eab4fae"
+      },
+      {
+        "id": "3ba82c37",
+        "parentId": "7785c0b4",
+        "agentId": "agent-9f5c78fb-458c-4225-9976-a95b22806221",
+        "compactionGeneration": 0,
+        "branchPathHash": "a81ea7a2e7315e1e89b3e6b7aa182bfc"
+      },
+      {
+        "id": "82c08c12",
+        "parentId": "e80d3817",
+        "agentId": "agent-9f5c78fb-458c-4225-9976-a95b22806221",
+        "compactionGeneration": 0,
+        "branchPathHash": "17f4d66d085a1f46ce893e455181177f"
+      }
+    ]
+  },
+  "compactResponse": {
+    "success": true,
+    "data": {
+      "firstKeptEntryId": "158e75ac",
+      "tokensBefore": 113244,
+      "estimatedTokensAfter": 40260,
+      "summary": "No prior history.\n\n---\n\n**Turn Context (split turn):**\n\n## Original Request\nUser asked the assistant to remember exact token `COMPACT_BOUNDARY_1783484227852`, ignore filler `A` except for context size, and reply exactly `TURN1_OK`.\n\n## Early Progress\n- No code or repo work in the prefix.\n- User sent a large `A` filler block to inflate context size.\n- Assistant complied with the exact reply: `TURN1_OK`.\n\n## Context for Suffix\n- Boundary token to preserve: `COMPACT_BOUNDARY_1783484227852`.\n- Filler `A` is padding only; not substantive content.\n- This looks like a compaction/boundary test: exact-token recall across a large dropped prefix.\n- Prior turn contract: exact-output replies (`TURN1_OK`, then likely `TURN2_OK`, `TURN3_OK` in later suffix turns).",
+      "details": {
+        "readFiles": [],
+        "modifiedFiles": []
+      }
+    }
+  },
+  "compactEvents": [
+    {
+      "type": "compaction_start",
+      "reason": "manual"
+    },
+    {
+      "type": "compaction_end",
+      "reason": "manual",
+      "result": {
+        "summary": "No prior history.\n\n---\n\n**Turn Context (split turn):**\n\n## Original Request\nUser asked the assistant to remember exact token `COMPACT_BOUNDARY_1783484227852`, ignore filler `A` except for context size, and reply exactly `TURN1_OK`.\n\n## Early Progress\n- No code or repo work in the prefix.\n- User sent a large `A` filler block to inflate context size.\n- Assistant complied with the exact reply: `TURN1_OK`.\n\n## Context for Suffix\n- Boundary token to preserve: `COMPACT_BOUNDARY_1783484227852`.\n- Filler `A` is padding only; not substantive content.\n- This looks like a compaction/boundary test: exact-token recall across a large dropped prefix.\n- Prior turn contract: exact-output replies (`TURN1_OK`, then likely `TURN2_OK`, `TURN3_OK` in later suffix turns).",
+        "firstKeptEntryId": "158e75ac",
+        "tokensBefore": 113244,
+        "estimatedTokensAfter": 40260,
+        "details": {
+          "readFiles": [],
+          "modifiedFiles": []
+        }
+      },
+      "aborted": false,
+      "willRetry": false
+    }
+  ],
+  "afterCompact": {
+    "compactionEntries": [
+      {
+        "id": "5c65d5c6",
+        "firstKeptEntryId": "158e75ac",
+        "tokensBefore": 113244,
+        "fromHook": false
+      }
+    ],
+    "prepare": null,
+    "latestResumeHandles": [
+      {
+        "id": "158e75ac",
+        "parentId": "38143e87",
+        "agentId": "agent-9f5c78fb-458c-4225-9976-a95b22806221",
+        "compactionGeneration": 0,
+        "branchPathHash": "0870edb00653841e470cfd3c8eab4fae"
+      },
+      {
+        "id": "3ba82c37",
+        "parentId": "7785c0b4",
+        "agentId": "agent-9f5c78fb-458c-4225-9976-a95b22806221",
+        "compactionGeneration": 0,
+        "branchPathHash": "a81ea7a2e7315e1e89b3e6b7aa182bfc"
+      },
+      {
+        "id": "82c08c12",
+        "parentId": "e80d3817",
+        "agentId": "agent-9f5c78fb-458c-4225-9976-a95b22806221",
+        "compactionGeneration": 0,
+        "branchPathHash": "17f4d66d085a1f46ce893e455181177f"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "label": "long-turn-1",
+      "text": "TURN1_OK",
+      "metadata": [
+        {
+          "agentId": "agent-9f5c78fb-458c-4225-9976-a95b22806221",
+          "runId": "run-14fcc15a-a52d-4bd5-a664-0458da95de93",
+          "localResume": true,
+          "resumedAgent": false,
+          "sendPlan": {
+            "mode": "bootstrap",
+            "resetAgent": false,
+            "reason": "initial"
+          },
+          "sendState": {
+            "bootstrapped": false,
+            "contextFingerprint": "",
+            "incrementalSendCount": 0
+          },
+          "bridgeRunId": "cursor-pi-bridge-run-5923365b-5113-4c43-8de3-5f4d9b3d2d4e"
+        }
+      ]
+    },
+    {
+      "label": "long-turn-2",
+      "text": "TURN2_OK",
+      "metadata": [
+        {
+          "agentId": "agent-9f5c78fb-458c-4225-9976-a95b22806221",
+          "runId": "run-f71ed2e8-e88c-41a8-916a-c7dcba391e2e",
+          "localResume": true,
+          "resumedAgent": true,
+          "sendPlan": {
+            "mode": "bootstrap",
+            "resetAgent": true,
+            "reason": "context_divergence"
+          },
+          "sendState": {
+            "bootstrapped": true,
+            "contextFingerprint": "{\"systemHash\":\"1c6bb451ee1dfa5b\",\"messageHashes\":[\"e10829fe5010d466\"]}",
+            "incrementalSendCount": 0
+          },
+          "bridgeRunId": "cursor-pi-bridge-run-daf0e5cd-5fb3-4671-8c8d-6e08477e11a1"
+        }
+      ]
+    },
+    {
+      "label": "long-turn-3",
+      "text": "TURN3_OK",
+      "metadata": [
+        {
+          "agentId": "agent-9f5c78fb-458c-4225-9976-a95b22806221",
+          "runId": "run-415a29c8-2d08-402a-94ea-792df9fec6ec",
+          "localResume": true,
+          "resumedAgent": true,
+          "sendPlan": {
+            "mode": "incremental",
+            "resetAgent": false,
+            "reason": "incremental"
+          },
+          "sendState": {
+            "bootstrapped": true,
+            "contextFingerprint": "{\"systemHash\":\"7583ee97010b735a\",\"messageHashes\":[\"e10829fe5010d466\",\"891792e9bc5e7c67\",\"241d66e3c363552d\"]}",
+            "incrementalSendCount": 0
+          },
+          "bridgeRunId": "cursor-pi-bridge-run-daf0e5cd-5fb3-4671-8c8d-6e08477e11a1"
+        }
+      ]
+    },
+    {
+      "label": "post-compact-first-restart",
+      "text": "TOKEN=COMPACT_BOUNDARY_1783484227852",
+      "metadata": [
+        {
+          "agentId": "agent-b5e5e885-9c63-4415-9593-575418449607",
+          "runId": "run-67aaa061-2b1e-4236-88ec-05a309da7939",
+          "localResume": true,
+          "resumedAgent": false,
+          "sendPlan": {
+            "mode": "bootstrap",
+            "resetAgent": false,
+            "reason": "initial"
+          },
+          "sendState": {
+            "bootstrapped": false,
+            "contextFingerprint": "",
+            "incrementalSendCount": 0
+          },
+          "bridgeRunId": "cursor-pi-bridge-run-64814d95-729b-4c32-b57b-0956a36ea51f"
+        }
+      ]
+    },
+    {
+      "label": "post-compact-second-restart",
+      "text": "POST_COMPACT_RESUME_OK",
+      "metadata": [
+        {
+          "agentId": "agent-b5e5e885-9c63-4415-9593-575418449607",
+          "runId": "run-b15c8fe3-f7ea-4e17-966e-b1919c978783",
+          "localResume": true,
+          "resumedAgent": true,
+          "sendPlan": {
+            "mode": "incremental",
+            "resetAgent": false,
+            "reason": "incremental"
+          },
+          "sendState": {
+            "bootstrapped": true,
+            "contextFingerprint": "{\"systemHash\":\"1c6bb451ee1dfa5b\",\"messageHashes\":[\"8c1955b241e04cf1\",\"241d66e3c363552d\",\"5031632b8c5ce720\",\"3b60d8827b0e7776\",\"36cc1b42c1645827\",\"66ac88cc166b7f2f\"]}",
+            "incrementalSendCount": 0
+          },
+          "bridgeRunId": "cursor-pi-bridge-run-8e16eb5f-36ed-4c89-bf15-56c9c60276c2"
+        }
+      ]
+    }
+  ],
+  "afterPostCompactPrompt": {
+    "latestResumeHandles": [
+      {
+        "id": "158e75ac",
+        "parentId": "38143e87",
+        "agentId": "agent-9f5c78fb-458c-4225-9976-a95b22806221",
+        "compactionGeneration": 0,
+        "branchPathHash": "0870edb00653841e470cfd3c8eab4fae"
+      },
+      {
+        "id": "3ba82c37",
+        "parentId": "7785c0b4",
+        "agentId": "agent-9f5c78fb-458c-4225-9976-a95b22806221",
+        "compactionGeneration": 0,
+        "branchPathHash": "a81ea7a2e7315e1e89b3e6b7aa182bfc"
+      },
+      {
+        "id": "82c08c12",
+        "parentId": "e80d3817",
+        "agentId": "agent-9f5c78fb-458c-4225-9976-a95b22806221",
+        "compactionGeneration": 0,
+        "branchPathHash": "17f4d66d085a1f46ce893e455181177f"
+      },
+      {
+        "id": "b768ad4c",
+        "parentId": "5471ceea",
+        "agentId": "agent-b5e5e885-9c63-4415-9593-575418449607",
+        "compactionGeneration": 1,
+        "branchPathHash": "7374d3b76c5585cddafb80038ce13ba9"
+      }
+    ]
+  },
+  "afterPostCompactResume": {
+    "latestResumeHandles": [
+      {
+        "id": "3ba82c37",
+        "parentId": "7785c0b4",
+        "agentId": "agent-9f5c78fb-458c-4225-9976-a95b22806221",
+        "compactionGeneration": 0,
+        "branchPathHash": "a81ea7a2e7315e1e89b3e6b7aa182bfc"
+      },
+      {
+        "id": "82c08c12",
+        "parentId": "e80d3817",
+        "agentId": "agent-9f5c78fb-458c-4225-9976-a95b22806221",
+        "compactionGeneration": 0,
+        "branchPathHash": "17f4d66d085a1f46ce893e455181177f"
+      },
+      {
+        "id": "b768ad4c",
+        "parentId": "5471ceea",
+        "agentId": "agent-b5e5e885-9c63-4415-9593-575418449607",
+        "compactionGeneration": 1,
+        "branchPathHash": "7374d3b76c5585cddafb80038ce13ba9"
+      },
+      {
+        "id": "51d6fd67",
+        "parentId": "a19358e8",
+        "agentId": "agent-b5e5e885-9c63-4415-9593-575418449607",
+        "compactionGeneration": 1,
+        "branchPathHash": "e368b3abe17246f2064959d422c50e12"
+      }
+    ]
+  }
+}

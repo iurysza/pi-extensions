@@ -1,0 +1,120 @@
+{
+  "fixtureKind": "normalized-captured-cursor-cloud-callback-excerpt",
+  "capturedAt": "2026-07-19",
+  "sdkVersion": "1.0.23",
+  "sourceCapture": {
+    "agentId": "bc-f69b9be6-4e88-4275-b496-0c6501c54abb",
+    "runId": "run-6535056e-39ef-443e-913a-336033855d30",
+    "onDeltaCount": 117,
+    "onStepCount": 7,
+    "terminalStatus": "finished",
+    "cleanup": {
+      "archived": true,
+      "deleted": true,
+      "getNotFound": true,
+      "listExcluded": true
+    }
+  },
+  "normalization": "This bounded excerpt retains only callback kinds observed in the live capture. Tool call IDs, paths, file contents, shell output, and task results are normalized; callback envelope and toolCall.type shapes are retained.",
+  "normalizedAgentId": "bc-00000000-0000-0000-0000-000000000027",
+  "normalizedRunId": "run-00000000-0000-0000-0000-000000000027",
+  "callbacks": [
+    {
+      "channel": "onDelta",
+      "args": {
+        "update": {
+          "type": "tool-call-started",
+          "callId": "call-read",
+          "toolCall": {
+            "type": "read",
+            "args": { "path": "README.md" }
+          }
+        }
+      }
+    },
+    {
+      "channel": "onStep",
+      "args": {
+        "step": {
+          "type": "toolCall",
+          "message": {
+            "type": "read",
+            "args": { "path": "README.md" },
+            "result": {
+              "status": "success",
+              "value": { "content": "# normalized cloud fixture", "totalLines": 1, "fileSize": 26 }
+            }
+          }
+        }
+      }
+    },
+    {
+      "channel": "onDelta",
+      "args": {
+        "update": {
+          "type": "tool-call-started",
+          "callId": "call-shell",
+          "toolCall": {
+            "type": "shell",
+            "args": { "command": "printf cloud-shell-ok", "timeout": 600000 }
+          }
+        }
+      }
+    },
+    {
+      "channel": "onDelta",
+      "args": {
+        "update": {
+          "type": "tool-call-completed",
+          "callId": "call-shell",
+          "toolCall": {
+            "type": "shell",
+            "args": { "command": "printf cloud-shell-ok", "timeout": 600000 },
+            "result": {
+              "status": "success",
+              "value": { "stdout": "cloud-shell-ok\n", "stderr": "", "exitCode": 0, "signal": "", "executionTime": 83 }
+            }
+          }
+        }
+      }
+    },
+    {
+      "channel": "onDelta",
+      "args": {
+        "update": {
+          "type": "tool-call-started",
+          "callId": "call-task",
+          "toolCall": {
+            "type": "task",
+            "args": { "description": "Inspect normalized cloud activity", "mode": "unspecified" }
+          }
+        }
+      }
+    },
+    {
+      "channel": "onStep",
+      "args": {
+        "step": {
+          "type": "toolCall",
+          "message": {
+            "type": "task",
+            "args": { "description": "Inspect normalized cloud activity", "mode": "unspecified" },
+            "result": {
+              "status": "success",
+              "value": { "description": "Inspect normalized cloud activity", "result": "normalized task complete" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "channel": "onDelta",
+      "args": {
+        "update": {
+          "type": "text-delta",
+          "text": "CLOUD_ACTIVITY_FIXTURE_OK"
+        }
+      }
+    }
+  ]
+}
