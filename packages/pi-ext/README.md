@@ -36,6 +36,7 @@ Omit a resource type to load all of it. Use an empty array to load none.
 | Extension | Description |
 | --- | --- |
 | [Leader Key](extensions/leader-key) | `Ctrl+X` command palette for sessions, models, thinking levels, labels, and extension commands. |
+| [Chat to Markdown](extensions/chat-to-md) | Save the last assistant response under `ai-artifacts/chat/` with `/chat-to-md` or `Ctrl+X`, then `w`. |
 | [Code Review](extensions/review) | `/review` workflows for pull requests, branches, commits, and uncommitted changes. |
 | [pi-sem](extensions/pi-sem) | Entity-aware Git diff, context, history, blame, and impact tools powered by `sem`. |
 | [Pi Telescope](extensions/pi-telescope) | Native fuzzy finder for sessions, files, commands, and other providers. |
@@ -60,6 +61,14 @@ operations, labels, extension commands, and workflow shortcuts.
 Favourite model presets live in
 `extensions/leader-key/favourite-models.json`. Optional display roles live in
 `extensions/leader-key/model-nicknames.json`.
+
+### Chat to Markdown
+
+Run `/chat-to-md` or press `Ctrl+X`, then `w`. The extension writes the last
+textual assistant response from the active session branch to the current Git
+repository's `ai-artifacts/chat/` directory. Files use
+`YYYY-MM-DD-<response-slug>.md`; repeated saves add a numeric suffix instead of
+overwriting an existing note.
 
 ### Permissions
 

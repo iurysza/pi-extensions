@@ -58,7 +58,7 @@
   "homepage": "https://github.com/iurysza/pi-extensions/tree/main/packages/pi-ext#readme",
   "scripts": {
     "sem:evaluate": "node extensions/pi-sem/bin/sem-eval.mjs",
-    "test": "npm run test:pi-sem && node --test tests/leader-key/favourite-models.test.mjs",
+    "test": "npm run test:pi-sem && node --test tests/leader-key/favourite-models.test.mjs tests/chat-to-md/chat-to-md.test.mjs",
     "test:pi-sem": "node --test tests/pi-sem/core.test.mjs tests/review/sem-guidance.test.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "pack:check": "node scripts/check-pack.mjs",
@@ -70,6 +70,7 @@
       "./extensions/custom-footer/custom-footer.ts",
       "./extensions/review/review.ts",
       "./extensions/leader-key/index.ts",
+      "./extensions/chat-to-md/index.ts",
       "./extensions/permissions/permissions.ts",
       "./extensions/session-query/session-query.ts",
       "./extensions/ask-user-question/index.ts",

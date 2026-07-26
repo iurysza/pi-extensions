@@ -26,6 +26,7 @@ import { searchableSelect } from "./model-switcher.js";
 import { runFavouriteModels } from "./favourite-models.js";
 import { OverlayFrame } from "../shared/overlay.js";
 import { copyToClipboard } from "../pi-telescope/clipboard.js";
+import { saveLastResponse } from "../chat-to-md/index.js";
 import type { ActionItem, ActionGroup, TopLevelEntry } from "./types.js";
 import { buildSessionEntries } from "./session-actions.js";
 import { buildLabelEntries } from "./label-actions.js";
@@ -98,7 +99,7 @@ function buildEntries(
 		"new", "resume", "tree", "fork", "compact",
 		"model", "thinking", "tools", "reload",
 		"switch", "lk", "leader-key",
-		"mode", "permissions",
+		"mode", "permissions", "chat-to-md",
 		"lk-navigate", "lk-switch", // internal bridge commands
 	]);
 
@@ -277,6 +278,17 @@ function buildEntries(
 				}
 			}
 			ctx.ui.notify("No assistant message found", "info");
+		},
+	});
+
+	// ── Save last response ───────────────────────────────────────────────
+	entries.push({
+		type: "action",
+		key: "w",
+		label: "Save last response",
+		description: "write assistant message to ai-artifacts/chat",
+		action: async (ctx: ExtensionContext) => {
+			await saveLastResponse(pi, ctx);
 		},
 	});
 
