@@ -241,7 +241,7 @@ describe("cursor replay tool details contract", () => {
 			sourceToolName: "write",
 			title: "Cursor write",
 		});
-		expect(rendered).toContain("write src/a.ts");
+		expect(rendered).toContain("Cursor write");
 		expect(rendered).toContain("Error: permission denied");
 		expect(rendered).not.toMatch(/^write src\/a\.ts$/m);
 	});

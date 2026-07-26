@@ -2,7 +2,7 @@
 
 User-facing overview of callable vs display-only tools: [Cursor tool surfaces in pi](./cursor-tool-surfaces.md).
 
-pi-cursor-sdk has two separate pi-facing paths plus Cursor's own local-agent tool surface:
+`@iurysza/pi-cursor-sdk` has two separate pi-facing paths plus Cursor's own local-agent tool surface:
 
 1. **Local pi MCP bridge:** default-on for local Cursor agents. It exposes the current pi session's bridgeable active tools to Cursor through a tokenized `127.0.0.1` MCP endpoint, excluding internal Cursor replay activity names and, by default, overlapping built-in pi tools (`read`, `bash`, `write`, `edit`, `grep`, `find`, `ls`). When Cursor calls one of those MCP tools, pi executes the real pi tool through the normal pi tool path.
 2. **Cursor native tool replay:** display-only. It renders completed Cursor SDK tool activity as pi-native-looking cards using recorded Cursor results.
@@ -66,7 +66,9 @@ Cursor `glob` activity is displayed through native `find` cards.
 
 For the full `@cursor/sdk@1.0.23` `ToolType` set, disposition matrix, and runtime alias normalization, see [SDK ToolType replay matrix](#sdk-tooltype-replay-matrix) below. Official SDK reference: https://cursor.com/docs/sdk/typescript
 
-Edit and write activity replays through pi-facing `edit` and `write` cards only when replay arguments truthfully satisfy the matching pi schema, but still uses recorded Cursor results only. The adapter passes through truthful Cursor paths, content when Cursor reported it, and recorded diff/details; it does not pretend Cursor's editing schema is pi's schema and it fails closed if a recorded replay result is missing. Cursor `StrReplace` with recorded replacement text displays as native-looking `edit`; path-only Cursor `edit` and notebook edit activity fall back to neutral Cursor activity so pi does not reject the replay before recorded-result handling. Cursor `write` displays as native-looking `write`. Diagnostics, delete, todos/plans, task/subagent, image, MCP, semantic search, screen recording, and web search/fetch activity use neutral Cursor activity cards with pi's default success/error tool shell. Cursor SDK `task` activity is labeled **Cursor subagent** by default because it represents Cursor-spawned child-agent work; `PI_CURSOR_TASK_PRESENTATION=task` keeps the older **Cursor task** wording for comparison. MCP completions whose `toolName` is `WebSearch` / `web_search` / `WebFetch` / similar are labeled **Cursor web search** or **Cursor web fetch** instead of generic **Cursor MCP**. Neutral Cursor activity cards carry display metadata such as `activityTitle` and `activitySummary`, so partial/collapsed cards can say `Cursor plan`, `Cursor todos`, `Cursor subagent`, `Cursor MCP`, `Cursor semantic search`, `Cursor screen recording`, `Cursor web search`, `Cursor web fetch`, or `Cursor edit` instead of only `Cursor activity`. These replay tools only display recorded Cursor results; they never mutate files or execute tool work directly. Replay paths are normalized to workspace-relative paths when possible. Most collapsed replay cards include bounded previews for diffs and text details so small edits, todos, task output, and MCP results are visible without expanding; web search/fetch activity stays summary-only while collapsed because those cards often arrive after final text and can otherwise bury the answer. Ctrl+O expansion shows the recorded details. Edit previews omit raw unified diff headers and show compact numbered changed/context lines using pi's native diff added/removed/context colors, and write previews use syntax highlighting when pi can infer a language from the path. Image generation replay cards show the saved image path in the collapsed summary and render the image inline when pi terminal image display is enabled and the generated file is still readable.
+Built-in-equivalent activity replays through `read`, `bash`, `edit`, `write`, `grep`, `find`, and `ls` only when replay arguments truthfully satisfy the matching pi schema. With `@iurysza/pi-ext` installed and compact tools enabled, pi-ext owns those cards and consumes the recorded Cursor result through a versioned callback protocol. Without that host, this package can register its standalone wrappers. Both paths are one-shot and fail closed: every `cursor-replay-*` built-in call requires one matching recorded result, and missing, malformed, mismatched, or already-consumed state throws before the underlying tool executor can run.
+
+Diagnostics, delete, todos/plans, task/subagent, image, MCP, semantic search, screen recording, web search/fetch, and future unknown activity use the neutral `cursor` replay tool. These cards are always one bounded summary line, including when the transcript is expanded; they do not render detail previews or inline images. Cursor SDK `task` activity is labeled **Cursor subagent** by default. MCP completions with web-shaped names become **Cursor web search** or **Cursor web fetch**. Replay paths are normalized to workspace-relative paths when possible.
 
 ## SDK ToolType replay matrix
 
@@ -74,7 +76,7 @@ Source of truth for SDK tool names: `@cursor/sdk@1.0.23` conversation `ToolType`
 
 Implementation owners: `src/cursor-tool-presentation-registry.ts` (canonical names, labels, visibility, replay policy, bridge exclusions for internal replay wrappers, alias normalization, and display-spec key completeness), `src/cursor-transcript-tool-specs.ts` (registry-keyed display implementations for transcript formatting and pi display builders), `src/cursor-native-tool-display-replay.ts` (replay card rendering derived from registry replay metadata), and `src/cursor-web-tool-activity.ts` (MCP/web alias remapping before display lookup).
 
-**Maintainer invariants — edit/write replay previews:** All colored diff rendering (native `edit` cards and `Cursor edit` activity fallbacks) flows through the single `formatCursorReplayDiff()` in `src/cursor-native-tool-display-replay.ts`. Activity write fallbacks with structured `fileContentAfterWrite` use the same `formatCursorReplayFilePreview()` path as native `write` cards. Structured `diffString` (and `diff`/`lines*`) or `fileContentAfterWrite` on `CursorReplay*Details` (including activity variants) is the source of truth for TUI preview coloring/highlighting. `expandedText` on activity details is for summary/expansion and as a fallback when the current SDK reports a unified diff only in text; it is never the primary preview source when structured fields are present. No parallel +/- coloring loops exist.
+**Maintainer invariant — execution ownership:** Built-in replay result consumption must happen before any native executor. The pi-ext host advertises capability only after Tidy successfully owns the built-in tools. The Cursor producer deletes recorded state before callback delivery; retries and duplicate consumption therefore fail closed. Standalone Cursor wrappers enforce the same rule. Neutral `cursor` cards never execute work.
 
 This matrix covers **Cursor native tool replay only**. It does not describe the [live pi MCP bridge](#live-bridge-vs-replay) or Cursor-native host tools, settings, plugins, and configured MCP servers from the Cursor SDK local-agent path.
 
@@ -104,7 +106,7 @@ This matrix covers **Cursor native tool replay only**. It does not describe the 
 
 **Replay detail disposition model:** `src/cursor-replay-tool-details.ts` stores replay card disposition separately from SDK source tool identity. Variants are `nativeEdit`, `nativeWrite`, `activity` (`sourceToolName` + display `title`), `generateImage`, and `genericFallback`. Path-only or notebook edit/write fallbacks produce `activity` details (neutral `cursor` cards) instead of structured edit/write variants with optional `title` escape hatches. Native edit/write cards use `nativeEdit` / `nativeWrite` only when pi-facing replay args satisfy the matching schema. The renderer dispatches on `variant` only.
 
-Neutral activity rows use pi tool name `cursor` with `activityTitle` / `activitySummary` metadata. User-visible collapsed cards use labels like **Cursor semantic search**.
+Neutral activity rows use pi tool name `cursor` with `activityTitle` / `activitySummary` metadata. User-visible cards use labels like **Cursor semantic search** and remain one bounded line in collapsed and expanded views.
 
 ## Runtime alias normalization
 
@@ -192,13 +194,13 @@ JSON and RPC consumers receive structured replay for completed Cursor host tools
 
 ## Replay-name policy
 
-Cursor native replay has one neutral replay tool name, `cursor`, plus native-compatible card names when renderer-compatible: `read`, `bash`, `grep`, `find`, `ls`, `edit`, and `write`. Neutral replay identity lives in `activityTitle`, `activitySummary`, and typed replay details, not in extra registered tool names.
+Cursor native replay has one neutral replay tool name, `cursor`, plus built-in-compatible names when schema-compatible: `read`, `bash`, `grep`, `find`, `ls`, `edit`, and `write`. Neutral replay identity lives in `activityTitle`, `activitySummary`, and typed replay details, not in extra registered tool names. Built-in names may be rendered by this package's standalone wrappers or by the shared `@iurysza/pi-ext` owner; recorded execution semantics are identical.
 
 Bridge MCP names are also not pi tool names. Cursor may see names such as `pi__sem_reindex` inside the local MCP bridge, but pi session output uses the real pi tool name.
 
 ## Conflicts and opt out
 
-Native replay wrappers are registered only for tool names not already owned by another extension. If another extension already owns a wrapper name needed for replay, pi-cursor-sdk skips only the conflicting wrapper and uses the scrubbed Cursor activity transcript for that tool instead.
+Native replay wrappers are registered only for tool names not already owned by another extension. `@iurysza/pi-ext` is the cooperative exception: a load-order-safe handshake lets it own the built-in card while this package supplies the recorded result. Other conflicts still skip that wrapper and use a bounded scrubbed Cursor activity trace instead.
 
 Disable native replay registration entirely:
 

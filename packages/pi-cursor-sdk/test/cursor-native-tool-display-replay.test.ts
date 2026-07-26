@@ -1,249 +1,133 @@
 import { describe, expect, it } from "vitest";
+import { visibleWidth, Text } from "@earendil-works/pi-tui";
 import { CURSOR_REPLAY_ACTIVITY_TOOL_NAME } from "../src/cursor-tool-presentation-registry.js";
 import {
-	CURSOR_REPLAY_COLLAPSED_PREVIEW_LINES,
-	CURSOR_REPLAY_PREVIEW_MAX_LINE_CHARS,
-	formatCursorReplayDiff,
-	formatCursorReplayFilePreview,
-	renderCursorReplayCall,
-	renderCursorReplayResult,
-	renderNativeLookingCursorReadReplayResult,
+  CURSOR_REPLAY_COLLAPSED_PREVIEW_LINES,
+  CURSOR_REPLAY_PREVIEW_MAX_LINE_CHARS,
+  formatCursorReplayDiff,
+  formatCursorReplayFilePreview,
+  renderCursorReplayCall,
+  renderCursorReplayResult,
+  renderNativeLookingCursorReadReplayResult,
 } from "../src/cursor-native-tool-display-replay.js";
 import { LOCAL_READ_PREVIEW_NOTICE } from "../src/cursor-transcript-utils.js";
-import { Text } from "@earendil-works/pi-tui";
 import { createRenderContext, createRenderTheme } from "./helpers/render-fixtures.js";
 
 const theme = createRenderTheme();
 
-const taggedTheme = createRenderTheme({
-	fg: (name: string, value: string) => `<${name}>${value}</${name}>`,
-});
-
-function renderReplayResultWithDetails(details: unknown): string {
-	return renderCursorReplayResult(
-		{ content: [{ type: "text", text: "ok" }], details },
-		{ expanded: false, isPartial: false },
-		taggedTheme,
-		createRenderContext({ isError: false, showImages: false }),
-		false,
-	)
-		.render(240)
-		.join("\n");
+function renderActivity(details: unknown, width = 120, expanded = false): string[] {
+  return renderCursorReplayResult(
+    { content: [{ type: "text", text: "fallback result\nsecond line" }], details },
+    { expanded, isPartial: false },
+    theme,
+    createRenderContext({ isError: false, showImages: false }),
+    false,
+  ).render(width);
 }
 
 describe("cursor native replay rendering", () => {
-	it("bounds huge single-line diffs in collapsed replay cards", () => {
-		const hugeLine = "x".repeat(20_000);
-		const rendered = formatCursorReplayDiff(`--- a/file.txt\n+++ b/file.txt\n@@ -1 +1 @@\n-${hugeLine}\n+${hugeLine}`, theme, CURSOR_REPLAY_COLLAPSED_PREVIEW_LINES);
+  it("bounds huge single-line diffs in standalone native replay cards", () => {
+    const hugeLine = "x".repeat(20_000);
+    const rendered = formatCursorReplayDiff(
+      `--- a/file.txt\n+++ b/file.txt\n@@ -1 +1 @@\n-${hugeLine}\n+${hugeLine}`,
+      theme,
+      CURSOR_REPLAY_COLLAPSED_PREVIEW_LINES,
+    );
+    expect(rendered).not.toContain(hugeLine);
+    expect(rendered.length).toBeLessThan(CURSOR_REPLAY_PREVIEW_MAX_LINE_CHARS * 4);
+    expect(rendered).toContain("…");
+  });
 
-		expect(rendered).not.toContain(hugeLine);
-		expect(rendered.length).toBeLessThan(CURSOR_REPLAY_PREVIEW_MAX_LINE_CHARS * 4);
-		expect(rendered).toContain("…");
-	});
+  it("bounds huge write previews before rendering", () => {
+    const hugeLine = "y".repeat(20_000);
+    const rendered = formatCursorReplayFilePreview(hugeLine, "generated.txt", theme);
+    expect(rendered).toBeDefined();
+    expect(rendered).not.toContain(hugeLine);
+    expect(rendered!.length).toBeLessThan(CURSOR_REPLAY_PREVIEW_MAX_LINE_CHARS * 2);
+    expect(rendered).toContain("more chars");
+  });
 
-	it("bounds huge write previews before rendering", () => {
-		const hugeLine = "y".repeat(20_000);
-		const rendered = formatCursorReplayFilePreview(hugeLine, "generated.txt", theme);
+  it("uses honest truncation copy for oversized standalone diffs", () => {
+    const diff = [
+      "--- a/file.txt",
+      "+++ b/file.txt",
+      "@@ -1,60 +1,60 @@",
+      ...Array.from({ length: 60 }, (_, index) => `+line ${index}`),
+    ].join("\n");
+    const rendered = formatCursorReplayDiff(diff, theme, 40);
+    expect(rendered).toContain("more diff lines hidden");
+    expect(rendered).not.toContain("full diff");
+  });
 
-		expect(rendered).toBeDefined();
-		expect(rendered).not.toContain(hugeLine);
-		expect(rendered!.length).toBeLessThan(CURSOR_REPLAY_PREVIEW_MAX_LINE_CHARS * 2);
-		expect(rendered).toContain("more chars");
-	});
+  it("keeps Cursor-only activity to one bounded neutral line even when expanded", () => {
+    const details = {
+      variant: "activity",
+      sourceToolName: "task",
+      title: "Cursor subagent",
+      summary: "Inspect package.json · Explore · composer-2.5-fast · ID: agent-1",
+      expandedText: "subagent Inspect package.json\n\n1. Package name\n2. Risk",
+    };
+    for (const expanded of [false, true]) {
+      for (const width of [12, 32, 80]) {
+        const lines = renderActivity(details, width, expanded);
+        expect(lines).toHaveLength(1);
+        expect(visibleWidth(lines[0]!)).toBeLessThanOrEqual(width);
+        expect(lines[0]).not.toContain("Package name");
+      }
+    }
+  });
 
-	it("uses honest truncation copy for expanded diffs that still exceed the display budget", () => {
-		const diff = ["--- a/file.txt", "+++ b/file.txt", "@@ -1,60 +1,60 @@", ...Array.from({ length: 60 }, (_, index) => `+line ${index}`)].join("\n");
-		const rendered = formatCursorReplayDiff(diff, theme, 40);
+  it.each([
+    ["mcp", "Cursor MCP", "git · status"],
+    ["createPlan", "Cursor plan", "Ship footer integration"],
+    ["task", "Cursor subagent", "Inspect package"],
+    ["webSearch", "Cursor web search", "Pi extension API"],
+    ["generateImage", "Cursor image generation", "saved image.png"],
+    ["futureTool", "Cursor futureTool", "future completed"],
+  ])("renders %s as a neutral one-line result", (sourceToolName, title, summary) => {
+    const details = sourceToolName === "generateImage"
+      ? { variant: "generateImage", summary, expandedText: "hidden image details" }
+      : sourceToolName === "futureTool"
+        ? { variant: "genericFallback", sourceToolName, summary, expandedText: "hidden future details" }
+        : { variant: "activity", sourceToolName, title, summary, expandedText: "hidden activity details" };
+    const lines = renderActivity(details, 120);
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toContain(title);
+    expect(lines[0]).toContain(summary);
+    expect(lines[0]).not.toContain("hidden");
+  });
 
-		expect(rendered).toContain("more diff lines hidden");
-		expect(rendered).not.toContain("full diff");
-	});
+  it("bounds partial activity calls and sanitizes multiline metadata", () => {
+    const component = renderCursorReplayCall(
+      CURSOR_REPLAY_ACTIVITY_TOOL_NAME,
+      {
+        activityTitle: "Cursor MCP\nignored",
+        activitySummary: "git status\n" + "x".repeat(500),
+      },
+      theme,
+      true,
+    );
+    for (const width of [8, 24, 72]) {
+      const lines = component.render(width);
+      expect(lines).toHaveLength(1);
+      expect(visibleWidth(lines[0]!)).toBeLessThanOrEqual(width);
+      expect(lines[0]).not.toContain("\n");
+    }
+  });
 
-	it("shows the standard expand affordance on collapsed expandable replay cards", () => {
-		const rendered = renderReplayResultWithDetails({
-			variant: "activity",
-			sourceToolName: "task",
-			title: "Cursor subagent",
-			summary: "Inspect package.json · Explore · composer-2.5-fast · ID: agent-1",
-			expandedText: "subagent Inspect package.json\n\n1. Package name: pi-cursor-sdk\n2. Risk: peer ranges",
-		});
-
-		expect(rendered).toContain("to expand");
-		expect(rendered).toContain("Cursor subagent");
-	});
-
-	it("colors unified diff body lines in neutral Cursor edit activity cards", () => {
-		// Unstructured path (no diffString): still exercises extract + canonical renderer.
-		const rendered = renderReplayResultWithDetails({
-			variant: "activity",
-			sourceToolName: "edit",
-			title: "Cursor edit",
-			summary: "file.txt added 1 line, removed 1 line",
-			expandedText: "edit file.txt\n\n+1 -1\n\n--- a/file.txt\n+++ b/file.txt\n@@ -1,3 +1,3 @@\n-old line\n+new line\n keep line\n final line",
-		});
-
-		// Canonical output: numbered lines, raw headers omitted (consistent with nativeEdit + structured activity).
-		expect(rendered).toContain("<toolDiffRemoved>-1 old line</toolDiffRemoved>");
-		expect(rendered).toContain("<toolDiffAdded>+1 new line</toolDiffAdded>");
-		expect(rendered).toContain("<toolDiffContext> 2 keep line</toolDiffContext>");
-		expect(rendered).toContain("<toolDiffContext> 3 final line</toolDiffContext>");
-		expect(rendered).not.toContain("--- a/file.txt");
-		expect(rendered).not.toContain("+++ b/file.txt");
-	});
-
-	it("colors collapsed diff lines when transcript preamble exceeds preview budget", () => {
-		// This exercises the extract path for activity details that only have diff in expandedText
-		// and no diffString. It routes through the single canonical renderer while proving preamble is ignored.
-		const preamble = Array.from({ length: 12 }, (_, index) => `note ${index + 1}`).join("\n");
-		const rendered = renderReplayResultWithDetails({
-			variant: "activity",
-			sourceToolName: "edit",
-			title: "Cursor edit",
-			summary: "src/file.ts added 1 line",
-			expandedText: `${preamble}\n\nedit src/file.ts\n\n+1 -0\n\n--- a/src/file.ts\n+++ b/src/file.ts\n@@ -1,3 +1,3 @@\n-old line\n+new line\n context line`,
-		});
-
-		// Canonical numbered output from formatCursorReplayDiff after extract.
-		expect(rendered).toContain("<toolDiffRemoved>-1 old line</toolDiffRemoved>");
-		expect(rendered).toContain("<toolDiffAdded>+1 new line</toolDiffAdded>");
-	});
-
-	it("activity edit with structured diffString uses canonical colored diff renderer (ignores expandedText preamble; text extraction not used)", () => {
-		// Structured primary path (new sessions): diffString present on details -> formatCursorReplayDiff directly.
-		// Long preamble in expandedText must not affect; no reliance on extractUnifiedDiffSection for coloring.
-		const preamble = Array.from({ length: 20 }, (_, index) => `preamble note ${index + 1}`).join("\n");
-		const structuredDiff = "--- a/src/file.ts\n+++ b/src/file.ts\n@@ -1,2 +1,2 @@\n-old\n+new\n context";
-		const rendered = renderReplayResultWithDetails({
-			variant: "activity",
-			sourceToolName: "edit",
-			title: "Cursor edit",
-			summary: "src/file.ts updated",
-			diffString: structuredDiff,
-			// expandedText has a long preamble; structured diffString must win for colors.
-			expandedText: `${preamble}\n\nsome transcript\n${structuredDiff}`,
-		});
-
-		// Uses formatCursorReplayDiff output shape (numbered, headers skipped, context/added/removed tags).
-		expect(rendered).toContain("<toolDiffRemoved>-1 old</toolDiffRemoved>");
-		expect(rendered).toContain("<toolDiffAdded>+1 new</toolDiffAdded>");
-		expect(rendered).toContain("<toolDiffContext> 2 context</toolDiffContext>");
-		// Headers from structured are omitted by canonical renderer (consistent with nativeEdit).
-		expect(rendered).not.toContain("--- a/src/file.ts");
-		expect(rendered).not.toContain("+++ b/src/file.ts");
-		// Preamble must not leak into diff preview.
-		expect(rendered).not.toContain("preamble note");
-	});
-
-	it("colors unified diff body lines in neutral Cursor write activity cards", () => {
-		// Unstructured write path (no diffString) still exercises extract + canonical renderer.
-		const rendered = renderReplayResultWithDetails({
-			variant: "activity",
-			sourceToolName: "write",
-			title: "Cursor write",
-			summary: "created 2 lines",
-			expandedText: "write file.txt\n\n+2 -0\n\n--- /dev/null\n+++ b/file.txt\n@@ -0,0 +1,2 @@\n+first line\n+second line",
-		});
-
-		expect(rendered).toContain("Cursor write");
-		// Canonical output (numbered, headers omitted).
-		expect(rendered).toContain("<toolDiffAdded>+1 first line</toolDiffAdded>");
-		expect(rendered).toContain("<toolDiffAdded>+2 second line</toolDiffAdded>");
-		expect(rendered).not.toContain("--- /dev/null");
-		expect(rendered).not.toContain("+++ b/file.txt");
-	});
-
-	it("activity write with structured fileContentAfterWrite uses canonical file preview (ignores expandedText preamble)", () => {
-		const preamble = Array.from({ length: 20 }, (_, index) => `preamble note ${index + 1}`).join("\n");
-		const rendered = renderReplayResultWithDetails({
-			variant: "activity",
-			sourceToolName: "write",
-			title: "Cursor write",
-			summary: "new.txt",
-			path: "new.txt",
-			fileContentAfterWrite: "hello world\n",
-			expandedText: `${preamble}\n\nwrite new.txt\n\nCreated 1 lines\n\nhello world\n`,
-		});
-
-		expect(rendered).toContain("<toolOutput>hello world</toolOutput>");
-		expect(rendered).not.toContain("preamble note");
-		expect(rendered).not.toContain("<muted>hello world</muted>");
-	});
-
-	it("shows local read preview disclaimer in collapsed native read replay results", () => {
-		const result = {
-			content: [{ type: "text" as const, text: `${LOCAL_READ_PREVIEW_NOTICE}\n# Local preview\n` }],
-			details: { localReadPreview: true },
-		};
-		const rendered = renderNativeLookingCursorReadReplayResult(
-			result,
-			{ expanded: false, isPartial: false },
-			theme,
-			createRenderContext({ isError: false, args: { path: "README.md", localReadPreview: true } }),
-			() => new Text("", 0, 0),
-		)
-			.render(120)
-			.join("\n");
-
-		expect(rendered).toContain(LOCAL_READ_PREVIEW_NOTICE);
-		expect(rendered).not.toContain("# Local preview");
-	});
-
-	it("renders collapsed activity summaries from metadata for neutral cursor cards", () => {
-		const rendered = [
-			renderCursorReplayCall(
-				CURSOR_REPLAY_ACTIVITY_TOOL_NAME,
-				{ activityTitle: "Cursor diagnostics", activitySummary: "0 diagnostics in src/index.ts" },
-				theme,
-				true,
-			),
-			renderCursorReplayCall(
-				CURSOR_REPLAY_ACTIVITY_TOOL_NAME,
-				{ activityTitle: "Cursor todos", activitySummary: "1/2 completed, 1 pending" },
-				theme,
-				true,
-			),
-			renderCursorReplayCall(
-				CURSOR_REPLAY_ACTIVITY_TOOL_NAME,
-				{ activityTitle: "Cursor MCP", activitySummary: "git · ## Git Status ✅", toolName: "git" },
-				theme,
-				true,
-			),
-		]
-			.map((component) => component.render(120).join("\n"))
-			.join("\n");
-
-		expect(rendered).toContain("Cursor diagnostics 0 diagnostics in src/index.ts");
-		expect(rendered).toContain("Cursor todos 1/2 completed, 1 pending");
-		expect(rendered).toContain("Cursor MCP git · ## Git Status ✅");
-	});
-
-	it("renders neutral cursor partial calls from activity metadata", () => {
-		const rendered = [
-			renderCursorReplayCall(
-				CURSOR_REPLAY_ACTIVITY_TOOL_NAME,
-				{ activityTitle: "Cursor semantic search", activitySummary: "main entrypoint (1 dir)" },
-				theme,
-				true,
-			),
-			renderCursorReplayCall(
-				CURSOR_REPLAY_ACTIVITY_TOOL_NAME,
-				{ activityTitle: "Cursor screen recording", activitySummary: ".cursor/recordings/demo.webm · 4.2s" },
-				theme,
-				true,
-			),
-			renderCursorReplayCall(
-				CURSOR_REPLAY_ACTIVITY_TOOL_NAME,
-				{ activityTitle: "Cursor delete", activitySummary: ".debug/delete-me.txt" },
-				theme,
-				true,
-			),
-		]
-			.map((component) => component.render(120).join("\n"))
-			.join("\n");
-
-		expect(rendered).toContain("Cursor semantic search main entrypoint (1 dir)");
-		expect(rendered).toContain("Cursor screen recording .cursor/recordings/demo.webm · 4.2s");
-		expect(rendered).toContain("Cursor delete .debug/delete-me.txt");
-		expect(rendered).not.toContain("cursor_");
-	});
+  it("shows local read preview disclaimer in collapsed standalone read replay", () => {
+    const result = {
+      content: [{ type: "text" as const, text: `${LOCAL_READ_PREVIEW_NOTICE}\n# Local preview\n` }],
+      details: { localReadPreview: true },
+    };
+    const rendered = renderNativeLookingCursorReadReplayResult(
+      result,
+      { expanded: false, isPartial: false },
+      theme,
+      createRenderContext({ isError: false, args: { path: "README.md", localReadPreview: true } }),
+      () => new Text("", 0, 0),
+    ).render(120).join("\n");
+    expect(rendered).toContain(LOCAL_READ_PREVIEW_NOTICE);
+    expect(rendered).not.toContain("# Local preview");
+  });
 });

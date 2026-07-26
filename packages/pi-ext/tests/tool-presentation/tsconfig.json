@@ -17,6 +17,7 @@
     "../../extensions/custom-footer/**/*.ts",
     "../../extensions/tool-presentation/**/*.ts",
     "../custom-footer/**/*.test.ts",
+    "./*.test.ts",
     "./tidy/**/*.test.ts"
   ]
 }

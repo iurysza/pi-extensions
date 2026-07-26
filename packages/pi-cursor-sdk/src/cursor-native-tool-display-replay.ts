@@ -1,9 +1,10 @@
 import { readFileSync, statSync } from "node:fs";
 import { basename } from "node:path";
 import { getLanguageFromPath, highlightCode, keyHint, type ToolDefinition } from "@earendil-works/pi-coding-agent";
-import { Image, Text, type Component } from "@earendil-works/pi-tui";
+import { Image, Text, truncateToWidth, type Component } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import { resolveCursorEditDiff } from "./cursor-edit-diff.js";
+import { truncateCursorDisplayLine } from "./cursor-display-text.js";
 import { inferImageMimeType } from "./cursor-tool-result-display-readers.js";
 import { LOCAL_READ_PREVIEW_NOTICE, isLocalReadPreviewContent } from "./cursor-transcript-utils.js";
 import {
@@ -323,9 +324,19 @@ export function formatCursorReplayFilePreview(
 	return renderedLines.join("\n");
 }
 
+function boundedOneLine(text: string): Component {
+	return {
+		render(width: number) {
+			if (width <= 0) return [];
+			return [truncateToWidth(text, width, "…")];
+		},
+		invalidate() {},
+	};
+}
+
 function getCursorReplayCardTitle(toolName: CursorReplayToolName, args: Record<string, unknown> | undefined): string {
 	if (toolName === CURSOR_REPLAY_ACTIVITY_TOOL_NAME && typeof args?.activityTitle === "string" && args.activityTitle.trim()) {
-		return args.activityTitle.trim();
+		return truncateCursorDisplayLine(args.activityTitle);
 	}
 	return "Cursor activity";
 }
@@ -335,12 +346,12 @@ export function renderCursorReplayCall(
 	args: Record<string, unknown> | undefined,
 	theme: CursorReplayRenderTheme,
 	isPartial: boolean,
-): Text {
-	if (!isPartial) return new Text("", 0, 0);
+): Component {
+	if (!isPartial) return boundedOneLine("");
 	let text = theme.fg("toolTitle", theme.bold(`${getCursorReplayCardTitle(toolName, args)} `));
 	const summary = getCursorReplayCallSummary(toolName, args);
-	if (summary) text += theme.fg("accent", summary);
-	return new Text(text.trimEnd(), 0, 0);
+	if (summary) text += theme.fg("muted", truncateCursorDisplayLine(summary));
+	return boundedOneLine(text.trimEnd());
 }
 
 function countDisplayLines(text: string): number {
@@ -541,6 +552,28 @@ function renderCursorReplayDetails(
 	return new Text(text || theme.fg("success", "Cursor tool result replayed"), 0, 0);
 }
 
+function renderNeutralCursorReplayResult(
+	details: CursorReplayToolDetails | undefined,
+	text: string,
+	theme: Parameters<CursorReplayRenderResult>[2],
+	isError: boolean,
+): Component {
+	const title = details?.variant === "activity"
+		? details.title
+		: details?.variant === "generateImage"
+			? CURSOR_REPLAY_GENERATE_IMAGE_RESULT_TITLE
+			: details?.variant === "genericFallback"
+				? `Cursor ${details.sourceToolName}`
+				: "Cursor activity";
+	const errorSummary = isError
+		? text.split("\n").find((line) => /^error\s*:/i.test(line.trim()))
+		: undefined;
+	const summary = errorSummary ?? details?.summary ?? text.split("\n").find((line) => line.trim()) ?? (isError ? "failed" : "completed");
+	return boundedOneLine(
+		`${theme.fg("toolTitle", theme.bold(truncateCursorDisplayLine(title)))} ${theme.fg(isError ? "error" : "muted", truncateCursorDisplayLine(summary))}`,
+	);
+}
+
 export function renderCursorReplayResult(
 	result: Parameters<CursorReplayRenderResult>[0],
 	options: Parameters<CursorReplayRenderResult>[1],
@@ -548,13 +581,12 @@ export function renderCursorReplayResult(
 	context: Parameters<CursorReplayRenderResult>[3],
 	isError: boolean,
 ): Component {
-	if (options.isPartial) return new Text(theme.fg("warning", "Replaying Cursor tool result..."), 0, 0);
+	if (options.isPartial) return boundedOneLine(theme.fg("muted", "Cursor activity running"));
 	const details = parseCursorReplayToolDetails(result.details);
 	const text = firstContentText(result);
-	if (isError && !hasCursorReplayDisplayTitle(details)) {
-		return new Text(theme.fg("error", text.split("\n")[0] || "Cursor replay failed"), 0, 0);
+	if (!details || details.variant === "activity" || details.variant === "generateImage" || details.variant === "genericFallback") {
+		return renderNeutralCursorReplayResult(details, text, theme, isError);
 	}
-	if (!details) return new Text(text || theme.fg("success", "Cursor tool result replayed"), 0, 0);
 	return renderCursorReplayDetails(details, result, options, theme, context, isError, text);
 }
 

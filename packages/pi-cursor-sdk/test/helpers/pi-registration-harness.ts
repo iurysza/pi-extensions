@@ -21,10 +21,26 @@ import type {
 /** Pi harness surface accepted by `src/index.ts` extension factory registration. */
 export type CursorExtensionRegistrationPi = Parameters<typeof cursorExtensionFactory>[0];
 
+function createHarnessEventBus(): ExtensionAPI["events"] {
+	const handlers = new Map<string, Set<(data: unknown) => void>>();
+	return {
+		emit(channel, data) {
+			for (const handler of handlers.get(channel) ?? []) handler(data);
+		},
+		on(channel, handler) {
+			const channelHandlers = handlers.get(channel) ?? new Set();
+			channelHandlers.add(handler);
+			handlers.set(channel, channelHandlers);
+			return () => channelHandlers.delete(handler);
+		},
+	};
+}
+
 export function createBridgePiHarness(options: { active: string[]; tools: ToolInfo[] }): BridgePiHarness {
 	const eventApi = createHarnessEventApi();
 	return {
 		...eventApi,
+		events: createHarnessEventBus(),
 		getActiveTools: vi.fn<ExtensionAPI["getActiveTools"]>(() => [...options.active]),
 		getAllTools: vi.fn<ExtensionAPI["getAllTools"]>(() => [...options.tools]),
 		setActiveTools: vi.fn<ExtensionAPI["setActiveTools"]>(),
@@ -66,6 +82,7 @@ export function createPiHarness(options: PiHarnessOptions = {}): PiHarness {
 
 	return {
 		...eventApi,
+		events: createHarnessEventBus(),
 		registerProvider: vi.fn<ExtensionAPI["registerProvider"]>((name: string, config: ProviderConfig) => {
 			registered.push({ name, config });
 		}),

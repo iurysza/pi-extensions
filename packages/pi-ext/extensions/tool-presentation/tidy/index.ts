@@ -469,6 +469,7 @@ export interface TidyExtensionDependencies {
 	createIntegration?: (pi: ExtensionAPI, cwd: string) => PiFffIntegrationController;
 	decorateSource?: (source: SourceToolDefinition) => SourceToolDefinition;
 	isReplayCall?: (toolCallId: string) => boolean;
+	onToolsReady?: () => void;
 }
 
 function previewText(preview: PiFffLifecyclePreview): string {
@@ -644,6 +645,7 @@ export function createTidyExtension(dependencies: TidyExtensionDependencies = {}
 			pi.registerTool(decorate(source) as any);
 		}
 		startupPlan.commit(decorate);
+		dependencies.onToolsReady?.();
 	};
 }
 

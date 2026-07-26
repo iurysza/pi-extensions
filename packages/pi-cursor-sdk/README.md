@@ -1,4 +1,4 @@
-# pi-cursor-sdk
+# @iurysza/pi-cursor-sdk
 
 A pi provider extension that lets pi use Cursor models through the local-by-default `@cursor/sdk` agent runtime, with explicit minimal Cursor Cloud opt-in.
 
@@ -6,21 +6,21 @@ Use this extension if you primarily use Cursor models inside pi and want Cursor'
 
 ## Why use this instead of an OpenAI-compatible Cursor endpoint?
 
-Use `pi-cursor-sdk` when you primarily want to use Cursor models **inside pi**.
+Use `@iurysza/pi-cursor-sdk` when you primarily want to use Cursor models **inside pi**.
 
 This extension runs Cursor models through `@cursor/sdk` and keeps Cursor's agent loop intact. Local remains the default; explicit cloud runtime starts Cursor Cloud after acknowledgement and preflight. pi integrates around that loop: model discovery, model selection, context-window variants, thinking controls where Cursor exposes them, fast/slow aliases, Cursor mode, session handling, native replay cards, and the optional local pi tool bridge.
 
 OpenAI-compatible Cursor proxies are useful when you want a generic `/v1/chat/completions` or `/v1/responses` endpoint for many clients such as curl, the OpenAI SDK, OpenCode, or other tools. That compatibility comes from translating Cursor behavior into OpenAI-shaped requests, responses, and tool calls.
 
-For pi users, that translation is usually the wrong abstraction. `pi-cursor-sdk` is pi-specific on purpose: it lets Cursor remain Cursor while making it feel native in pi.
+For pi users, that translation is usually the wrong abstraction. `@iurysza/pi-cursor-sdk` is pi-specific on purpose: it lets Cursor remain Cursor while making it feel native in pi.
 
 | If you want... | Prefer |
 | --- | --- |
-| First-class Cursor usage inside pi | `pi-cursor-sdk` |
-| Cursor's local SDK agent loop preserved, not replaced by an OpenAI-shaped adapter | `pi-cursor-sdk` |
-| pi model picker, `/login`, `/model`, sessions, context display, footer/status UX | `pi-cursor-sdk` |
-| Cursor SDK local-agent tools, settings, MCP, and native replay surfaced in pi | `pi-cursor-sdk` |
-| pi extension tools exposed to Cursor through a local MCP bridge | `pi-cursor-sdk` |
+| First-class Cursor usage inside pi | `@iurysza/pi-cursor-sdk` |
+| Cursor's local SDK agent loop preserved, not replaced by an OpenAI-shaped adapter | `@iurysza/pi-cursor-sdk` |
+| pi model picker, `/login`, `/model`, sessions, context display, footer/status UX | `@iurysza/pi-cursor-sdk` |
+| Cursor SDK local-agent tools, settings, MCP, and native replay surfaced in pi | `@iurysza/pi-cursor-sdk` |
+| pi extension tools exposed to Cursor through a local MCP bridge | `@iurysza/pi-cursor-sdk` |
 | A generic OpenAI-compatible localhost `/v1` API for non-pi clients | An OpenAI-compatible Cursor proxy |
 | One Cursor-ish endpoint shared across several unrelated tools | An OpenAI-compatible Cursor proxy |
 
@@ -29,14 +29,10 @@ For pi users, that translation is usually the wrong abstraction. `pi-cursor-sdk`
 1. Install the package:
 
 ```bash
-pi install npm:pi-cursor-sdk
+pi install npm:@iurysza/pi-cursor-sdk
 ```
 
-Or install from GitHub:
-
-```bash
-pi install https://github.com/fitchmultz/pi-cursor-sdk
-```
+Source and preserved upstream history live in [`iurysza/pi-extensions`](https://github.com/iurysza/pi-extensions/tree/main/packages/pi-cursor-sdk).
 
 2. Start pi with a Cursor model:
 
@@ -61,13 +57,7 @@ No global `@cursor/sdk` install is required. This package depends on exact `@cur
 ### Global install
 
 ```bash
-pi install npm:pi-cursor-sdk
-```
-
-Alternative GitHub install:
-
-```bash
-pi install https://github.com/fitchmultz/pi-cursor-sdk
+pi install npm:@iurysza/pi-cursor-sdk
 ```
 
 ### Project-local install
@@ -75,7 +65,7 @@ pi install https://github.com/fitchmultz/pi-cursor-sdk
 Use `-l` if you want the package recorded in the current project's `.pi/settings.json` instead of your global pi settings:
 
 ```bash
-pi install -l npm:pi-cursor-sdk
+pi install -l npm:@iurysza/pi-cursor-sdk
 ```
 
 Pi 0.80.9 loads project-local extensions only after project trust is resolved, so this extension cannot observe that trust event. When a project-local install needs to read or write `.pi/cursor-sdk.json`, start every such run with explicit approval:
@@ -97,7 +87,7 @@ pi --approve -e . --model cursor/composer-2-5
 
 ## Configure your Cursor SDK API key
 
-`pi-cursor-sdk` passes an explicit API key to the Cursor SDK. It does **not** reuse Cursor Agent CLI login, Cursor Desktop login, or Cursor subscription/OAuth state shown by `agent status`.
+`@iurysza/pi-cursor-sdk` passes an explicit API key to the Cursor SDK. It does **not** reuse Cursor Agent CLI login, Cursor Desktop login, or Cursor subscription/OAuth state shown by `agent status`.
 
 Use either a user API key from Cursor Dashboard → API Keys or a service account API key from Team settings. Team Admin API keys are not supported by the Cursor SDK. Then configure the key with one of the methods below.
 
@@ -456,7 +446,7 @@ Bridge capabilities are snapshotted from `pi.getActiveTools()` and `pi.getAllToo
 
 Overlapping built-in pi tools (`read`, `bash`, `write`, `edit`, `grep`, `find`, `ls`) are hidden by default because Cursor local agents already have native equivalents. Extension/custom tools and non-overlapping active tools present in pi's active tool registry normally remain exposed. The bridge also exposes `cursor_ask_question` as `pi__cursor_ask_question` when enabled, allowing Cursor to ask the user through pi UI instead of silently choosing a default. For local runtime, when pi has visible Agent Skills loaded, the extension rewrites pi's skill catalog for Cursor and exposes `cursor_activate_skill` as `pi__cursor_activate_skill`; Cursor should call that bridge tool with a listed skill name to load the full `SKILL.md` and bundled resource list before applying the skill. If the local bridge is disabled, the catalog remains available and instructs Cursor to fall back to reading the listed `SKILL.md` path directly. Cloud runtime preserves Pi project instructions but omits Pi's local skill catalog and keeps `cursor_activate_skill` inactive because the bridge and local absolute skill paths are unavailable there.
 
-Cursor-native tool replay is separate from the bridge. Replay cards are display-only recorded Cursor SDK activity. They never re-run Cursor-side commands, reapply Cursor edits, call MCP servers, or mutate pi state. See [Cursor native tool replay](docs/cursor-native-tool-replay.md).
+Cursor-native tool replay is separate from the bridge. Replay cards are display-only recorded Cursor SDK activity. With `@iurysza/pi-ext` installed and compact tools enabled, built-in-equivalent replay (`read`, `bash`, `edit`, `write`, `grep`, `find`, `ls`) is consumed once by pi-ext's shared compact cards. Missing replay state fails closed before any built-in executor runs. Cursor-only MCP, plan, task, search, web, image, and unknown activity remains visible as bounded neutral one-line cards. See [Cursor native tool replay](docs/cursor-native-tool-replay.md).
 
 Bridge controls:
 
@@ -527,7 +517,7 @@ Actual Cursor runs still need a key from `/login`, `CURSOR_API_KEY`, or `--api-k
 
 - **Cloud runtime is explicit and minimal.** Local remains the default. Cloud runs create Cursor cloud agents only after first-use acknowledgement and safety preflight, use fresh context by default, do not expose the pi bridge or local MCP, do not forward pi env vars, support explicit Cursor-managed environment selection, name agents from the pi session title when available, stream display-only agent/run/branch/PR/artifact/raw-usage telemetry when available, and record only explicit session-branch lifecycle commands for cleanup (`/cursor-cloud list|archive|delete`).
 - **The pi tool bridge is local and MCP-backed.** Bridgeable active pi tools are exposed to local Cursor agents through a tokenized `127.0.0.1` MCP endpoint; internal Cursor replay activity names are excluded, and overlapping built-in pi tools are hidden by default. Set `PI_CURSOR_PI_TOOL_BRIDGE=0` to disable it or `PI_CURSOR_EXPOSE_BUILTIN_TOOLS=1` to expose overlapping built-ins too.
-- **Cursor native tool replay is display-only.** Replay renders recorded Cursor SDK activity and never re-runs Cursor-side commands, reapplies Cursor edits, calls MCP servers, or mutates pi state. Workflow tools such as Cursor mode/task/todo/plan activity are not pi workflow controls. See [Cursor native tool replay](docs/cursor-native-tool-replay.md) for supported replay cards, ordering, conflict handling, and opt-out flags.
+- **Cursor native tool replay is display-only and fail-closed.** Replay renders recorded Cursor SDK activity and never re-runs Cursor-side commands, reapplies Cursor edits, calls MCP servers, or mutates pi state. Every `cursor-replay-*` built-in call requires one matching recorded result; missing or already-consumed state errors before native execution. `@iurysza/pi-ext` can own the shared compact built-in cards, while Cursor-only activity stays one bounded neutral line. Workflow tools such as Cursor mode/task/todo/plan activity are not pi workflow controls. See [Cursor native tool replay](docs/cursor-native-tool-replay.md) for supported replay cards, ordering, conflict handling, and opt-out flags.
 - **Cursor run state can span tool-use turns.** Within a pi session, the extension reuses one Cursor SDK agent across compatible follow-up turns and sends incremental prompts when context still matches. It recreates the agent when context diverges, after compaction or `/tree` navigation, on API key changes, after send errors, or on session shutdown. For bridged pi tools, the matching pi `toolResult` resolves into the same live Cursor SDK run without creating a new `Agent`, unless the run was disposed, aborted, or cancelled. Replay can also split one live Cursor SDK run across pi `toolUse` turns for display.
 - **Final assistant text is the last non-empty text part.** Composer responses can produce one assistant message with early progress `text`, thinking/tool metadata, and a later final `text` report. Consumers that need a final answer should scan assistant message content from the end and use the last non-empty `text` part, not the first. Cursor `thinking` deltas are shown as thinking traces when the SDK emits them; those traces can include draft answers or copied exact-output targets and are intentionally not collapsed by this extension.
 - **Cursor setting sources default to all.** The extension passes `local.settingSources: ["all"]` by default so configured Cursor MCP servers, plugin tools, project/user settings, and related Cursor-native capabilities are available like they are in Cursor. To narrow loading, set a comma-separated list such as `PI_CURSOR_SETTING_SOURCES=project,user,plugins`. To disable ambient setting sources, set `PI_CURSOR_SETTING_SOURCES=none`. Direct Cursor SDK bootstrap logs (settings, skills, hook-load compatibility warnings, and similar) are suppressed so they do not pollute the TUI.
@@ -572,7 +562,7 @@ pi list
 Then reinstall if needed:
 
 ```bash
-pi install npm:pi-cursor-sdk
+pi install npm:@iurysza/pi-cursor-sdk
 ```
 
 ### `pi --list-models` shows `thinking=no`
@@ -601,7 +591,7 @@ Known SDK boundary: Cursor SDK `task` activity is shown as **Cursor subagent** b
 
 Many runs never expose web activity as replayable SDK tool completions or local transcript web tool records. The model may still answer from internal Cursor web tooling or only mention search in assistant text/thinking. In that case pi cannot render a tool card because there is no completed SDK tool-call payload to replay. Capture a run with `npm run debug:provider-events` when investigating; if `on-delta.jsonl`, `on-step.jsonl`, `stream-events.jsonl`, `coordinator-events.jsonl`, and `display-decisions.jsonl` have no completed or transcript web tool data, the limitation is on the Cursor SDK surface, not pi replay registration.
 
-**Web fetch:** `pi-cursor-sdk` can display `webFetchToolCall` transcript records and web-fetch-shaped MCP/host completions when Cursor reports them. It cannot make Cursor expose or execute a `WebFetch` tool. If Cursor's current local SDK tool set does not include WebFetch, pi cannot fetch a URL through Cursor web fetch; use an allowed browser/shell/MCP tool instead.
+**Web fetch:** `@iurysza/pi-cursor-sdk` can display `webFetchToolCall` transcript records and web-fetch-shaped MCP/host completions when Cursor reports them. It cannot make Cursor expose or execute a `WebFetch` tool. If Cursor's current local SDK tool set does not include WebFetch, pi cannot fetch a URL through Cursor web fetch; use an allowed browser/shell/MCP tool instead.
 
 ### I disabled MCP in pi but Cursor still has extra tools
 

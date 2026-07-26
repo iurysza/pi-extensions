@@ -203,7 +203,7 @@ describe("extension native Cursor tool replay", () => {
 		}
 	});
 
-	it("renders Cursor generateImage replay results with a visible path and image fallback", async () => {
+	it("renders Cursor generateImage replay as a bounded path summary", async () => {
 		process.env.PI_CURSOR_NATIVE_TOOL_DISPLAY = "1";
 		mockedDiscover.mockResolvedValueOnce([]);
 		const dir = mkdtempSync(join(tmpdir(), "pi-cursor-image-replay-"));
@@ -233,9 +233,10 @@ describe("extension native Cursor tool replay", () => {
 				createRenderContext({ isError: false, showImages: true }),
 			);
 
-			const rendered = component?.render(120).join("\n") ?? "";
-			expect(rendered).toContain(`Cursor image generation saved ${imagePath}`);
-			expect(rendered).toContain("[Image: badge.png [image/png] 1x1]");
+			const rendered = component?.render(120) ?? [];
+			expect(rendered).toHaveLength(1);
+			expect(rendered[0]).toContain("Cursor image generation saved");
+			expect(rendered.join("\n")).not.toContain("[Image:");
 		} finally {
 			resetCapabilitiesCache();
 			rmSync(dir, { recursive: true, force: true });
@@ -266,7 +267,7 @@ describe("extension native Cursor tool replay", () => {
 		expect(rendered).not.toContain("Cursor activity");
 	});
 
-	it("renders Cursor web replay cards summary-only until expanded", async () => {
+	it("keeps Cursor web replay summary-only when expanded", async () => {
 		process.env.PI_CURSOR_NATIVE_TOOL_DISPLAY = "1";
 		mockedDiscover.mockResolvedValueOnce([]);
 		const pi = createExtensionPi();
@@ -291,10 +292,9 @@ describe("extension native Cursor tool replay", () => {
 		const expanded = cursorTool!.renderResult?.(result, createRenderOptions({ expanded: true }), theme, context)?.render(120).join("\n") ?? "";
 
 		expect(collapsed).toBe("Cursor web search web search azure-functions python");
-		expect(collapsed).not.toContain("Links:");
-		expect(expanded).toContain("Cursor web search web search azure-functions python");
-		expect(expanded).toContain("Links:");
-		expect(expanded).toContain("https://example.com");
+		expect(expanded).toBe(collapsed);
+		expect(expanded).not.toContain("Links:");
+		expect(expanded).not.toContain("https://example.com");
 	});
 
 	it("renders canonical neutral Cursor activity labels", async () => {
@@ -391,7 +391,7 @@ describe("extension native Cursor tool replay", () => {
 		expect(rendered).not.toContain("cursor_");
 	});
 
-	it("renders Cursor replay-only results with collapsed previews instead of summary-only cards", async () => {
+	it("renders Cursor-only results as summary-only cards", async () => {
 		process.env.PI_CURSOR_NATIVE_TOOL_DISPLAY = "1";
 		mockedDiscover.mockResolvedValueOnce([]);
 		const pi = createExtensionPi();
@@ -420,8 +420,9 @@ describe("extension native Cursor tool replay", () => {
 			theme,
 			context,
 		)?.render(120).join("\n") ?? "";
-		expect(todosRendered).toContain("Demo TodoWrite tool output");
-		expect(todosRendered).toContain("Run remaining Cursor tools once");
+		expect(todosRendered).toBe("Cursor todos 1/2 completed, 1 in progress");
+		expect(todosRendered).not.toContain("Demo TodoWrite tool output");
+		expect(todosRendered).not.toContain("Run remaining Cursor tools once");
 
 		const taskRendered = cursorTool.renderResult?.(
 			{

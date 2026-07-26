@@ -259,6 +259,7 @@ export async function createNativeToolDisplayPiForTest(registeredTools: Register
 		),
 	});
 	const nativePi: CursorNativeToolDisplayExtensionApi = {
+		events: pi.events,
 		on: pi.on as CursorNativeToolDisplayExtensionApi["on"],
 		registerTool: (tool) => {
 			registeredTools.push(tool as RegisteredTool);

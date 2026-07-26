@@ -3,6 +3,7 @@ import type {
 	BeforeAgentStartEventResult,
 	ExtensionContext,
 	ExtensionHandler,
+	SessionShutdownEvent,
 	SessionStartEvent,
 	TurnStartEvent,
 } from "@earendil-works/pi-coding-agent";
@@ -19,6 +20,7 @@ type CursorModelBeforeAgentStartHandler = ExtensionHandler<BeforeAgentStartEvent
 
 export interface CursorModelLifecycleExtensionApi {
 	on(event: "session_start", handler: ExtensionHandler<SessionStartEvent>): void;
+	on(event: "session_shutdown", handler: ExtensionHandler<SessionShutdownEvent>): void;
 	on(event: "before_agent_start", handler: CursorModelBeforeAgentStartHandler): void;
 	on(event: "model_select", handler: (event: CursorModelSelectEvent, ctx: ExtensionContext) => Promise<void> | void): void;
 	on(event: "turn_start", handler: ExtensionHandler<TurnStartEvent>): void;

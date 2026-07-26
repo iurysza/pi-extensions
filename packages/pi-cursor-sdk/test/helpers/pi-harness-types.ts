@@ -197,6 +197,7 @@ export interface EventHarness {
 }
 
 export interface PiHarness extends EventHarness {
+	events: ExtensionAPI["events"];
 	registerProvider: MockFn<ExtensionAPI["registerProvider"]>;
 	registerFlag: MockFn<ExtensionAPI["registerFlag"]>;
 	registerCommand: MockFn<ExtensionAPI["registerCommand"]>;
@@ -219,6 +220,7 @@ export interface PiHarness extends EventHarness {
 }
 
 export interface BridgePiHarness extends EventHarness {
+	events: ExtensionAPI["events"];
 	getActiveTools: MockFn<ExtensionAPI["getActiveTools"]>;
 	getAllTools: MockFn<ExtensionAPI["getAllTools"]>;
 	setActiveTools: MockFn<ExtensionAPI["setActiveTools"]>;

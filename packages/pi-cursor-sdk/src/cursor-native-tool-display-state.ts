@@ -11,6 +11,7 @@ export const NATIVE_CURSOR_TOOL_REGISTRATION_ENV = "PI_CURSOR_REGISTER_NATIVE_TO
 
 export const registeredNativeToolNames = new Set<string>();
 export const skippedNativeToolNames = new Set<string>();
+export const sharedReplayToolNames = new Set<string>();
 export const nativeToolResults = new Map<string, CursorNativeToolDisplayItem>();
 
 let nativeToolDisplayRuntimeRequested = false;
@@ -35,19 +36,30 @@ export function setCursorNativeToolDisplayRuntimeRequested(requested: boolean): 
 }
 
 export function isCursorNativeToolDisplayEnabled(): boolean {
-	return registeredNativeToolNames.size > 0;
+	return registeredNativeToolNames.size > 0 || sharedReplayToolNames.size > 0;
 }
 
 export function isCursorNativeToolDisplayRuntimeEnabled(): boolean {
-	return nativeToolDisplayRuntimeRequested && readBooleanEnv(NATIVE_CURSOR_TOOL_DISPLAY_ENV) !== false && registeredNativeToolNames.size > 0;
+	return nativeToolDisplayRuntimeRequested
+		&& readBooleanEnv(NATIVE_CURSOR_TOOL_DISPLAY_ENV) !== false
+		&& (registeredNativeToolNames.size > 0 || sharedReplayToolNames.size > 0);
 }
 
 export function canRenderCursorToolNatively(toolName: string): boolean {
-	return registeredNativeToolNames.has(toolName);
+	return registeredNativeToolNames.has(toolName) || sharedReplayToolNames.has(toolName);
 }
 
 export function isRegisteredCursorNativeToolName(toolName: string): boolean {
 	return registeredNativeToolNames.has(toolName);
+}
+
+export function setSharedCursorReplayToolNames(toolNames: Iterable<string>): void {
+	sharedReplayToolNames.clear();
+	for (const toolName of toolNames) sharedReplayToolNames.add(toolName);
+}
+
+export function clearSharedCursorReplayToolNames(): void {
+	sharedReplayToolNames.clear();
 }
 
 export function recordCursorNativeToolDisplay(item: CursorNativeToolDisplayItem): boolean {
@@ -84,6 +96,7 @@ export const __testUtils = {
 		nativeToolDisplayRuntimeRequested = false;
 		registeredNativeToolNames.clear();
 		skippedNativeToolNames.clear();
+		sharedReplayToolNames.clear();
 		nativeToolResults.clear();
 	},
 };

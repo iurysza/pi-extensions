@@ -18,6 +18,7 @@ import {
 	skippedNativeToolNames,
 } from "./cursor-native-tool-display-state.js";
 import { isCursorReplayToolName } from "./cursor-tool-presentation-registry.js";
+import { createCursorSharedReplayProducer } from "./cursor-shared-replay-producer.js";
 
 export const CURSOR_CORE_PI_REPLAY_TOOL_NAMES = ["read", "bash", "edit", "write"] as const;
 const CORE_PI_TOOL_NAMES = new Set<string>(CURSOR_CORE_PI_REPLAY_TOOL_NAMES);
@@ -29,7 +30,9 @@ function isCursorCorePiReplayToolName(toolName: string): toolName is (typeof CUR
 type CursorNativeToolActivationApi = Pick<ExtensionAPI, "getActiveTools" | "setActiveTools">;
 type CursorNativeToolRegistryApi = CursorNativeToolActivationApi & Pick<ExtensionAPI, "getAllTools" | "registerTool">;
 
-export interface CursorNativeToolDisplayExtensionApi extends CursorNativeToolRegistryApi, CursorModelLifecycleExtensionApi {}
+export interface CursorNativeToolDisplayExtensionApi extends CursorNativeToolRegistryApi, CursorModelLifecycleExtensionApi {
+	events: ExtensionAPI["events"];
+}
 
 function hasNonBuiltinTool(pi: Pick<ExtensionAPI, "getAllTools">, toolName: NativeCursorToolName): boolean {
 	const existingTool = pi.getAllTools().find((tool) => tool.name === toolName);
@@ -128,9 +131,12 @@ async function ensureThenSyncNativeCursorToolsForModel(pi: CursorNativeToolRegis
 }
 
 export function registerCursorNativeToolDisplay(pi: CursorNativeToolDisplayExtensionApi): void {
+	const sharedReplay = createCursorSharedReplayProducer(pi.events);
 	registerCursorModelLifecycle(pi, async (ctx) => {
+		sharedReplay.register();
 		await ensureThenSyncNativeCursorToolsForModel(pi, ctx);
 	});
+	pi.on("session_shutdown", async () => sharedReplay.dispose());
 }
 
 export { isNativeCursorToolName, isCursorNativeToolDisplayRequested };
