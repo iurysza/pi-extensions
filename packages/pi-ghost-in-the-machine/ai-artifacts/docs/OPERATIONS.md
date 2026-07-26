@@ -7,8 +7,8 @@
 Normal install:
 
 ```sh
-pi install git:github.com/iurysza/pi-ghost-in-the-machine
-~/.pi/agent/git/github.com/iurysza/pi-ghost-in-the-machine/scripts/setup.sh
+pi install npm:@iurysza/pi-ghost-in-the-machine
+"${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}/npm/node_modules/@iurysza/pi-ghost-in-the-machine/scripts/setup.sh"
 ```
 
 Then reload Pi:
@@ -41,6 +41,33 @@ Then initialize the face:
 ```
 
 For Herdr routing, link the plugin from an environment where `herdr` is available, then start a Pi session inside Herdr.
+
+### Hard reset
+
+Use this after changing package source, or when stale watcher/runtime state keeps selecting an old shader. Set `GHOST` explicitly to the package Pi should use; do not derive it from the stale shader fragment being repaired.
+
+```sh
+PI_ROOT="${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}"
+GHOST="$PI_ROOT/npm/node_modules/@iurysza/pi-ghost-in-the-machine"
+# Source install: GHOST="$PI_ROOT/git/github.com/iurysza/pi-extensions/packages/pi-ghost-in-the-machine"
+STATE="${XDG_STATE_HOME:-$HOME/.local/state}/ghost-in-the-machine"
+
+pkill -TERM -f 'ghost-in-the-machine/scripts/sidebar-watcher\.mjs' 2>/dev/null || true
+"$GHOST/scripts/ghost-state.sh" apply off
+rm -rf "$STATE"
+HERDR_ENV=1 "$GHOST/scripts/setup.sh"
+```
+
+Restarting every open Pi pane is the cleanest reload. Otherwise run `/reload` in each pane; setup repairs Ghostty and watcher state, but it cannot replace extension code already loaded in a Pi process.
+
+Verify from a shell:
+
+```sh
+"$GHOST/scripts/ghost-state.sh" status
+grep '^custom-shader = ' "$STATE/ghostty-state.conf"
+```
+
+The shader path must be below the selected `GHOST` directory, not an older standalone checkout. Run `/ghost-status` in Pi to verify the loaded extension and lifecycle state.
 
 ## 2. Runtime layout
 

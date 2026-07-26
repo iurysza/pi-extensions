@@ -1,0 +1,32 @@
+{
+  "source": {
+    "url": "https://cursor.com/docs/cloud-agent/api/endpoints",
+    "verified": "2026-07-09"
+  },
+  "request": {
+    "method": "GET",
+    "path": "/v1/agents/bc-00000000-0000-0000-0000-000000000001/usage",
+    "optionalRunId": "run-00000000-0000-0000-0000-000000000001"
+  },
+  "response": {
+    "totalUsage": {
+      "inputTokens": 1000,
+      "outputTokens": 200,
+      "cacheWriteTokens": 40,
+      "cacheReadTokens": 300,
+      "totalTokens": 1540
+    },
+    "runs": [
+      {
+        "id": "run-00000000-0000-0000-0000-000000000001",
+        "usage": {
+          "inputTokens": 1000,
+          "outputTokens": 200,
+          "cacheWriteTokens": 40,
+          "cacheReadTokens": 300,
+          "totalTokens": 1540
+        }
+      }
+    ]
+  }
+}

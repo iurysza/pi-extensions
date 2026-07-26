@@ -40,6 +40,8 @@ function fakeAPI(provider = "openai-codex", registeredProviderIds: string[] = []
   const widgetKinds: Record<string, "lines" | "component" | undefined> = {};
   const widgetRenderers: Record<string, ((width: number) => string[]) | undefined> = {};
   const commands: Record<string, { handler: (args: string, ctx: ExtensionContext) => Promise<void> }> = {};
+  const busHandlers = new Map<string, Set<(data: unknown) => void>>();
+  const busEvents: Array<{ channel: string; data: unknown }> = [];
 
   const ctx: ExtensionContext = {
     mode: "tui",
@@ -77,6 +79,18 @@ function fakeAPI(provider = "openai-codex", registeredProviderIds: string[] = []
 
   return {
     api: {
+      events: {
+        emit(channel: string, data: unknown) {
+          busEvents.push({ channel, data });
+          for (const handler of busHandlers.get(channel) ?? []) handler(data);
+        },
+        on(channel: string, handler: (data: unknown) => void) {
+          const handlersForChannel = busHandlers.get(channel) ?? new Set();
+          handlersForChannel.add(handler);
+          busHandlers.set(channel, handlersForChannel);
+          return () => handlersForChannel.delete(handler);
+        },
+      },
       on: (event: string, handler: (event: unknown, ctx: unknown) => Promise<unknown>) => {
         handlers[event] = handlers[event] ?? [];
         handlers[event]!.push(handler);
@@ -91,6 +105,7 @@ function fakeAPI(provider = "openai-codex", registeredProviderIds: string[] = []
     widgetKinds,
     widgetRenderers,
     commands,
+    busEvents,
     ctx,
     async fire(event: string, payload: unknown) {
       for (const h of handlers[event] ?? []) {
@@ -350,6 +365,10 @@ describe("createTokenTank", () => {
     fakeAPI();
     const registered: string[] = [];
     const pi = {
+      events: {
+        emit: () => {},
+        on: () => () => {},
+      },
       on: () => {},
       registerCommand: (name: string) => {
         registered.push(name);
@@ -359,6 +378,27 @@ describe("createTokenTank", () => {
     assert.ok(registered.includes("token-tank"));
     assert.ok(!registered.includes("usage"));
   });
+
+  it(
+    "registers footer slot metadata and unregisters on shutdown",
+    withMockFetch(async () => {
+      const f = fakeAPI();
+      createTokenTank(f.api, fakeCredentials());
+      const registrations = () => f.busEvents.filter(({ channel }) => channel.endsWith("/register/v1"));
+      assert.deepEqual(registrations().at(-1)?.data, {
+        protocolVersion: 1,
+        id: "pi-token-tank",
+        priority: 100,
+      });
+
+      f.api.events.emit("@iurysza/pi-ext/footer-slot/ready/v1", { protocolVersion: 1 });
+      assert.equal(registrations().length, 2);
+      await f.fire("session_shutdown", {});
+      assert.ok(f.busEvents.some(({ channel, data }) =>
+        channel.endsWith("/unregister/v1")
+        && (data as { id?: string }).id === "pi-token-tank"));
+    }),
+  );
 
   it(
     "sets footer on session_start",

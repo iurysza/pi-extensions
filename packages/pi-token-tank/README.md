@@ -1,4 +1,4 @@
-# pi-token-tank
+# @iurysza/pi-token-tank
 
 See your subscription mileage without leaving Pi. Token Tank follows the active
 model and adds provider quota, usage pressure, and reset timing to the footer.
@@ -30,7 +30,7 @@ Authenticate the providers you use, then restart Pi or run `/reload`:
 | GitHub Copilot | Pi `/login github-copilot` | Monthly premium requests |
 | Cursor | Registered Pi Cursor provider plus `CURSOR_SESSION_TOKEN` | Billing-cycle total, Auto, and API |
 
-Unsupported providers produce no footer status.
+Unsupported providers produce no footer status. Token Tank always publishes through Pi's native `setStatus()` API, so it works alone. When `@iurysza/pi-ext` is installed, it also advertises priority 100 metadata for pi-ext's bounded auxiliary footer line.
 
 ## Footer modes
 

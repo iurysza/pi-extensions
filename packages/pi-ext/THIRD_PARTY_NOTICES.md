@@ -9,6 +9,22 @@
 
 The package-level license remains MIT and retains the original copyright in `LICENSE`.
 
+## tool presentation
+
+Compact built-in tool presentation is adapted from
+[mikeyobrien/pi-tidy-tools](https://github.com/mikeyobrien/pi-tidy-tools) 0.4.1,
+licensed under MIT. Its filtered public history was imported unsquashed, and
+its original license remains at `extensions/tool-presentation/tidy/LICENSE`.
+
+Expanded edit/write rendering is derived from
+[pi-diff](https://github.com/buddingnewinsights/pi-diff) by @heyhuynhgiabuu.
+
+## handoff
+
+The handoff redaction helper is adapted from
+[sting8k/pi-vcc](https://github.com/sting8k/pi-vcc) 0.3.5, licensed under MIT
+according to its published package metadata.
+
 ## ask-user-question
 
 Derived from [ghoseb/pi-askuserquestion](https://github.com/ghoseb/pi-askuserquestion), licensed under MIT.

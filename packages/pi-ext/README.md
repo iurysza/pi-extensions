@@ -1,4 +1,4 @@
-# pi-ext
+# @iurysza/pi-ext
 
 A practical extension pack for [Pi](https://pi.dev): command palettes, code
 review, session workflows, terminal integrations, compact UI, skills, and a
@@ -40,8 +40,8 @@ Omit a resource type to load all of it. Use an empty array to load none.
 | [Code Review](extensions/review) | `/review` workflows for pull requests, branches, commits, and uncommitted changes. |
 | [pi-sem](extensions/pi-sem) | Entity-aware Git diff, context, history, blame, and impact tools powered by `sem`. |
 | [Pi Telescope](extensions/pi-telescope) | Native fuzzy finder for sessions, files, commands, and other providers. |
-| [Custom Footer](extensions/custom-footer) | Compact status line with Git, token, context, timing, and model information. |
-| [Tool Pills](extensions/tool-pills) | Compact tool labels, collapsible output, and highlighted write/edit diffs. |
+| [Custom Footer](extensions/custom-footer) | Core session line plus one bounded prioritized extension-status line. |
+| [Tool Presentation](extensions/tool-presentation) | Tidy compact built-in cards with lazy highlighted edit/write details. |
 | [Permissions](extensions/permissions) | Switchable `yolo`, `safe`, and `read-only` command policies. |
 | [Session Query](extensions/session-query) | Ask focused questions about previous Pi session files. |
 | [Session Store](extensions/session-store) | Search indexed session history with `/search`. |
@@ -85,6 +85,24 @@ Use `/mode` to switch policy:
 
 Rules merge from project `.agents/permissions.json`, global
 `~/.pi/agent/permissions.json`, and built-ins.
+
+### Compact tools and footer
+
+Tool Presentation is the sole owner of Pi's `read`, `bash`, `edit`, `write`,
+`grep`, `find`, and `ls` cards. Collapsed output uses vendored Tidy cards;
+expanded edit/write results lazily render highlighted diffs. `/tidy` controls
+layout, icons, and optional pi-fff integration. Remove any separately installed
+`@mobrienv/pi-tidy-tools` package to avoid ownership conflicts.
+
+When `@iurysza/pi-cursor-sdk` is also installed, built-in-equivalent Cursor
+activity uses these same cards. Recorded results are consumed once through a
+versioned callback protocol; missing or duplicate replay state fails before any
+built-in executor runs.
+
+The footer keeps core session state on line one and packs native `setStatus()`
+values onto one auxiliary line. Optional metadata sorts known slots by priority;
+unregistered statuses remain compatible at priority zero. The highest-priority
+slot is the only slot that may truncate.
 
 ### Review and semantic tools
 

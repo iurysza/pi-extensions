@@ -200,7 +200,7 @@ function watcherEnvironment(
   };
 }
 
-test("watcher frames pane.layout requests, serializes polls, and deduplicates transitions", async () => {
+test("watcher frames requests and reacts to visibility or focus transitions", async () => {
   const directory = temporaryDirectory("gitm protocol ");
   const stateHome = join(directory, "state with spaces");
   mkdirSync(stateHome, { recursive: true });
@@ -208,6 +208,7 @@ test("watcher frames pane.layout requests, serializes polls, and deduplicates tr
   const herdr = await startFakeHerdr(directory, [
     { kind: "layout", x: 36, width: 82, focusedPaneId: "pane-1", delayMs: 30 },
     { kind: "layout", x: 36, width: 82, focusedPaneId: "pane-1" },
+    { kind: "layout", x: 36, width: 82, focusedPaneId: "pane-2" },
     { kind: "layout", x: 4, width: 114 },
     { kind: "malformed" },
     { kind: "error" },
@@ -232,10 +233,10 @@ test("watcher frames pane.layout requests, serializes polls, and deduplicates tr
   });
 
   try {
-    await waitFor(() => herdr.requests.length >= 8, "watcher did not complete scripted requests");
+    await waitFor(() => herdr.requests.length >= 9, "watcher did not complete scripted requests");
     await waitFor(
-      () => existsSync(fakeController.log) && readFileSync(fakeController.log, "utf8").split("\n").filter(Boolean).length >= 3,
-      "watcher did not apply the final expanded transition",
+      () => existsSync(fakeController.log) && readFileSync(fakeController.log, "utf8").split("\n").filter(Boolean).length >= 4,
+      "watcher did not apply visibility and focus transitions",
     );
     child.kill("SIGTERM");
     await waitForExit(child);
@@ -244,7 +245,10 @@ test("watcher frames pane.layout requests, serializes polls, and deduplicates tr
     assert.ok(herdr.requests.every((request) => request.method === "pane.layout"));
     assert.ok(herdr.requests.every((request) => JSON.stringify(request.params) === "{}"));
     assert.equal(new Set(herdr.requests.map((request) => request.id)).size, herdr.requests.length);
-    assert.equal(readFileSync(fakeController.log, "utf8"), "expanded:pane-1\ncollapsed\nexpanded:pane-1\n");
+    assert.equal(
+      readFileSync(fakeController.log, "utf8"),
+      "expanded:pane-1\nexpanded:pane-2\ncollapsed\nexpanded:pane-1\n",
+    );
     assert.equal(readFileSync(socketFile, "utf8"), `${canonicalSocketPath(herdr.socketPath)}\n`);
     assert.equal(existsSync(pidFile), false);
 

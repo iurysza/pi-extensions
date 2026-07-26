@@ -13,5 +13,14 @@ remain with every distribution.
 Its own `LICENSE` and `NOTICE` preserve the original copyright and attribution
 and must remain with every distribution.
 
+`packages/pi-cursor-sdk` is an integrated distribution of
+[fitchmultz/pi-cursor-sdk](https://github.com/fitchmultz/pi-cursor-sdk), imported
+from release 0.1.61 with its public history and MIT license intact.
+
+`packages/pi-cache-hit-predictor` is an integrated distribution of the
+Cache Hit Predictor package from
+[IgorWarzocha/howaboua-pi-stuff](https://github.com/IgorWarzocha/howaboua-pi-stuff),
+imported with its public package history and MIT license intact.
+
 The root workspace is private and is not a distributable package. Each
 publishable child package carries its own license and package metadata.
