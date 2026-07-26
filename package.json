@@ -46,6 +46,7 @@
       "./packages/pi-agent-explorer/extensions/agent-explorer.ts",
       "./packages/pi-token-tank/src/index.ts",
       "./packages/pi-context-audit/src/index.ts",
+      "./packages/pi-wtf/src/index.ts",
       "./packages/pi-secret-env/src/index.ts",
       "./packages/pi-ghost-in-the-machine/src/index.ts",
       "./packages/artifact-explorer/index.ts"
