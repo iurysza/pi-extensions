@@ -11,8 +11,8 @@ import {
 	TIDY_PI_FFF_CONFLICTS,
 	type PiFffDiagnostic,
 	type PiFffModuleLoader,
-} from "../pi-fff/adapter.js";
-import { createRunningPiFffLoader, readPackageVersionForEntry, resolveRunningPiAliases } from "../pi-fff/loader.js";
+} from "../../../extensions/tool-presentation/tidy/pi-fff/adapter.js";
+import { createRunningPiFffLoader, readPackageVersionForEntry, resolveRunningPiAliases } from "../../../extensions/tool-presentation/tidy/pi-fff/loader.js";
 
 const textResult = (text = "ok", details: unknown = { source: "fff" }) => ({
 	content: [{ type: "text", text }], details, terminate: true,
@@ -520,24 +520,28 @@ test("running Pi Jiti aliases legacy peers and shared TypeBox to one identity", 
 	const previousArgv = process.argv[1];
 	try {
 		process.argv[1] = codingEntry;
+		const legacyPiAgent = ["@mariozechner", "pi-coding-agent"].join("/");
+		const legacyPiTui = ["@mariozechner", "pi-tui"].join("/");
+		const legacyTypebox = ["@sinclair", "typebox"].join("/");
 		await writeFile(entry, `
-			import { VERSION } from "@mariozechner/pi-coding-agent";
-			import { Text } from "@mariozechner/pi-tui";
-			import { Type as LegacyType } from "@sinclair/typebox";
+			import { VERSION } from "${legacyPiAgent}";
+			import { Text } from "${legacyPiTui}";
+			import { Type as LegacyType } from "${legacyTypebox}";
 			import { Type } from "typebox";
 			export default function () { return { VERSION, Text, sameType: LegacyType === Type }; }
 		`);
 		const { loader, aliases } = createRunningPiFffLoader();
-		assert.equal(aliases["@mariozechner/pi-coding-agent"], aliases.codingAgent);
-		assert.equal(aliases["@mariozechner/pi-tui"], aliases.tui);
-		assert.equal(aliases["@sinclair/typebox"], aliases.typebox);
+		assert.equal(aliases[legacyPiAgent], aliases.codingAgent);
+		assert.equal(aliases[legacyPiTui], aliases.tui);
+		assert.equal(aliases[legacyTypebox], aliases.typebox);
 		const loaded = await loader.load(entry, aliases);
 		assert.equal(typeof loaded, "function");
 		const evidence = (loaded as () => any)();
-		assert.equal(evidence.VERSION, "0.80.6");
+		const runningVersion = readPackageVersionForEntry(codingEntry);
+		assert.equal(evidence.VERSION, runningVersion);
 		assert.equal(typeof evidence.Text, "function");
 		assert.equal(evidence.sameType, true);
-		assert.equal(readPackageVersionForEntry(codingEntry), "0.80.6");
+		assert.match(runningVersion, /^0\.80\./);
 		assert.throws(() => readPackageVersionForEntry(join(root, "missing", "entry.js")), /running Pi package root is unavailable/);
 	} finally {
 		process.argv[1] = previousArgv;

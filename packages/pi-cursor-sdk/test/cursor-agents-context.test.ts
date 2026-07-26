@@ -7,7 +7,7 @@ vi.mock("@earendil-works/pi-coding-agent", async (importOriginal) => {
 	const actual = await importOriginal<typeof import("@earendil-works/pi-coding-agent")>();
 	return {
 		...actual,
-		getAgentDir: () => "/Users/me/.pi/agent",
+		getAgentDir: () => "/home/me/.pi/agent",
 	};
 });
 
@@ -32,11 +32,11 @@ import { CURSOR_SETTING_SOURCES_ENV } from "../src/cursor-setting-sources.js";
 import { createEventHarness, makeModel } from "./helpers/pi-harness.js";
 import { buildPiSystemPromptWithContextFiles, makeSystemPromptOptions } from "./helpers/pi-system-prompt.js";
 
-const GLOBAL_AGENTS_PATH = "/Users/me/.pi/agent/AGENTS.md";
-const GLOBAL_CLAUDE_PATH = "/Users/me/.pi/agent/CLAUDE.md";
+const GLOBAL_AGENTS_PATH = "/home/me/.pi/agent/AGENTS.md";
+const GLOBAL_CLAUDE_PATH = "/home/me/.pi/agent/CLAUDE.md";
 const PROJECT_AGENTS_PATH = "/repo/AGENTS.md";
 const PROJECT_CLAUDE_PATH = "/repo/CLAUDE.md";
-const DEFAULT_AGENT_DIR = "/Users/me/.pi/agent";
+const DEFAULT_AGENT_DIR = "/home/me/.pi/agent";
 const CUSTOM_AGENT_DIR = "/custom/pi-agent";
 const NESTED_UNDER_AGENT_AGENTS_PATH = `${DEFAULT_AGENT_DIR}/my-project/AGENTS.md`;
 const NESTED_UNDER_AGENT_CLAUDE_PATH = `${DEFAULT_AGENT_DIR}/my-project/CLAUDE.md`;

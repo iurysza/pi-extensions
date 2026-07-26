@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createPiFffIntegrationController, formatPiFffStatus } from "../pi-fff/controller.js";
-import type { PiFffLifecycle, PiFffLifecycleParticipant, PiFffLifecycleResult } from "../pi-fff/integration.js";
+import { createPiFffIntegrationController, formatPiFffStatus } from "../../../extensions/tool-presentation/tidy/pi-fff/controller.js";
+import type { PiFffLifecycle, PiFffLifecycleParticipant, PiFffLifecycleResult } from "../../../extensions/tool-presentation/tidy/pi-fff/integration.js";
 
 const participant = (entry: unknown, profile: "legacy" | "scoped" = "legacy"): PiFffLifecycleParticipant => ({
 	scope: "project", packageIdentity: profile === "scoped" ? "@ff-labs/pi-fff" : "pi-fff", profile, settingsPath: "/fixture/.pi/settings.json", packageRoot: profile === "scoped" ? "/fixture/.pi/npm/node_modules/@ff-labs/pi-fff" : "/fixture/.pi/npm/node_modules/pi-fff",

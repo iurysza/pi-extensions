@@ -19,6 +19,7 @@ export interface SourceToolCompositionOptions {
 export type ComposedSourceTool<T extends SourceToolDefinition> = Omit<T, "execute" | "parameters"> & {
 	parameters: any;
 	promptGuidelines?: string[];
+	prepareArguments?: (args: unknown) => any;
 	execute: (id: string, params: any, signal: any, onUpdate: any, context: any) => any;
 };
 
@@ -59,6 +60,13 @@ export function composeSourceTool<T extends SourceToolDefinition>(
 	const composed = {
 		...source,
 		parameters: injectReasoning ? withReasoning(source.parameters) : source.parameters,
+		...(injectReasoning ? {
+			prepareArguments(args: unknown) {
+				const prepared = source.prepareArguments ? source.prepareArguments(args) : args;
+				if (!prepared || typeof prepared !== "object" || Object.hasOwn(prepared, "reasoning")) return prepared;
+				return { reasoning: "", ...prepared };
+			},
+		} : {}),
 		execute(this: SourceToolDefinition, id: string, params: any, signal: any, onUpdate: any, context: any) {
 			const delegatedParams = injectReasoning ? stripReasoning(params).rest : params;
 			return source.execute.call(source, id, delegatedParams, signal, onUpdate, context);

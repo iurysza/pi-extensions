@@ -36,13 +36,13 @@ describe("cursor tool lifecycle", () => {
 	});
 
 	it("does not leak endpoint URLs or absolute private paths in non-shell lifecycle labels", () => {
-		const secretPath = "/Users/test/Projects/secret-project/src/file.ts";
+		const secretPath = "/home/test/Projects/secret-project/src/file.ts";
 		const secretUrl = "https://api.example.com/v1/secret-endpoint";
 		const unsafeDetailCases = [
 			{ name: "task", args: { description: "Inspect /root/.ssh/id_rsa" }, expected: "task" },
-			{ name: "task", args: { description: "Open file:///Users/test/secret" }, expected: "task" },
+			{ name: "task", args: { description: "Open file:///home/test/secret" }, expected: "task" },
 			{ name: "task", args: { description: "path=/root/.ssh/id_rsa" }, expected: "task" },
-			{ name: "task", args: { description: "--file=/Users/test/secret" }, expected: "task" },
+			{ name: "task", args: { description: "--file=/home/test/secret" }, expected: "task" },
 			{ name: "task", args: { description: "cwd=C:\\Users\\test\\secret" }, expected: "task" },
 			{ name: "task", args: { description: "path=~/secret" }, expected: "task" },
 			{ name: "semSearch", args: { query: "/Volumes/Secrets/file" }, expected: "semantic search" },

@@ -14,10 +14,11 @@ const packageJson = require("../package.json") as {
 	bundledDependencies?: string[];
 	overrides?: Record<string, string>;
 };
-const packageLock = require("../package-lock.json") as {
+const packageLock = require("../../../package-lock.json") as {
 	version: string;
-	packages: Record<string, { version?: string; dependencies?: Record<string, string> }>;
+	packages: Record<string, { name?: string; version?: string; dependencies?: Record<string, string> }>;
 };
+const workspaceLockEntry = packageLock.packages["packages/pi-cursor-sdk"];
 
 const PI_PACKAGES = [
 	"@earendil-works/pi-ai",
@@ -26,16 +27,17 @@ const PI_PACKAGES = [
 ] as const;
 
 function lockPackageVersion(packageName: string): string | undefined {
-	return packageLock.packages[`node_modules/${packageName}`]?.version;
+	return packageLock.packages[`packages/pi-cursor-sdk/node_modules/${packageName}`]?.version
+		?? packageLock.packages[`node_modules/${packageName}`]?.version;
 }
 
 describe("package metadata cutover baselines", () => {
-	it("keeps package, lockfile, and changelog release versions aligned", () => {
-		const changelogVersion = readFileSync(join(process.cwd(), "CHANGELOG.md"), "utf8").match(/^## (\S+) /m)?.[1];
+	it("keeps the scoped package and root workspace lock aligned", () => {
+		const upstreamChangelogVersion = readFileSync(join(process.cwd(), "CHANGELOG.md"), "utf8").match(/^## (\S+) /m)?.[1];
 
-		expect(packageLock.version).toBe(packageJson.version);
-		expect(packageLock.packages[""]?.version).toBe(packageJson.version);
-		expect(changelogVersion).toBe(packageJson.version);
+		expect(workspaceLockEntry?.name).toBe("@iurysza/pi-cursor-sdk");
+		expect(workspaceLockEntry?.version).toBe(packageJson.version);
+		expect(upstreamChangelogVersion).toBe("0.1.61");
 	});
 
 	it("pins Cursor SDK exactly", () => {

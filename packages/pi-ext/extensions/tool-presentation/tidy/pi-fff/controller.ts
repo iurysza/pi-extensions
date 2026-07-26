@@ -166,7 +166,7 @@ export function createPiFffIntegrationController(options: CreatePiFffControllerO
 		agentDir,
 		preflight: async (participant) => {
 			const built = await buildPlan({ cwd: options.cwd, agentDir, api: options.pi, selection: { scope: participant.scope, entry: participant.managedEntry } });
-			if (!built.ok) throw Object.assign(new Error(built.diagnostic.summary), { diagnostic: built.diagnostic });
+			if (built.ok === false) throw Object.assign(new Error(built.diagnostic.summary), { diagnostic: built.diagnostic });
 			return built.plan;
 		},
 	});
@@ -214,7 +214,7 @@ export function createPiFffIntegrationController(options: CreatePiFffControllerO
 				return { status: current, skipTidyTools: skipFor(active), notice: { message: "pi-fff is not managed by tidy; run /tidy pi-fff setup.", level: "warning" }, commit() {} };
 			}
 			const built = await buildPlan({ cwd: options.cwd, agentDir, api: options.pi });
-			if (!built.ok) {
+			if (built.ok === false) {
 				const active = selected(participants);
 				current = { state: "managed-invalid", owner: active?.profile === "scoped" ? "tidy/native" : "native Pi", scopes: participants.map((item) => item.scope), packageIdentity: active?.packageIdentity, profile: active?.profile, piVersion: built.diagnostic.piVersion, piFffVersion: built.diagnostic.piFffVersion, tuple: "unavailable", journal: "committed", diagnostic: adapterDiagnostic(built.diagnostic), action: `${active?.profile === "scoped" ? "Native tidy read/grep/find remain active; raw FFF names are hidden. " : ""}${built.diagnostic.action} Or run /tidy pi-fff teardown.` };
 				return { status: current, skipTidyTools: skipFor(active), notice: built.diagnostic.severity === "info" ? undefined : { message: `${built.diagnostic.summary} ${current.action}`, level: "error" }, commit() {} };

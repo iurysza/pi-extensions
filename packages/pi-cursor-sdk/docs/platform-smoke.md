@@ -335,7 +335,7 @@ PLATFORM_SMOKE_CRABBOX=/opt/homebrew/bin/crabbox
 
 PLATFORM_SMOKE_MAC_HOST=localhost
 PLATFORM_SMOKE_MAC_USER="$USER"
-PLATFORM_SMOKE_MAC_WORK_ROOT="/Users/$USER/crabbox/pi-cursor-sdk"
+PLATFORM_SMOKE_MAC_WORK_ROOT="$HOME/crabbox/pi-cursor-sdk"
 # Optional prebuilt replacement; bypasses the configured local root-wrapper build.
 PLATFORM_SMOKE_UBUNTU_IMAGE="registry.example.com/ubuntu-node24-crabbox:latest"
 

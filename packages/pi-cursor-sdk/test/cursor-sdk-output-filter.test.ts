@@ -17,7 +17,7 @@ describe("isCursorSdkStartupNoise", () => {
 
 	it("filters ignore-mapping initialization errors", () => {
 		expect(
-			isCursorSdkStartupNoise("Error initializing ignore mapping for /Users/dev/project: permission denied"),
+			isCursorSdkStartupNoise("Error initializing ignore mapping for /home/dev/project: permission denied"),
 		).toBe(true);
 	});
 

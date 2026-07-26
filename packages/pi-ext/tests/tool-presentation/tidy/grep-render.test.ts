@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildToolBlock } from "../index.js";
+import { buildToolBlock } from "../../../extensions/tool-presentation/tidy/index.js";
 
 const stripAnsi = (value: string) => value.replace(/\x1b\[[0-9;]*m/g, "");
 

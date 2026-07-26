@@ -1,7 +1,8 @@
 {
   "name": "@iurysza/pi-ext",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "An attributed fork of tomsej/pi-ext with additional Pi workflows and integrations.",
+  "type": "module",
   "keywords": [
     "pi-package",
     "pi-extension"
@@ -24,7 +25,8 @@
     "@sting8k/pi-vcc": "^0.3.5",
     "@tintinweb/pi-tasks": "^0.4.2",
     "better-sqlite3": "^12.10.0",
-    "diff": "^7.0.0"
+    "diff": "^7.0.0",
+    "semver": "^7.8.5"
   },
   "optionalDependencies": {
     "@ataraxy-labs/sem": "^0.3.21"
@@ -41,6 +43,7 @@
     "@earendil-works/pi-ai": "^0.80.10",
     "@earendil-works/pi-coding-agent": "^0.80.10",
     "@earendil-works/pi-tui": "^0.80.10",
+    "@types/semver": "^7.7.1",
     "typebox": "^1.1.32",
     "typescript": "^7.0.2"
   },
@@ -58,8 +61,9 @@
   "homepage": "https://github.com/iurysza/pi-extensions/tree/main/packages/pi-ext#readme",
   "scripts": {
     "sem:evaluate": "node extensions/pi-sem/bin/sem-eval.mjs",
-    "test": "npm run test:pi-sem && node --test tests/leader-key/favourite-models.test.mjs tests/chat-to-md/chat-to-md.test.mjs",
+    "test": "npm run test:pi-sem && npm run test:tool-presentation && node --test tests/leader-key/favourite-models.test.mjs tests/chat-to-md/chat-to-md.test.mjs",
     "test:pi-sem": "node --test tests/pi-sem/core.test.mjs tests/review/sem-guidance.test.mjs",
+    "test:tool-presentation": "node scripts/test-tool-presentation.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "pack:check": "node scripts/check-pack.mjs",
     "check": "npm test && npm run typecheck && npm run pack:check",
@@ -74,7 +78,7 @@
       "./extensions/permissions/permissions.ts",
       "./extensions/session-query/session-query.ts",
       "./extensions/ask-user-question/index.ts",
-      "./extensions/tool-pills/index.ts",
+      "./extensions/tool-presentation/index.ts",
       "./extensions/split-fork/index.ts",
       "./extensions/superconductor/index.ts",
       "./extensions/session-store/index.ts",

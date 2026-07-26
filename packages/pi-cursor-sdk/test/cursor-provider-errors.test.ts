@@ -96,7 +96,7 @@ function makeCursorExtensionNetworkConnectError(): Error & { rawMessage: string;
 	const error = makeCursorSdkNetworkConnectError();
 	error.stack =
 		"ConnectError: [aborted] read ECONNRESET\n" +
-		"    at file:///C:/Users/example/.pi/agent/git/github.com/fitchmultz/pi-cursor-sdk/node_modules/@connectrpc/connect-node/dist/esm/node-universal-client.js:293:63";
+		"    at file:///C:/home/example/.pi/agent/git/github.com/fitchmultz/pi-cursor-sdk/node_modules/@connectrpc/connect-node/dist/esm/node-universal-client.js:293:63";
 	return error;
 }
 

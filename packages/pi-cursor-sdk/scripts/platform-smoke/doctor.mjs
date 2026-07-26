@@ -8,6 +8,7 @@
 
 import { execSync, execFileSync } from "node:child_process";
 import { accessSync, constants, existsSync, mkdirSync, writeFileSync, unlinkSync, rmSync, statSync } from "node:fs";
+import { homedir } from "node:os";
 import { dirname, resolve } from "node:path";
 import { ensureUbuntuContainerImage } from "./crabbox-runner.mjs";
 import { renderAll } from "./render-ansi.mjs";
@@ -282,7 +283,7 @@ async function runChecks(config) {
 		}
 		const sshHost = env("PLATFORM_SMOKE_MAC_HOST") || "localhost";
 		const sshUser = env("PLATFORM_SMOKE_MAC_USER") || env("USER");
-		const sshRoot = env("PLATFORM_SMOKE_MAC_WORK_ROOT") || `/Users/${env("USER")}/crabbox/pi-cursor-sdk`;
+		const sshRoot = env("PLATFORM_SMOKE_MAC_WORK_ROOT") || `${homedir()}/crabbox/pi-cursor-sdk`;
 		const sshDoc = silent(cbox, [
 			"doctor", "--provider", "ssh", "--target", "macos",
 			"--static-host", sshHost, "--static-user", sshUser,

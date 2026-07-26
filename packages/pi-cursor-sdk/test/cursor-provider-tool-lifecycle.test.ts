@@ -221,7 +221,7 @@ describe("streamCursor Cursor tool lifecycle", () => {
 
 	it("surfaces scrubbed shell lifecycle progress even when commands include paths", async () => {
 		process.env.PI_CURSOR_NATIVE_TOOL_DISPLAY = "0";
-		const shellCall = { name: "shell", args: { command: "cd /Users/test/project && gh pr view 114" } };
+		const shellCall = { name: "shell", args: { command: "cd /home/test/project && gh pr view 114" } };
 		const mockSend = vi.fn().mockImplementation(async (_msg: unknown, opts: { onDelta: CursorDeltaHandler }) => {
 			opts.onDelta({ update: { type: "tool-call-started", toolCall: shellCall, callId: "shell-unsafe" } });
 			await delayBeyondLifecycleDefer();
@@ -255,8 +255,8 @@ describe("streamCursor Cursor tool lifecycle", () => {
 		const trace = collectThinkingDeltas(events);
 
 		expect(trace).not.toContain("Cursor shell: shell");
-		expect(trace).toContain("Cursor shell: cd /Users/test/project && gh pr view 114");
-		expect(trace).toContain("$ cd /Users/test/project && gh pr view 114");
+		expect(trace).toContain("Cursor shell: cd /home/test/project && gh pr view 114");
+		expect(trace).toContain("$ cd /home/test/project && gh pr view 114");
 	});
 
 	it("does not emit lifecycle progress for fast read completions", async () => {

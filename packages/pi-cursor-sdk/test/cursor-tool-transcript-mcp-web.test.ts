@@ -266,7 +266,7 @@ describe("formatCursorToolTranscript MCP and web", () => {
 				args: { description: "Small badge", filePath: "assets/badge.png" },
 				result: {
 					status: "success",
-					value: { filePath: "/Users/example/.cursor/projects/repo/assets/badge.png", imageData: "base64-image-data" },
+					value: { filePath: "/home/example/.cursor/projects/repo/assets/badge.png", imageData: "base64-image-data" },
 				},
 			},
 			{ cwd: "/repo" },
@@ -274,19 +274,19 @@ describe("formatCursorToolTranscript MCP and web", () => {
 
 		expect(display).toMatchObject({
 			toolName: CURSOR_REPLAY_ACTIVITY_TOOL_NAME,
-			args: { prompt: "Small badge", activityTitle: "Cursor image generation", activitySummary: "/Users/example/.cursor/projects/repo/assets/badge.png" },
+			args: { prompt: "Small badge", activityTitle: "Cursor image generation", activitySummary: "/home/example/.cursor/projects/repo/assets/badge.png" },
 			result: {
 				details: {
 					variant: "generateImage",
-					summary: "/Users/example/.cursor/projects/repo/assets/badge.png",
-					imagePath: "/Users/example/.cursor/projects/repo/assets/badge.png",
-					imageDisplayPath: "/Users/example/.cursor/projects/repo/assets/badge.png",
+					summary: "/home/example/.cursor/projects/repo/assets/badge.png",
+					imagePath: "/home/example/.cursor/projects/repo/assets/badge.png",
+					imageDisplayPath: "/home/example/.cursor/projects/repo/assets/badge.png",
 					imageMimeType: "image/png",
 				},
 			},
 			isError: false,
 		});
-		expect(display.result.content[0].text).toContain("Saved image: /Users/example/.cursor/projects/repo/assets/badge.png");
+		expect(display.result.content[0].text).toContain("Saved image: /home/example/.cursor/projects/repo/assets/badge.png");
 		expect(display.result.content[0].text).not.toContain("base64-image-data");
 	});
 });

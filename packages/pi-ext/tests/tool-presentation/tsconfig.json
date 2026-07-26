@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": false,
+    "skipLibCheck": true,
+    "noEmit": false,
+    "outDir": "../../.tool-presentation-test-dist",
+    "rootDir": "../..",
+    "sourceMap": true,
+    "esModuleInterop": true,
+    "lib": ["ES2022"],
+    "types": ["node"]
+  },
+  "include": [
+    "../../extensions/tool-presentation/**/*.ts",
+    "./tidy/**/*.test.ts"
+  ]
+}

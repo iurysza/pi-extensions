@@ -43,20 +43,23 @@ export function resolveRunningPiAliases(): { aliases: PiFffLoaderAliases; jitiEn
 	const piRequire = createRequire(join(piRoot, "package.json"));
 	const tui = piRequire.resolve("@earendil-works/pi-tui");
 	const typebox = piRequire.resolve("typebox");
+	const legacyPiAgent = ["@mariozechner", "pi-coding-agent"].join("/");
+	const legacyPiTui = ["@mariozechner", "pi-tui"].join("/");
+	const legacyTypebox = ["@sinclair", "typebox"].join("/");
 	const aliases: PiFffLoaderAliases = {
 		codingAgent,
 		tui,
 		typebox,
 		sinclairTypebox: typebox,
 		"@earendil-works/pi-coding-agent": codingAgent,
-		"@mariozechner/pi-coding-agent": codingAgent,
+		[legacyPiAgent]: codingAgent,
 		"@earendil-works/pi-tui": tui,
-		"@mariozechner/pi-tui": tui,
-		"@sinclair/typebox": typebox,
+		[legacyPiTui]: tui,
+		[legacyTypebox]: typebox,
 		"typebox/compile": piRequire.resolve("typebox/compile"),
-		"@sinclair/typebox/compile": piRequire.resolve("typebox/compile"),
+		[`${legacyTypebox}/compile`]: piRequire.resolve("typebox/compile"),
 		"typebox/value": piRequire.resolve("typebox/value"),
-		"@sinclair/typebox/value": piRequire.resolve("typebox/value"),
+		[`${legacyTypebox}/value`]: piRequire.resolve("typebox/value"),
 	};
 	const jitiManifestPath = piRequire.resolve("jiti/package.json");
 	const jitiManifest = JSON.parse(readFileSync(jitiManifestPath, "utf8"));

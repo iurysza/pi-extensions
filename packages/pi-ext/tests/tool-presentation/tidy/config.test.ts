@@ -18,7 +18,7 @@ import {
   saveTidyEnabled,
   saveTidyIcons,
   saveTidyMode,
-} from "../config.js";
+} from "../../../extensions/tool-presentation/tidy/config.js";
 
 async function withTempConfig(
   run: (configPath: string, root: string) => Promise<void>

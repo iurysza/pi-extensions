@@ -12,7 +12,7 @@ import extension, {
   fitToolLine,
   formatElapsed,
   withReasoning,
-} from "../index.js";
+} from "../../../extensions/tool-presentation/tidy/index.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -821,7 +821,7 @@ test("pi-fff setup previews exact changes and awaits one reload", async () => {
 test("a successful state change persists and reloads exactly once", async () => {
   const home = await mkdtemp(join(tmpdir(), "pi-tidy-home-"));
   const script = `
-		const { default: extension } = await import(${JSON.stringify(new URL("../index.js", import.meta.url).href)});
+		const { default: extension } = await import(${JSON.stringify(new URL("../../../extensions/tool-presentation/tidy/index.js", import.meta.url).href)});
 		const commands = new Map();
 		const pi = {
 			on() {}, registerShortcut() {}, registerMessageRenderer() {}, registerTool() {},
@@ -843,7 +843,7 @@ test("a successful state change persists and reloads exactly once", async () => 
       ["--input-type=module", "--eval", script],
       { env }
     );
-    assert.equal(stdout.trim(), "1");
+    assert.equal(withoutAnsi(stdout).trim(), "1");
     const saved = JSON.parse(
       await readFile(join(home, ".pi", "agent", "pi-tidy-tools.json"), "utf8")
     );
@@ -1258,7 +1258,7 @@ test("result mode keeps native schemas and management commands preserve state", 
     "utf8"
   );
   const script = `
-		const { default: extension } = await import(${JSON.stringify(new URL("../index.js", import.meta.url).href)});
+		const { default: extension } = await import(${JSON.stringify(new URL("../../../extensions/tool-presentation/tidy/index.js", import.meta.url).href)});
 		const commands = new Map(), tools = new Map(), notices = [];
 		await extension({
 			on() {}, registerShortcut() {}, registerMessageRenderer() {}, sendMessage() {},

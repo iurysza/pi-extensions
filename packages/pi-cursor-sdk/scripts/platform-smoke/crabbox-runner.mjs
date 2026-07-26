@@ -7,6 +7,7 @@
 
 import { execFileSync, spawn } from "node:child_process";
 import { existsSync, readFileSync, rmSync } from "node:fs";
+import { homedir } from "node:os";
 
 const CRABBOX_BIN = process.env.PLATFORM_SMOKE_CRABBOX || "crabbox";
 
@@ -97,7 +98,7 @@ export function buildTargetBaseArgs(targetName, config = {}) {
 		case "macos": {
 			const host = env("PLATFORM_SMOKE_MAC_HOST") || "localhost";
 			const user = env("PLATFORM_SMOKE_MAC_USER") || env("USER");
-			const workRoot = env("PLATFORM_SMOKE_MAC_WORK_ROOT") || `/Users/${env("USER")}/crabbox/pi-cursor-sdk`;
+			const workRoot = env("PLATFORM_SMOKE_MAC_WORK_ROOT") || `${homedir()}/crabbox/pi-cursor-sdk`;
 			return [
 				"--provider", "ssh",
 				"--target", "macos",

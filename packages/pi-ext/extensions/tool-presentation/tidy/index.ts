@@ -84,6 +84,7 @@ import {
 	type PiFffIntegrationController,
 } from "./pi-fff/controller.js";
 import type { PiFffLifecyclePreview } from "./pi-fff/integration.js";
+import { renderRichDiff } from "../rich-diff.js";
 
 export { withReasoning } from "./tool-composition.js";
 
@@ -132,6 +133,78 @@ class WidthAwareLines {
 			// segment so it remains continuous through the full padded line.
 			return padded.split(RESET).map((segment) => this.background!(`${segment}${RESET}`)).join("");
 		});
+	}
+}
+
+class RichToolResult {
+	private richKey = "";
+	private richLines: string[] | undefined;
+	private richPending = false;
+
+	constructor(
+		private readonly name: string,
+		private readonly args: Record<string, unknown>,
+		private readonly result: any,
+		private readonly options: { isError: boolean; expanded: boolean; elapsedMs: number; mode: TidyMode; icons: boolean },
+		private readonly theme: any,
+		private readonly invalidateResult: () => void,
+	) {}
+
+	invalidate(): void {}
+
+	render(width: number): string[] {
+		const compact = buildToolBlock(this.name, this.args, this.result, { ...this.options, expanded: false });
+		const background = (text: string) => this.theme.bg(this.options.isError ? "toolErrorBg" : "toolSuccessBg", text);
+		const compactLines = new WidthAwareLines(compact, background).render(width);
+		if (!this.options.expanded) return compactLines;
+
+		const fallback = buildToolBlock(this.name, this.args, this.result, { ...this.options, expanded: true }).slice(compact.length);
+		if (this.options.isError || (this.name !== "edit" && this.name !== "write")) {
+			return [...compactLines, ...new WidthAwareLines(fallback, background).render(width)];
+		}
+
+		const key = [
+			this.name,
+			width,
+			typeof this.args.path === "string" ? this.args.path : "",
+			typeof this.args.content === "string" ? this.args.content.length : 0,
+			typeof this.args.oldText === "string" ? this.args.oldText.length : 0,
+			typeof this.args.newText === "string" ? this.args.newText.length : 0,
+			Array.isArray(this.args.edits) ? this.args.edits.length : 0,
+			typeof this.result?.details?.diff === "string" ? this.result.details.diff.length : 0,
+		].join(":");
+		if (key !== this.richKey) {
+			this.richKey = key;
+			this.richLines = undefined;
+			this.richPending = false;
+		}
+		if (!this.richPending && this.richLines === undefined) {
+			this.richPending = true;
+			renderRichDiff({
+				toolName: this.name,
+				args: this.args,
+				result: this.result,
+				width,
+				theme: this.theme,
+			}).then((lines) => {
+				if (this.richKey !== key) return;
+				this.richLines = lines ?? [];
+				this.richPending = false;
+				this.invalidateResult();
+			}).catch(() => {
+				if (this.richKey !== key) return;
+				this.richLines = [];
+				this.richPending = false;
+				this.invalidateResult();
+			});
+		}
+		if (!this.richLines?.length) {
+			return [...compactLines, ...new WidthAwareLines(fallback, background).render(width)];
+		}
+		return [
+			...compactLines,
+			...this.richLines.map((line) => truncateToWidth(line, Math.max(1, width))),
+		];
 	}
 }
 
@@ -394,6 +467,8 @@ export interface TidyExtensionDependencies {
 	loadIcons?: typeof loadTidyIcons;
 	saveIcons?: typeof saveTidyIcons;
 	createIntegration?: (pi: ExtensionAPI, cwd: string) => PiFffIntegrationController;
+	decorateSource?: (source: SourceToolDefinition) => SourceToolDefinition;
+	isReplayCall?: (toolCallId: string) => boolean;
 }
 
 function previewText(preview: PiFffLifecyclePreview): string {
@@ -491,7 +566,8 @@ export function createTidyExtension(dependencies: TidyExtensionDependencies = {}
 
 		const decorate = (source: SourceToolDefinition): SourceToolDefinition => {
 			const name = source.name;
-			const tool = composeSourceTool(source, { mode: tidyMode, reasoningGuideline: `Always pass a "reasoning" phrase to ${name}: state the GOAL/intent, not the file or command (those are shown already).` });
+			const behaviorSource = dependencies.decorateSource?.(source) ?? source;
+			const tool = composeSourceTool(behaviorSource, { mode: tidyMode, reasoningGuideline: `Always pass a "reasoning" phrase to ${name}: state the GOAL/intent, not the file or command (those are shown already).` });
 			ownedTools.add(name);
 			return {
 				...tool, name, renderShell: "self",
@@ -500,7 +576,8 @@ export function createTidyExtension(dependencies: TidyExtensionDependencies = {}
 					const id = context.toolCallId as string;
 					if (!elapsedTimerByCallId.has(id)) { const timer = setInterval(() => context.invalidate(), 1000); timer.unref?.(); elapsedTimerByCallId.set(id, timer); }
 					let started = startedAtByCallId.get(id); if (started === undefined) { started = Date.now(); startedAtByCallId.set(id, started); }
-					return new WidthAwareLines(() => buildToolBlock(name, args ?? {}, {}, { isPartial: true, elapsedMs: Date.now() - started!, mode: tidyMode, icons: tidyIcons }), (text) => theme.bg("toolPendingBg", text));
+					const mode = dependencies.isReplayCall?.(id) ? "result" : tidyMode;
+					return new WidthAwareLines(() => buildToolBlock(name, args ?? {}, {}, { isPartial: true, elapsedMs: Date.now() - started!, mode, icons: tidyIcons }), (text) => theme.bg("toolPendingBg", text));
 				},
 				renderResult: (result: any, options: any, theme: any, context: any) => {
 					if (options?.isPartial) return new Container();
@@ -510,8 +587,15 @@ export function createTidyExtension(dependencies: TidyExtensionDependencies = {}
 					if (timer) clearInterval(timer); elapsedTimerByCallId.delete(id ?? ""); startedAtByCallId.delete(id ?? "");
 					const persisted = Number(result?.details?.piTidyElapsedMs);
 					const elapsedMs = Number.isFinite(persisted) ? persisted : started === undefined ? 0 : Date.now() - started;
-					const lines = buildToolBlock(name, context?.args ?? {}, result, { isError, expanded: options?.expanded ?? false, elapsedMs, mode: tidyMode, icons: tidyIcons });
-					return new WidthAwareLines(lines, (text) => theme.bg(isError ? "toolErrorBg" : "toolSuccessBg", text));
+					const mode = id && dependencies.isReplayCall?.(id) ? "result" : tidyMode;
+					return new RichToolResult(
+						name,
+						context?.args ?? {},
+						result,
+						{ isError, expanded: options?.expanded ?? false, elapsedMs, mode, icons: tidyIcons },
+						theme,
+						() => context?.invalidate?.(),
+					);
 				},
 			} as SourceToolDefinition;
 		};

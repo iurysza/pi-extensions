@@ -1,6 +1,6 @@
 {
-  "name": "pi-cursor-sdk",
-  "version": "0.1.61",
+  "name": "@iurysza/pi-cursor-sdk",
+  "version": "0.1.0",
   "description": "pi provider extension backed by @cursor/sdk local and cloud agents",
   "author": "Mitch Fultz (https://github.com/fitchmultz)",
   "license": "MIT",
@@ -15,12 +15,16 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/fitchmultz/pi-cursor-sdk.git"
+    "url": "git+https://github.com/iurysza/pi-extensions.git",
+    "directory": "packages/pi-cursor-sdk"
   },
   "bugs": {
-    "url": "https://github.com/fitchmultz/pi-cursor-sdk/issues"
+    "url": "https://github.com/iurysza/pi-extensions/issues"
   },
-  "homepage": "https://github.com/fitchmultz/pi-cursor-sdk#readme",
+  "homepage": "https://github.com/iurysouza/pi-extensions/tree/main/packages/pi-cursor-sdk#readme",
+  "publishConfig": {
+    "access": "public"
+  },
   "files": [
     "shared",
     "src",
@@ -119,7 +123,7 @@
     "typecheck:tests": "tsc -p tsconfig.test.json --noEmit",
     "typecheck:replay-compile": "tsc --noEmit -p test/tsconfig.json",
     "verify": "npm run check:platform-smoke && npm run typecheck && npm test",
-    "test": "vitest run",
+    "test": "node scripts/test.mjs",
     "test:watch": "vitest",
     "refresh:cursor-snapshots": "node scripts/refresh-cursor-model-snapshots.mjs",
     "check:cursor-snapshots": "node scripts/refresh-cursor-model-snapshots.mjs --check",
@@ -165,20 +169,18 @@
     "@earendil-works/pi-ai": "0.80.9",
     "@earendil-works/pi-coding-agent": "0.80.9",
     "@earendil-works/pi-tui": "0.80.9",
+    "@types/node": "25.6.0",
     "@xterm/xterm": "^6.0.0",
     "node-pty": "^1.1.0",
     "playwright": "^1.60.0",
     "typebox": "^1.1.38",
-    "typescript": "^6.0.3",
+    "typescript": "6.0.3",
     "vitest": "^4.1.6"
   },
   "pi": {
     "extensions": [
       "./src/index.ts"
     ]
-  },
-  "allowScripts": {
-    "node-pty@1.1.0": true
   },
   "peerDependenciesMeta": {
     "@earendil-works/pi-ai": {

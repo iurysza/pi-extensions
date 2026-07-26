@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { createReadTool } from "@earendil-works/pi-coding-agent";
 import test from "node:test";
-import { composeSourceTool } from "../tool-composition.js";
+import { composeSourceTool } from "../../../extensions/tool-presentation/tidy/tool-composition.js";
 
 const guideline = "Always explain the goal.";
 
@@ -123,4 +123,36 @@ test("composed execution propagates source errors unchanged", () => {
 	const composed = composeSourceTool(source, { mode: "result", reasoningGuideline: guideline });
 
 	assert.throws(() => composed.execute("call-2", {}, undefined, undefined, undefined), (error) => error === failure);
+});
+
+test("argument preparation supplies empty reasoning for provider-generated calls", () => {
+	const marker = { prepared: true };
+	const source = {
+		name: "read",
+		parameters: { type: "object", properties: { path: { type: "string" } }, required: ["path"] },
+		prepareArguments(args: unknown) {
+			assert.deepEqual(args, { file: "a.ts" });
+			return { path: "a.ts", marker };
+		},
+		execute() {},
+	};
+	const composed = composeSourceTool(source, { mode: "default", reasoningGuideline: guideline });
+
+	const prepared = composed.prepareArguments?.({ file: "a.ts" });
+	assert.deepEqual(prepared, { reasoning: "", path: "a.ts", marker });
+	assert.equal((prepared as any).marker, marker);
+});
+
+test("argument preparation preserves explicit reasoning", () => {
+	const source = {
+		name: "read",
+		parameters: { type: "object", properties: { path: { type: "string" } }, required: ["path"] },
+		execute() {},
+	};
+	const composed = composeSourceTool(source, { mode: "default", reasoningGuideline: guideline });
+
+	assert.deepEqual(composed.prepareArguments?.({ path: "a.ts", reasoning: "inspect source" }), {
+		path: "a.ts",
+		reasoning: "inspect source",
+	});
 });

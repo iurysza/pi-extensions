@@ -336,7 +336,7 @@ if (!windows.includes("for($i=0;$i -lt 10") || !windows.includes("$w=$e.Replace(
 		const [pack] = JSON.parse(result.stdout) as Array<{ name: string; version: string; files: Array<{ path: string }> }>;
 		const paths = new Set(pack.files.map((file) => file.path));
 
-		expect(pack.name).toBe("pi-cursor-sdk");
+		expect(pack.name).toBe("@iurysza/pi-cursor-sdk");
 		expect(paths.has("scripts/tmux-live-smoke.sh")).toBe(true);
 		expect(paths.has("scripts/isolated-cursor-smoke.sh")).toBe(true);
 		expect(paths.has("scripts/fixtures/plan-strip-shim/index.ts")).toBe(true);

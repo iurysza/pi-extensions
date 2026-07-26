@@ -806,11 +806,11 @@ async function renderUnified(
 	language: BundledLanguage | undefined,
 	max = MAX_RENDER_LINES,
 	dc: DiffColors = DEFAULT_DIFF_COLORS,
+	tw = termW(),
 ): Promise<string> {
 	if (!diff.lines.length) return "";
 
 	const vis = diff.lines.slice(0, max);
-	const tw = termW();
 	const nw = Math.max(2, String(Math.max(...vis.map((l) => l.oldNum ?? l.newNum ?? 0), 0)).length);
 	const gw = nw + 5;
 	const cw = Math.max(20, tw - gw);
@@ -845,7 +845,7 @@ async function renderUnified(
 		const numFg = borderFg || FG_LNUM;
 		const gutter = `${border}${gutterBg}${lnum(num, nw, numFg)}${signFg}${sign}${RST} ${DIVIDER} `;
 		const contGutter = `${border}${gutterBg}${" ".repeat(nw + 1)}${RST} ${DIVIDER} `;
-		const rows = wrapAnsi(tabs(body), cw, adaptiveWrapRows(), bodyBg);
+		const rows = wrapAnsi(tabs(body), cw, adaptiveWrapRows(tw), bodyBg);
 		out.push(`${gutter}${rows[0]}${RST}`);
 		for (let r = 1; r < rows.length; r++) out.push(`${contGutter}${rows[r]}${RST}`);
 	}
@@ -930,9 +930,9 @@ async function renderSplit(
 	language: BundledLanguage | undefined,
 	max = MAX_PREVIEW_LINES,
 	dc: DiffColors = DEFAULT_DIFF_COLORS,
+	tw = termW(),
 ): Promise<string> {
-	const tw = termW();
-	if (!shouldUseSplit(diff, tw, max)) return renderUnified(diff, language, max, dc);
+	if (!shouldUseSplit(diff, tw, max)) return renderUnified(diff, language, max, dc, tw);
 	if (!diff.lines.length) return "";
 
 	type Row = { left: DiffLine | null; right: DiffLine | null };
@@ -1024,7 +1024,7 @@ async function renderSplit(
 
 		const gutter = `${border}${gBg}${lnum(num, nw, numFg)}${sFg}${BOLD}${sign}${RST} ${FG_RULE}│${RST} `;
 		const contGutter = `${border}${gBg}${" ".repeat(nw + 1)}${RST} ${FG_RULE}│${RST} `;
-		const bodyRows = wrapAnsi(tabs(body), cw, adaptiveWrapRows(), cBg);
+		const bodyRows = wrapAnsi(tabs(body), cw, adaptiveWrapRows(tw), cBg);
 		return { gutter, contGutter, bodyRows };
 	}
 
@@ -1082,462 +1082,90 @@ async function renderSplit(
 }
 
 // ---------------------------------------------------------------------------
-// Public API — register write/edit tools with diff rendering
+// Public API — expanded edit/write presentation only
 // ---------------------------------------------------------------------------
 
-export function registerDiffTools(pi: any): void {
-	applyDiffPalette();
+export interface RichDiffRenderInput {
+	toolName: "edit" | "write";
+	args: Record<string, unknown>;
+	result: any;
+	width: number;
+	theme?: any;
+}
 
-	let createWriteFn: any, createEditFn: any, TextComponent: any, pillFn: any, keyHintFn: any;
-	try {
-		const sdk = require("@earendil-works/pi-coding-agent");
-		createWriteFn = sdk.createWriteTool;
-		createEditFn = sdk.createEditTool;
-		keyHintFn = sdk.keyHint;
-		TextComponent = require("@earendil-works/pi-tui").Text;
-		pillFn = require("./pill.js").pill;
-	} catch {
-		return;
-	}
-	if (!createWriteFn || !createEditFn || !TextComponent) return;
+function parseRecordedDiff(raw: string): ParsedDiff {
+	const lines: DiffLine[] = [];
+	let added = 0;
+	let removed = 0;
+	let chars = 0;
 
-	const cwd = process.cwd();
-	const home = process.env.HOME ?? "";
-	const sp = (p: string) => shortPath(cwd, home, p);
-
-	/** Max diff lines shown collapsed vs expanded */
-	const COLLAPSED_DIFF_LINES = 30;
-	const COLLAPSED_NEW_FILE_LINES = 12;
-
-	/** Expand hint text */
-	function expandHint(theme: any): string {
-		const hint = keyHintFn ? keyHintFn("app.tools.expand", "to expand") : "expand to see more";
-		return theme.fg("dim", `… (${hint})`);
-	}
-
-	/** Get raw text from tool result (fallback rendering) */
-	function fallbackText(result: any, theme: any): string {
-		const raw = result?.content
-			?.filter((c: any) => c.type === "text")
-			.map((c: any) => c.text || "")
-			.join("\n") ?? "";
-		return raw ? theme.fg("dim", raw.slice(0, 200)) : "";
-	}
-
-	/** Render a pill header for write/create/edit */
-	function header(label: string, fp: string, theme: any): string {
-		const p = pillFn ? pillFn(label, theme) : theme.fg("toolTitle", theme.bold(label));
-		return `${p} ${theme.fg("accent", sp(fp))}`;
-	}
-
-	// =======================================================================
-	// write
-	// =======================================================================
-
-	const origWrite = createWriteFn(cwd);
-
-	pi.registerTool({
-		...origWrite,
-		parameters: { ...origWrite.parameters },
-
-		async execute(tid: string, params: any, sig: any, upd: any, ctx: any) {
-			const fp = params.path ?? params.file_path ?? "";
-			let old: string | null = null;
-			try {
-				if (fp && existsSync(fp)) old = readFileSync(fp, "utf-8");
-			} catch {
-				old = null;
-			}
-
-			// Store isNew decision in state so renderCall/renderResult stay consistent
-			if (ctx.state) ctx.state._isNewFile = old === null;
-
-			const result = await origWrite.execute(tid, params, sig, upd, ctx);
-			const content = params.content ?? "";
-
-			try {
-				if (old !== null && old !== content) {
-					const diff = parseDiff(old, content);
-					const lg = lang(fp);
-					(result as any).details = {
-						_type: "diff",
-						summary: summarize(diff.added, diff.removed),
-						diff,
-						language: lg,
-					};
-				} else if (old === null) {
-					const lineCount = content ? content.split("\n").length : 0;
-					(result as any).details = {
-						_type: "new",
-						lines: lineCount,
-						content: content ?? "",
-						filePath: fp,
-					};
-				} else if (old === content) {
-					(result as any).details = { _type: "noChange" };
-				}
-			} catch {
-				// Fallback: if diff computation fails, just report success
-				(result as any).details = { _type: "fallback" };
-			}
-			return result;
-		},
-
-		renderCall(args: any, theme: any, ctx: any) {
-			const fp = args?.path ?? args?.file_path ?? "";
-			// Use state from execute if available, otherwise check filesystem
-			const isNew = ctx.state?._isNewFile ?? (!fp || !existsSync(fp));
-			const label = isNew ? "create" : "write";
-			const text = ctx.lastComponent ?? new TextComponent("", 0, 0);
-			const hdr = header(label, fp, theme);
-
-			// Streaming: show line count progress
-			if (args?.content && !ctx.argsComplete) {
-				const n = String(args.content).split("\n").length;
-				text.setText(`${hdr}  ${theme.fg("muted", `(${n} lines…)`)}`);
-				return text;
-			}
-
-			// Create preview: syntax-highlight new file content
-			if (args?.content && ctx.argsComplete && isNew) {
-				const previewKey = `create:${fp}:${String(args.content).length}:${ctx.expanded}`;
-				if (ctx.state._previewKey !== previewKey) {
-					ctx.state._previewKey = previewKey;
-					ctx.state._previewText = hdr;
-					const lg = lang(fp);
-					hlBlock(args.content, lg)
-						.then((lines: string[]) => {
-							if (ctx.state._previewKey !== previewKey) return;
-							const maxShow = ctx.expanded ? lines.length : COLLAPSED_NEW_FILE_LINES;
-							const preview = lines.slice(0, maxShow).join("\n");
-							const rem = lines.length - maxShow;
-							let out = `${hdr}\n\n${preview}`;
-							if (rem > 0) out += `\n${expandHint(theme)}`;
-							ctx.state._previewText = out;
-							ctx.invalidate();
-						})
-						.catch(() => {
-							// Fallback: show plain content
-							const lines = args.content.split("\n");
-							const maxShow = ctx.expanded ? lines.length : COLLAPSED_NEW_FILE_LINES;
-							const preview = lines.slice(0, maxShow).join("\n");
-							const rem = lines.length - maxShow;
-							let out = `${hdr}\n\n${preview}`;
-							if (rem > 0) out += `\n${expandHint(theme)}`;
-							ctx.state._previewText = out;
-							ctx.invalidate();
-						});
-				}
-				text.setText(ctx.state._previewText ?? hdr);
-				return text;
-			}
-
-			text.setText(hdr);
-			return text;
-		},
-
-		renderResult(result: any, opts: any, theme: any, ctx: any) {
-			const text = ctx.lastComponent ?? new TextComponent("", 0, 0);
-			const expanded = opts?.expanded ?? ctx.expanded ?? false;
-
-			if (ctx.isError) {
-				const e =
-					result.content
-						?.filter((c: any) => c.type === "text")
-						.map((c: any) => c.text || "")
-						.join("\n") ?? "Error";
-				text.setText(`\n${theme.fg("error", e)}`);
-				return text;
-			}
-
-			const d = result.details;
-
-			// Diff result (overwrite of existing file)
-			if (d?._type === "diff") {
-				const w = termW();
-				const maxLines = expanded ? MAX_RENDER_LINES : COLLAPSED_DIFF_LINES;
-				const key = `wd:${w}:${maxLines}:${d.summary}:${d.diff?.lines?.length ?? 0}:${d.language ?? ""}`;
-				if (ctx.state._wdk !== key) {
-					ctx.state._wdk = key;
-					ctx.state._wdt = `  ${d.summary}\n${theme.fg("muted", "  rendering diff…")}`;
-					try {
-						const dc = resolveDiffColors(theme);
-						renderSplit(d.diff, d.language, maxLines, dc)
-							.then((rendered: string) => {
-								if (ctx.state._wdk !== key) return;
-								let out = `  ${d.summary}\n${rendered}`;
-								if (!expanded && d.diff.lines.length > COLLAPSED_DIFF_LINES) {
-									out += `\n${expandHint(theme)}`;
-								}
-								ctx.state._wdt = out;
-								ctx.invalidate();
-							})
-							.catch(() => {
-								if (ctx.state._wdk !== key) return;
-								ctx.state._wdt = `  ${d.summary}`;
-								ctx.invalidate();
-							});
-					} catch {
-						ctx.state._wdt = `  ${d.summary}`;
-					}
-				}
-				text.setText(ctx.state._wdt ?? `  ${d.summary}`);
-				return text;
-			}
-
-			// No changes
-			if (d?._type === "noChange") {
-				text.setText(`  ${theme.fg("muted", "✓ no changes")}`);
-				return text;
-			}
-
-			// New file
-			if (d?._type === "new") {
-				const { lines: lineCount, content: rawContent, filePath: fp } = d;
-				const maxShow = expanded ? Infinity : COLLAPSED_NEW_FILE_LINES;
-				const pk = `nf:${fp}:${lineCount}:${maxShow}`;
-				if (ctx.state._nfk !== pk) {
-					ctx.state._nfk = pk;
-					ctx.state._nft = `  ${theme.fg("success", `✓ new file (${lineCount} lines)`)}`;
-					const lg = lang(fp);
-					if (rawContent) {
-						hlBlock(rawContent, lg)
-							.then((hlLines: string[]) => {
-								if (ctx.state._nfk !== pk) return;
-								const shown = hlLines.slice(0, maxShow);
-								const preview = shown.join("\n");
-								const rem = hlLines.length - shown.length;
-								let out = `  ${theme.fg("success", `✓ new file (${lineCount} lines)`)}\n${preview}`;
-								if (rem > 0) out += `\n${expandHint(theme)}`;
-								ctx.state._nft = out;
-								ctx.invalidate();
-							})
-							.catch(() => {
-								// Fallback: plain text preview
-								const lines = rawContent.split("\n");
-								const shown = lines.slice(0, maxShow);
-								const rem = lines.length - shown.length;
-								let out = `  ${theme.fg("success", `✓ new file (${lineCount} lines)`)}\n${shown.join("\n")}`;
-								if (rem > 0) out += `\n${expandHint(theme)}`;
-								ctx.state._nft = out;
-								ctx.invalidate();
-							});
-					}
-				}
-				text.setText(ctx.state._nft ?? `  ${theme.fg("success", `✓ new file (${lineCount} lines)`)}`);
-				return text;
-			}
-
-			// Fallback: show raw result text
-			const fb = fallbackText(result, theme);
-			text.setText(fb ? `  ${fb}` : `  ${theme.fg("dim", "written")}`);
-			return text;
-		},
-	});
-
-	// =======================================================================
-	// edit
-	// =======================================================================
-
-	const origEdit = createEditFn(cwd);
-
-	function getEditOperations(input: any): Array<{ oldText: string; newText: string }> {
-		if (Array.isArray(input?.edits)) {
-			return input.edits
-				.map((edit: any) => ({
-					oldText:
-						typeof edit?.oldText === "string"
-							? edit.oldText
-							: typeof edit?.old_text === "string"
-								? edit.old_text
-								: "",
-					newText:
-						typeof edit?.newText === "string"
-							? edit.newText
-							: typeof edit?.new_text === "string"
-								? edit.new_text
-								: "",
-				}))
-				.filter((edit: { oldText: string; newText: string }) => edit.oldText !== edit.newText);
+	for (const rawLine of raw.split("\n")) {
+		const match = rawLine.match(/^([ +\-])(\d+)\s?(.*)$/);
+		if (!match) continue;
+		const [, marker, lineNumberRaw, content] = match;
+		const lineNumber = Number(lineNumberRaw);
+		chars += content.length;
+		if (marker === "+") {
+			lines.push({ type: "add", oldNum: null, newNum: lineNumber, content });
+			added++;
+		} else if (marker === "-") {
+			lines.push({ type: "del", oldNum: lineNumber, newNum: null, content });
+			removed++;
+		} else {
+			lines.push({ type: "ctx", oldNum: lineNumber, newNum: lineNumber, content });
 		}
-
-		const oldText =
-			typeof input?.oldText === "string"
-				? input.oldText
-				: typeof input?.old_text === "string"
-					? input.old_text
-					: "";
-		const newText =
-			typeof input?.newText === "string"
-				? input.newText
-				: typeof input?.new_text === "string"
-					? input.new_text
-					: "";
-		return oldText !== newText ? [{ oldText, newText }] : [];
 	}
 
-	function summarizeEditOperations(operations: Array<{ oldText: string; newText: string }>) {
-		const diffs = operations.map((edit) => parseDiff(edit.oldText, edit.newText));
-		const totalAdded = diffs.reduce((sum, diff) => sum + diff.added, 0);
-		const totalRemoved = diffs.reduce((sum, diff) => sum + diff.removed, 0);
-		return {
-			diffs,
-			totalAdded,
-			totalRemoved,
-			summary: summarize(totalAdded, totalRemoved),
-		};
+	return { lines, added, removed, chars };
+}
+
+function editOperations(args: Record<string, unknown>): Array<{ oldText: string; newText: string }> {
+	if (Array.isArray(args.edits)) {
+		return args.edits.flatMap((value) => {
+			if (!value || typeof value !== "object") return [];
+			const edit = value as Record<string, unknown>;
+			const oldText = typeof edit.oldText === "string" ? edit.oldText : "";
+			const newText = typeof edit.newText === "string" ? edit.newText : "";
+			return oldText === newText ? [] : [{ oldText, newText }];
+		});
 	}
+	const oldText = typeof args.oldText === "string" ? args.oldText : "";
+	const newText = typeof args.newText === "string" ? args.newText : "";
+	return oldText === newText ? [] : [{ oldText, newText }];
+}
 
-	pi.registerTool({
-		...origEdit,
-		parameters: { ...origEdit.parameters },
+function combineDiffs(diffs: ParsedDiff[]): ParsedDiff {
+	const lines: DiffLine[] = [];
+	for (const [index, diff] of diffs.entries()) {
+		if (index > 0) lines.push({ type: "sep", oldNum: null, newNum: null, content: "" });
+		lines.push(...diff.lines);
+	}
+	return {
+		lines,
+		added: diffs.reduce((sum, diff) => sum + diff.added, 0),
+		removed: diffs.reduce((sum, diff) => sum + diff.removed, 0),
+		chars: diffs.reduce((sum, diff) => sum + diff.chars, 0),
+	};
+}
 
-		async execute(tid: string, params: any, sig: any, upd: any, ctx: any) {
-			const fp = params.path ?? params.file_path ?? "";
-			const operations = getEditOperations(params);
+/** Render Shiki-backed details without owning or executing a tool. */
+export async function renderRichDiff(input: RichDiffRenderInput): Promise<string[] | undefined> {
+	const { toolName, args, result, theme } = input;
+	const path = typeof args.path === "string" ? args.path : "";
+	const recorded = typeof result?.details?.diff === "string" ? result.details.diff : "";
+	let diff = recorded ? parseRecordedDiff(recorded) : undefined;
 
-			// Read old content BEFORE executing, to find correct line offset
-			let preEditContent: string | null = null;
-			try {
-				if (fp && existsSync(fp)) preEditContent = readFileSync(fp, "utf-8");
-			} catch {
-				preEditContent = null;
-			}
+	if (!diff?.lines.length && toolName === "edit") {
+		const operations = editOperations(args);
+		if (operations.length > 0) diff = combineDiffs(operations.map((edit) => parseDiff(edit.oldText, edit.newText)));
+	}
+	if (!diff?.lines.length && toolName === "write" && typeof args.content === "string") {
+		diff = parseDiff("", args.content);
+	}
+	if (!diff?.lines.length) return undefined;
 
-			const result = await origEdit.execute(tid, params, sig, upd, ctx);
-
-			if (operations.length === 0) return result;
-
-			try {
-				const { diffs, summary } = summarizeEditOperations(operations);
-				if (operations.length === 1) {
-					let editLine = 0;
-					// Use pre-edit content to find oldText position (not newText)
-					if (preEditContent && operations[0].oldText) {
-						const idx = preEditContent.indexOf(operations[0].oldText);
-						if (idx >= 0) editLine = preEditContent.slice(0, idx).split("\n").length;
-					}
-					(result as any).details = { _type: "editInfo", summary, editLine };
-					return result;
-				}
-
-				(result as any).details = {
-					_type: "multiEditInfo",
-					summary,
-					editCount: operations.length,
-					diffLineCount: diffs.reduce((sum, diff) => sum + diff.lines.length, 0),
-				};
-			} catch {
-				(result as any).details = { _type: "fallback" };
-			}
-			return result;
-		},
-
-		renderCall(args: any, theme: any, ctx: any) {
-			const fp = args?.path ?? args?.file_path ?? "";
-			const operations = getEditOperations(args);
-			const text = ctx.lastComponent ?? new TextComponent("", 0, 0);
-			const hdr = header("edit", fp, theme);
-
-			if (!(ctx.argsComplete && operations.length > 0)) {
-				text.setText(hdr);
-				return text;
-			}
-
-			const expanded = ctx.expanded ?? false;
-			const pk = JSON.stringify({ fp, operations, w: termW(), expanded });
-			if (ctx.state._pk !== pk) {
-				ctx.state._pk = pk;
-				ctx.state._pt = `${hdr}  ${theme.fg("muted", "(rendering…)")}`;
-				const lg = lang(fp);
-				const dc = resolveDiffColors(theme);
-				const maxLines = expanded ? MAX_PREVIEW_LINES : COLLAPSED_DIFF_LINES;
-
-				if (operations.length === 1) {
-					const diff = parseDiff(operations[0].oldText, operations[0].newText);
-					renderSplit(diff, lg, maxLines, dc)
-						.then((rendered) => {
-							if (ctx.state._pk !== pk) return;
-							let out = `${hdr}\n${summarize(diff.added, diff.removed)}\n${rendered}`;
-							if (!expanded && diff.lines.length > COLLAPSED_DIFF_LINES) {
-								out += `\n${expandHint(theme)}`;
-							}
-							ctx.state._pt = out;
-							ctx.invalidate();
-						})
-						.catch(() => {
-							if (ctx.state._pk !== pk) return;
-							ctx.state._pt = `${hdr}  ${summarize(diff.added, diff.removed)}`;
-							ctx.invalidate();
-						});
-				} else {
-					const { diffs, summary } = summarizeEditOperations(operations);
-					const maxShown = Math.min(operations.length, 3);
-					const previewLines = Math.max(8, Math.floor(maxLines / maxShown));
-					Promise.all(
-						diffs.slice(0, maxShown).map((diff, index) =>
-							renderSplit(diff, lg, previewLines, dc)
-								.then((rendered) => `Edit ${index + 1}/${operations.length}\n${rendered}`)
-								.catch(() => `Edit ${index + 1}/${operations.length}  ${summarize(diff.added, diff.removed)}`),
-						),
-					)
-						.then((sections) => {
-							if (ctx.state._pk !== pk) return;
-							const remainder = operations.length - maxShown;
-							const suffix =
-								remainder > 0
-									? `\n${theme.fg("muted", `… ${remainder} more edit blocks`)}`
-									: "";
-							ctx.state._pt = `${hdr}\n${operations.length} edits ${summary}\n\n${sections.join("\n\n")}${suffix}`;
-							ctx.invalidate();
-						})
-						.catch(() => {
-							if (ctx.state._pk !== pk) return;
-							ctx.state._pt = `${hdr}  ${operations.length} edits ${summary}`;
-							ctx.invalidate();
-						});
-				}
-			}
-
-			text.setText(ctx.state._pt ?? hdr);
-			return text;
-		},
-
-		renderResult(result: any, opts: any, theme: any, ctx: any) {
-			const text = ctx.lastComponent ?? new TextComponent("", 0, 0);
-			const expanded = opts?.expanded ?? ctx.expanded ?? false;
-
-			if (ctx.isError) {
-				const e =
-					result.content
-						?.filter((c: any) => c.type === "text")
-						.map((c: any) => c.text || "")
-						.join("\n") ?? "Error";
-				text.setText(`\n${theme.fg("error", e)}`);
-				return text;
-			}
-
-			if (result.details?._type === "editInfo") {
-				const { summary: s, editLine } = result.details;
-				const loc = editLine > 0 ? ` ${theme.fg("muted", `at line ${editLine}`)}` : "";
-				text.setText(`  ${s}${loc}`);
-				return text;
-			}
-
-			if (result.details?._type === "multiEditInfo") {
-				const { summary: s, editCount, diffLineCount } = result.details;
-				const dlInfo =
-					typeof diffLineCount === "number"
-						? ` ${theme.fg("muted", `(${diffLineCount} diff lines)`)}`
-						: "";
-				text.setText(`  ${editCount} edits ${s}${dlInfo}`);
-				return text;
-			}
-
-			// Fallback
-			const fb = fallbackText(result, theme);
-			text.setText(fb ? `  ${fb}` : `  ${theme.fg("dim", "edited")}`);
-			return text;
-		},
-	});
+	applyDiffPalette();
+	const width = Math.max(40, Math.min(input.width, MAX_TERM_WIDTH));
+	const rendered = await renderSplit(diff, lang(path), MAX_RENDER_LINES, resolveDiffColors(theme), width);
+	return rendered ? rendered.split("\n") : undefined;
 }

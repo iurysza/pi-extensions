@@ -3,13 +3,13 @@ import { chmod, lstat, mkdir, mkdtemp, readFile, readdir, realpath, rm, stat, sy
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test from "node:test";
-import { buildPiFffRegistrationPlan } from "../pi-fff/adapter.js";
-import { createPiFffIntegrationController } from "../pi-fff/controller.js";
+import { buildPiFffRegistrationPlan } from "../../../extensions/tool-presentation/tidy/pi-fff/adapter.js";
+import { createPiFffIntegrationController } from "../../../extensions/tool-presentation/tidy/pi-fff/controller.js";
 import {
 	createPiFffLifecycle,
 	type PiFffLifecycleParticipant,
 	type PiFffLifecyclePreview,
-} from "../pi-fff/integration.js";
+} from "../../../extensions/tool-presentation/tidy/pi-fff/integration.js";
 
 const entry = (scope: string) => ({ source: `npm:pi-fff@0.1.12`, extensions: ["index.ts"], scope, extra: { keep: true } });
 const scopedEntry = (scope: string) => ({ source: `npm:@ff-labs/pi-fff@0.9.6`, extensions: ["src/index.ts"], scope, extra: { keep: true } });
@@ -62,7 +62,7 @@ async function fixture(options: { project?: unknown; user?: unknown; projectMode
 			}
 			pi.on("session_start", () => {}); pi.on("session_shutdown", () => {});
 		}; } } });
-		if (!built.ok) throw new Error(built.diagnostic.summary);
+		if (built.ok === false) throw new Error(built.diagnostic.summary);
 		return built.plan;
 	};
 	const lifecycle = (extra: Record<string, unknown> = {}) => createPiFffLifecycle({ cwd, agentDir, preflight, ...extra });

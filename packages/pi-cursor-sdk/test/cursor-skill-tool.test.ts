@@ -42,13 +42,13 @@ function makeSkill(overrides: Partial<Skill> & Pick<Skill, "name" | "filePath">)
 describe("formatCursorSkillsForPrompt", () => {
 	it("builds a Cursor-safe pi skill catalog and excludes explicit-only skills", () => {
 		const prompt = formatCursorSkillsForPrompt([
-			makeSkill({ name: "global-skill", description: "Use for global work", filePath: "/Users/me/.pi/agent/skills/global-skill/SKILL.md" }),
+			makeSkill({ name: "global-skill", description: "Use for global work", filePath: "/home/me/.pi/agent/skills/global-skill/SKILL.md" }),
 			makeSkill({ name: "manual-only", description: "Manual", filePath: "/skills/manual-only/SKILL.md", disableModelInvocation: true }),
 		]);
 
 		expect(prompt).toContain(CURSOR_ACTIVATE_SKILL_MCP_NAME);
 		expect(prompt).toContain("<name>global-skill</name>");
-		expect(prompt).toContain("/Users/me/.pi/agent/skills/global-skill/SKILL.md");
+		expect(prompt).toContain("/home/me/.pi/agent/skills/global-skill/SKILL.md");
 		expect(prompt).not.toContain("manual-only");
 	});
 });
@@ -56,7 +56,7 @@ describe("formatCursorSkillsForPrompt", () => {
 describe("resolveCursorSkillSystemPrompt", () => {
 	const cursorModel = makeModel("composer-2.5");
 	const otherModel = { provider: "anthropic", id: "claude-sonnet-4-5" } as ReturnType<typeof makeModel>;
-	const skill = makeSkill({ name: "global-skill", description: "Global pi skill", filePath: "/Users/me/.pi/agent/skills/global-skill/SKILL.md" });
+	const skill = makeSkill({ name: "global-skill", description: "Global pi skill", filePath: "/home/me/.pi/agent/skills/global-skill/SKILL.md" });
 	const piSkillSection = [
 		"System prompt before skills.",
 		"",
@@ -67,7 +67,7 @@ describe("resolveCursorSkillSystemPrompt", () => {
 		"  <skill>",
 		"    <name>global-skill</name>",
 		"    <description>Global pi skill</description>",
-		"    <location>/Users/me/.pi/agent/skills/global-skill/SKILL.md</location>",
+		"    <location>/home/me/.pi/agent/skills/global-skill/SKILL.md</location>",
 		"  </skill>",
 		"</available_skills>",
 	].join("\n");
@@ -95,7 +95,7 @@ describe("resolveCursorSkillSystemPrompt", () => {
 		expect(resolved).toContain("System prompt before skills.");
 		expect(resolved).not.toContain("<available_skills>");
 		expect(resolved).not.toContain(CURSOR_ACTIVATE_SKILL_MCP_NAME);
-		expect(resolved).not.toContain("/Users/me/.pi/agent/skills");
+		expect(resolved).not.toContain("/home/me/.pi/agent/skills");
 	});
 
 	it("does not change prompts for non-Cursor models", () => {
