@@ -47,6 +47,28 @@ Ghostty has time to compile and display the selected shader.
 | `/ghost-disable` | Disable automatic transitions for the current Pi session. |
 | `/ghost-status` | Show extension, sidebar, watcher, and shader state. |
 
+## Hard reset
+
+Use this when the watcher or state is stale, or Ghostty still references an
+older package checkout:
+
+```bash
+PI_ROOT="${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}"
+GHOST="$PI_ROOT/npm/node_modules/@iurysza/pi-ghost-in-the-machine"
+# Source install: GHOST="$PI_ROOT/git/github.com/iurysza/pi-extensions/packages/pi-ghost-in-the-machine"
+STATE="${XDG_STATE_HOME:-$HOME/.local/state}/ghost-in-the-machine"
+
+pkill -TERM -f 'ghost-in-the-machine/scripts/sidebar-watcher\.mjs' 2>/dev/null || true
+"$GHOST/scripts/ghost-state.sh" apply off
+rm -rf "$STATE"
+HERDR_ENV=1 "$GHOST/scripts/setup.sh"
+```
+
+Restart every open Pi pane, or run `/reload` in each pane. Then run
+`/ghost-status` and confirm `ghostty-state.conf` references the selected
+`GHOST` path. See [Operations](ai-artifacts/docs/OPERATIONS.md) for detailed
+verification.
+
 ## Requirements
 
 - Pi 0.80.4 or newer
