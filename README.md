@@ -27,6 +27,20 @@ npm run check
 The repository is an npm workspace. The root package is private; each package
 under [`packages/`](packages) is independently publishable.
 
+### Isolated Pi test
+
+Validate or drive the complete monorepo without loading or changing live Pi
+configuration:
+
+```bash
+scripts/isolated-pi.sh --check
+scripts/isolated-pi.sh
+```
+
+The launcher creates a temporary HOME, copies the current Pi auth and optional
+keybindings files with mode `600`, loads only this local package, and deletes
+the sandbox on exit.
+
 ## License
 
 The root [MIT license](LICENSE) covers Iury-owned packages. `pi-ext` and
