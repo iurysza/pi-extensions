@@ -6,7 +6,15 @@ import { dirname, resolve } from "node:path";
 const require = createRequire(import.meta.url);
 const packageRoot = resolve(import.meta.dirname, "..");
 const output = resolve(packageRoot, ".tool-presentation-test-dist");
-const testsDir = resolve(output, "tests/tool-presentation/tidy");
+const testsRoot = resolve(output, "tests");
+
+function findTests(directory) {
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const path = resolve(directory, entry.name);
+    if (entry.isDirectory()) return findTests(path);
+    return entry.name.endsWith(".test.js") ? [path] : [];
+  });
+}
 
 rmSync(output, { recursive: true, force: true });
 try {
@@ -16,10 +24,7 @@ try {
     "-p",
     resolve(packageRoot, "tests/tool-presentation/tsconfig.json"),
   ], { cwd: packageRoot, stdio: "inherit" });
-  const tests = readdirSync(testsDir)
-    .filter((name) => name.endsWith(".test.js"))
-    .map((name) => resolve(testsDir, name));
-  execFileSync(process.execPath, ["--test", ...tests], {
+  execFileSync(process.execPath, ["--test", ...findTests(testsRoot)], {
     cwd: packageRoot,
     stdio: "inherit",
   });

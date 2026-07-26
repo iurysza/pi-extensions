@@ -7,6 +7,7 @@ import { truncateToWidth } from "@earendil-works/pi-tui";
 import { createCredentialSource, type CredentialSourceLike } from "./auth.js";
 import { captureCursorSessionToken, fetchCursorQuotaWithToken } from "./cursor.js";
 import { formatFooter, formatWidget } from "./format.js";
+import { createFooterSlotRegistration } from "./footer-slot.js";
 import { loadFooterMode, saveFooterMode, type FooterMode } from "./preferences.js";
 import {
   createCursorProvider,
@@ -119,6 +120,7 @@ export function createTokenTank(
   let credentials = credentialSourceOverride;
   let widgetVisible = false;
   let footerMode: FooterMode = "minimal";
+  const footerSlot = createFooterSlotRegistration(pi.events, STATUS_KEY, 100);
 
   function sameRegistry(left: readonly QuotaProvider[], right: readonly QuotaProvider[]): boolean {
     return left.length === right.length && left.every((provider, index) => provider.id === right[index]?.id);
@@ -150,7 +152,7 @@ export function createTokenTank(
     return coordinator;
   }
 
-  function updateFooter(ctx: ExtensionContext) {
+  function updateStatusSlot(ctx: ExtensionContext) {
     const activeCoordinator = getCoordinator(ctx);
     const provider = findProviderForModel(ctx.model, runtimeRegistry);
     if (!provider) {
@@ -184,7 +186,7 @@ export function createTokenTank(
   async function refreshAndRender(ctx: ExtensionContext, force: boolean) {
     const activeCoordinator = getCoordinator(ctx);
     const provider = findProviderForModel(ctx.model, runtimeRegistry);
-    updateFooter(ctx);
+    updateStatusSlot(ctx);
     if (provider) await activeCoordinator.refresh(provider.id, force);
     if (widgetVisible && pendingProviderIds.length > 0) {
       const addedProviderIds = pendingProviderIds;
@@ -193,11 +195,12 @@ export function createTokenTank(
         .filter((providerId) => providerId !== provider?.id)
         .map((providerId) => activeCoordinator.refresh(providerId, force)));
     }
-    updateFooter(ctx);
+    updateStatusSlot(ctx);
     if (widgetVisible) updateWidget(ctx);
   }
 
   pi.on("session_start", async (_event, ctx) => {
+    footerSlot.register();
     footerMode = await loadFooterMode(preferenceFile);
     await refreshAndRender(ctx, true);
   });
@@ -212,6 +215,7 @@ export function createTokenTank(
     coordinator = undefined;
     runtimeRegistry = registry;
     pendingProviderIds = [];
+    footerSlot.dispose();
   });
 
   pi.registerCommand("token-tank", {
@@ -223,7 +227,7 @@ export function createTokenTank(
       const argument = args.trim();
       if (argument === "minimal" || argument === "full") {
         footerMode = argument;
-        updateFooter(ctx);
+        updateStatusSlot(ctx);
         await saveFooterMode(footerMode, preferenceFile);
         return;
       }
@@ -240,7 +244,7 @@ export function createTokenTank(
         await getCoordinator(ctx).refreshAll(true);
         pendingProviderIds = [];
       }
-      updateFooter(ctx);
+      updateStatusSlot(ctx);
       updateWidget(ctx);
     },
   });
