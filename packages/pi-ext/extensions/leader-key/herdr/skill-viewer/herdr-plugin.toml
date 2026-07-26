@@ -1,0 +1,14 @@
+id = "pi-ext-skill-viewer"
+name = "Pi Skill Viewer"
+version = "0.1.0"
+min_herdr_version = "0.7.4"
+description = "Open a selected Pi skill in a modal terminal editor."
+platforms = ["linux", "macos"]
+
+[[panes]]
+id = "skill"
+title = "Pi Skill"
+placement = "popup"
+width = "80%"
+height = "80%"
+command = ["bash", "-c", "exec \"$HERDR_PLUGIN_ROOT/open-skill.sh\""]

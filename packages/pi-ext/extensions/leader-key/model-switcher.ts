@@ -96,6 +96,11 @@ interface SearchableItem {
 	description?: string;
 }
 
+export interface SearchableSelectAlternateAction<T extends string> {
+	label: string;
+	run(value: T): void | Promise<void>;
+}
+
 const MAX_VISIBLE = 15;
 
 /** Simple word-wrap: split text into lines of at most maxWidth visible chars. */
@@ -122,9 +127,11 @@ export async function searchableSelect<T extends string>(
 	items: SearchableItem[],
 	helpText?: string,
 	defaultValue?: string,
+	alternateAction?: SearchableSelectAlternateAction<T>,
 ): Promise<T | null> {
 	const defaultIndex = defaultValue ? items.findIndex((i) => i.value === defaultValue) : -1;
-	return ctx.ui.custom<T | null>((tui, theme, _kb, done) => {
+	let alternateValue: T | null = null;
+	const selected = await ctx.ui.custom<T | null>((tui, theme, _kb, done) => {
 		let searchText = "";
 		let filteredItems = [...items];
 		let highlightedIndex = defaultIndex >= 0 ? defaultIndex : 0;
@@ -217,7 +224,15 @@ export async function searchableSelect<T extends string>(
 
 				// Footer
 				lines.push(f.separator());
-				const hint = helpText ?? "type to search • ↑↓ navigate • tab expand • enter select • esc cancel";
+				const defaultHint = [
+					"type search",
+					"↑↓ nav",
+					"tab expand",
+					...(alternateAction ? [`S-Enter ${alternateAction.label}`] : []),
+					"enter select",
+					"esc cancel",
+				].join(" • ");
+				const hint = helpText ?? defaultHint;
 				lines.push(f.row(th.fg("dim", hint)));
 				lines.push(f.bottom());
 
@@ -269,6 +284,15 @@ export async function searchableSelect<T extends string>(
 					return;
 				}
 
+				// Shift+Enter: close, then run the caller's alternate action
+				if (matchesKey(data, "shift+enter")) {
+					if (alternateAction && filteredItems.length > 0 && highlightedIndex < filteredItems.length) {
+						alternateValue = filteredItems[highlightedIndex].value as T;
+						done(null);
+					}
+					return;
+				}
+
 				// Enter: select highlighted
 				if (matchesKey(data, "enter")) {
 					if (filteredItems.length > 0 && highlightedIndex < filteredItems.length) {
@@ -295,6 +319,12 @@ export async function searchableSelect<T extends string>(
 			maxHeight: "80%",
 		},
 	});
+
+	const pendingAlternate = alternateValue as T | null;
+	if (pendingAlternate !== null && alternateAction) {
+		await alternateAction.run(pendingAlternate);
+	}
+	return selected;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -24,6 +24,7 @@ import type {
 import { matchesKey, parseKey, Key } from "@earendil-works/pi-tui";
 import { searchableSelect } from "./model-switcher.js";
 import { runFavouriteModels } from "./favourite-models.js";
+import { launchSkillEditor } from "./skill-editor.js";
 import { OverlayFrame } from "../shared/overlay.js";
 import { copyToClipboard } from "../pi-telescope/clipboard.js";
 import { saveLastResponse } from "../chat-to-md/index.js";
@@ -167,6 +168,22 @@ function buildEntries(
 					ctx,
 					"Select Skill",
 					items,
+					undefined,
+					undefined,
+					{
+						label: "open",
+						run: async (skillName) => {
+							const command = skillCommands.find((candidate) => candidate.name === skillName);
+							if (!command) return;
+							try {
+								const target = await launchSkillEditor(pi, command.sourceInfo.path);
+								ctx.ui.notify(`Opened ${skillName} in ${target}`, "info");
+							} catch (error) {
+								const message = error instanceof Error ? error.message : String(error);
+								ctx.ui.notify(`Unable to open ${skillName}: ${message}`, "error");
+							}
+						},
+					},
 				);
 
 				if (selected) {
