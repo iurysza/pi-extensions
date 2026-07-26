@@ -26,7 +26,7 @@ npm run generate
 
 ## 2. Placement
 
-The face keeps one height-based size on every display. Surfaces narrower than `3200 px` use the Mac placement: original `16 px × 29` center plus a `30 px` gap for the full animated footprint. Verified `3440 px` ultrawide surfaces use the fixed `144 px` center of Herdr's `36 columns × 8 px` sidebar. Placement deliberately ignores cursor geometry because cursor style and focus can invalidate it. The face always renders on the dense `8 × 17 px` virtual ASCII grid.
+The face keeps one height-based size on every display. Surfaces narrower than `3200 px` use the Mac placement: original `16 px × 29` center plus a `20 px` gap for the full animated footprint. Verified `3440 px` ultrawide surfaces use the fixed `144 px` center of Herdr's `36 columns × 8 px` sidebar. Placement deliberately ignores cursor geometry because cursor style and focus can invalidate it. The face always renders on the dense `8 × 17 px` virtual ASCII grid.
 
 ## 3. Visual invariants
 
