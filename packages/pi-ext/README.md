@@ -62,6 +62,11 @@ Favourite model presets live in
 `extensions/leader-key/favourite-models.json`. Optional display roles live in
 `extensions/leader-key/model-nicknames.json`.
 
+Press `Ctrl+X`, then `k` to open the skills palette. `Enter` stages the selected
+skill command; `Shift+Enter` opens its `SKILL.md` in `$VISUAL` or `$EDITOR`. The
+editor opens in a modal Herdr popup when available, otherwise a tmux split, then
+a new terminal window. The bundled Herdr pane links itself on first use.
+
 ### Chat to Markdown
 
 Run `/chat-to-md` or press `Ctrl+X`, then `w`. The extension writes the last
