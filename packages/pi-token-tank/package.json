@@ -1,6 +1,6 @@
 {
   "name": "@iurysza/pi-token-tank",
-  "version": "0.6.2",
+  "version": "0.6.3",
   "description": "Token Tank — provider-aware subscription quota status for Pi",
   "license": "MIT",
   "author": "Iury Souza",
