@@ -38,8 +38,8 @@ import {
 import { normalize } from "@sting8k/pi-vcc/src/core/normalize";
 import { filterNoise } from "@sting8k/pi-vcc/src/core/filter-noise";
 import { buildSections } from "@sting8k/pi-vcc/src/core/build-sections";
-import { redact } from "@sting8k/pi-vcc/src/core/redact";
 import { TaskStore } from "@tintinweb/pi-tasks/src/task-store.js";
+import { redact } from "./redact.js";
 
 function shellQuote(value: string): string {
 	if (value.length === 0) return "''";

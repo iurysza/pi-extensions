@@ -22,8 +22,8 @@
   ],
   "dependencies": {
     "@shikijs/cli": "^4.0.2",
-    "@sting8k/pi-vcc": "^0.3.5",
-    "@tintinweb/pi-tasks": "^0.4.2",
+    "@sting8k/pi-vcc": "0.3.18",
+    "@tintinweb/pi-tasks": "0.4.3",
     "better-sqlite3": "^12.10.0",
     "diff": "^7.0.0",
     "semver": "^7.8.5"
@@ -61,7 +61,7 @@
   "homepage": "https://github.com/iurysza/pi-extensions/tree/main/packages/pi-ext#readme",
   "scripts": {
     "sem:evaluate": "node extensions/pi-sem/bin/sem-eval.mjs",
-    "test": "npm run test:pi-sem && npm run test:tool-presentation && node --test tests/leader-key/favourite-models.test.mjs tests/chat-to-md/chat-to-md.test.mjs",
+    "test": "npm run test:pi-sem && npm run test:tool-presentation && node --test tests/leader-key/favourite-models.test.mjs tests/chat-to-md/chat-to-md.test.mjs tests/handoff/dependency-contract.test.mjs",
     "test:pi-sem": "node --test tests/pi-sem/core.test.mjs tests/review/sem-guidance.test.mjs",
     "test:tool-presentation": "node scripts/test-tool-presentation.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
