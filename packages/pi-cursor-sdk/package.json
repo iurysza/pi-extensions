@@ -21,7 +21,7 @@
   "bugs": {
     "url": "https://github.com/iurysza/pi-extensions/issues"
   },
-  "homepage": "https://github.com/iurysouza/pi-extensions/tree/main/packages/pi-cursor-sdk#readme",
+  "homepage": "https://github.com/iurysza/pi-extensions/tree/main/packages/pi-cursor-sdk#readme",
   "publishConfig": {
     "access": "public"
   },

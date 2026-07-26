@@ -119,8 +119,10 @@ for (const entry of packageEntries) {
   ) {
     failures.push(`${manifest.name ?? entry.name} has incorrect repository metadata`);
   }
-  if (!manifest.bugs?.url || !manifest.homepage) {
-    failures.push(`${manifest.name ?? entry.name} is missing bugs or homepage metadata`);
+  const expectedBugs = "https://github.com/iurysza/pi-extensions/issues";
+  const expectedHomepage = `https://github.com/iurysza/pi-extensions/tree/main/packages/${entry.name}#readme`;
+  if (manifest.bugs?.url !== expectedBugs || manifest.homepage !== expectedHomepage) {
+    failures.push(`${manifest.name ?? entry.name} has incorrect bugs or homepage metadata`);
   }
 
   const keywords = new Set(manifest.keywords ?? []);
