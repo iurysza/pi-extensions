@@ -12,7 +12,6 @@ const oldModel = {
   api: "openai-responses",
   id: "gpt-old",
   name: "Old",
-  baseUrl: "https://api.openai.com/v1",
   reasoning: true,
   input: ["text"],
   cost: { input: 1, output: 1, cacheRead: 0.1, cacheWrite: 0 },
@@ -21,51 +20,89 @@ const oldModel = {
 } as const;
 const newModel = { ...oldModel, id: "gpt-new", name: "New" };
 
-const branch = [
-  {
-    type: "thinking_level_change",
-    id: "00000001",
-    parentId: null,
-    timestamp: new Date(1_000).toISOString(),
-    thinkingLevel: "high",
+const testTheme = {
+  fg(color: string, text: string) {
+    return `<${color}>${text}</${color}>`;
   },
-  {
+};
+
+let nextId = 1;
+
+function baseEntry(type: string) {
+  const id = nextId.toString(16).padStart(8, "0");
+  const parentId = nextId === 1 ? null : (nextId - 1).toString(16).padStart(8, "0");
+  nextId += 1;
+  return {
+    type,
+    id,
+    parentId,
+    timestamp: new Date(nextId * 1_000).toISOString(),
+  };
+}
+
+function thinkingChange(level: string): SessionEntry {
+  return {
+    ...baseEntry("thinking_level_change"),
+    type: "thinking_level_change",
+    thinkingLevel: level,
+  };
+}
+
+function assistant(
+  model: string,
+  prompt: number,
+  cacheRead: number,
+): Extract<SessionEntry, { type: "message" }> {
+  return {
+    ...baseEntry("message"),
     type: "message",
-    id: "00000002",
-    parentId: "00000001",
-    timestamp: new Date(2_000).toISOString(),
     message: {
       role: "assistant",
       content: [],
       api: "openai-responses",
       provider: "openai",
-      model: "gpt-old",
+      model,
       usage: {
-        input: 17_000,
+        input: prompt - cacheRead,
         output: 10,
-        cacheRead: 8_000,
+        cacheRead,
         cacheWrite: 0,
-        totalTokens: 25_010,
+        totalTokens: prompt + 10,
         cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
       },
       stopReason: "stop",
-      timestamp: 2_000,
+      timestamp: nextId * 1_000,
     },
-  },
-] as SessionEntry[];
+  };
+}
 
-function createHarness() {
-  const handlers = new Map<string, (event: never, ctx: ExtensionContext) => unknown>();
+function createHarness(options?: {
+  branch?: SessionEntry[];
+  contextUsage?: { tokens: number; contextWindow: number; percent: number } | null;
+}) {
+  nextId = 1;
+  const handlers = new Map<
+    string,
+    (event: never, ctx: ExtensionContext) => unknown
+  >();
   const busHandlers = new Map<string, Set<(data: unknown) => void>>();
   const busEvents: Array<{ channel: string; data: unknown }> = [];
   const statuses: Array<string | undefined> = [];
+  const branch = options?.branch ?? [
+    thinkingChange("high"),
+    assistant("gpt-old", 25_010, 8_000),
+  ];
+  const contextUsage = options?.contextUsage === undefined
+    ? { tokens: 100_000, contextWindow: 200_000, percent: 50 }
+    : options.contextUsage;
   const ctx = {
     mode: "tui",
     model: newModel,
-    getContextUsage: () => ({ tokens: 100_000, contextWindow: 200_000, percent: 50 }),
+    getContextUsage: () => contextUsage,
     sessionManager: { getBranch: () => branch },
     modelRegistry: { find: () => undefined },
     ui: {
+      theme: testTheme,
       setStatus(key: string, value: string | undefined) {
         assert.equal(key, "pi-cache-hit-predictor");
         statuses.push(value);
@@ -96,6 +133,7 @@ function createHarness() {
     ctx,
     statuses,
     busEvents,
+    branch,
     async fire(event: string, data: unknown = {}) {
       await handlers.get(event)?.(data as never, ctx);
     },
@@ -104,30 +142,37 @@ function createHarness() {
 
 const waitForPrediction = () => new Promise((resolve) => setTimeout(resolve, 5));
 
-function assistantMessage(overrides: Record<string, unknown> = {}) {
-  const entry = branch[1] as Extract<SessionEntry, { type: "message" }>;
+function assistantMessage(
+  branch: SessionEntry[],
+  overrides: Record<string, unknown> = {},
+) {
+  const entry = branch[branch.length - 1] as Extract<SessionEntry, { type: "message" }>;
   return { ...entry.message, ...overrides };
 }
 
-test("coalesces a model clamp into one footer status", async () => {
+test("shows a full cache drop when switching to a cold model", async () => {
   const harness = createHarness();
   await harness.fire("session_start");
-  await harness.fire("thinking_level_select", { level: "high", previousLevel: "low" });
   await harness.fire("model_select", {
     model: newModel,
     previousModel: oldModel,
     source: "set",
   });
   await waitForPrediction();
-  assert.equal(harness.statuses.filter(Boolean).length, 1);
   assert.equal(
     harness.statuses.at(-1),
-    "cache gpt-new · high · cold 0%/~100k",
+    "cache gpt-new · high ↓100% [<error>█</error><dim>░░░░░░░</dim>]",
   );
 });
 
-test("renders a concise warm-lane footer status", async () => {
-  const harness = createHarness();
+test("shows a partial drop when switching to a smaller cached lane", async () => {
+  const harness = createHarness({
+    branch: [
+      thinkingChange("high"),
+      assistant("gpt-old", 25_010, 8_000),
+      assistant("gpt-new", 100_010, 24_000),
+    ],
+  });
   await harness.fire("session_start");
   await harness.fire("model_select", {
     model: oldModel,
@@ -137,7 +182,51 @@ test("renders a concise warm-lane footer status", async () => {
   await waitForPrediction();
   assert.equal(
     harness.statuses.at(-1),
-    "cache gpt-old · high · ~25k/~100k 25%",
+    "cache gpt-old · high ↓75% [<success>█</success><error>███</error><dim>░░░░</dim>]",
+  );
+});
+
+test("shows a warm destination with no loss", async () => {
+  const harness = createHarness({
+    branch: [
+      thinkingChange("low"),
+      assistant("gpt-old", 25_010, 8_000),
+      thinkingChange("high"),
+      assistant("gpt-old", 100_010, 24_000),
+      thinkingChange("low"),
+      assistant("gpt-old", 25_010, 8_000),
+    ],
+  });
+  await harness.fire("session_start");
+  (harness.ctx as any).model = oldModel;
+  await harness.fire("thinking_level_select", {
+    level: "high",
+    previousLevel: "low",
+  });
+  await waitForPrediction();
+  assert.equal(
+    harness.statuses.at(-1),
+    "cache gpt-old · high ↓0% [<success>████</success><dim>░░░░</dim>]",
+  );
+});
+
+test("coalesces paired model and thinking changes into one status", async () => {
+  const harness = createHarness();
+  await harness.fire("session_start");
+  await harness.fire("thinking_level_select", {
+    level: "high",
+    previousLevel: "low",
+  });
+  await harness.fire("model_select", {
+    model: newModel,
+    previousModel: oldModel,
+    source: "set",
+  });
+  await waitForPrediction();
+  assert.equal(harness.statuses.filter(Boolean).length, 1);
+  assert.equal(
+    harness.statuses.at(-1),
+    "cache gpt-new · high ↓100% [<error>█</error><dim>░░░░░░░</dim>]",
   );
 });
 
@@ -152,29 +241,42 @@ test("clears only after a successful response on the predicted lane", async () =
   const prediction = harness.statuses.at(-1);
 
   await harness.fire("message_end", {
-    message: assistantMessage({ model: newModel.id, stopReason: "error" }),
+    message: assistantMessage(harness.branch, { model: newModel.id, stopReason: "error" }),
   });
   assert.equal(harness.statuses.at(-1), prediction);
 
   await harness.fire("message_end", {
-    message: assistantMessage({ model: newModel.id, stopReason: "aborted" }),
+    message: assistantMessage(harness.branch, { model: newModel.id, stopReason: "aborted" }),
   });
   assert.equal(harness.statuses.at(-1), prediction);
 
   await harness.fire("message_end", {
-    message: assistantMessage({ model: oldModel.id, stopReason: "stop" }),
+    message: assistantMessage(harness.branch, { model: oldModel.id, stopReason: "stop" }),
   });
   assert.equal(harness.statuses.at(-1), prediction);
 
   await harness.fire("message_end", {
-    message: assistantMessage({ model: newModel.id, stopReason: "stop" }),
+    message: assistantMessage(harness.branch, { model: newModel.id, stopReason: "stop" }),
   });
   assert.equal(harness.statuses.at(-1), undefined);
 });
 
+test("falls back to legacy text when context usage is unavailable", async () => {
+  const harness = createHarness({ contextUsage: null });
+  await harness.fire("session_start");
+  await harness.fire("model_select", {
+    model: newModel,
+    previousModel: oldModel,
+    source: "set",
+  });
+  await waitForPrediction();
+  assert.equal(harness.statuses.at(-1), "cache gpt-new · high · cold");
+});
+
 test("registers priority metadata and cleans up at shutdown", async () => {
   const harness = createHarness();
-  const registrations = () => harness.busEvents.filter(({ channel }) => channel.endsWith("/register/v1"));
+  const registrations = () =>
+    harness.busEvents.filter(({ channel }) => channel.endsWith("/register/v1"));
   assert.deepEqual(registrations().at(-1)?.data, {
     protocolVersion: 1,
     id: "pi-cache-hit-predictor",

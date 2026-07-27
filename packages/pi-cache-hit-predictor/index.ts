@@ -5,8 +5,12 @@ import type {
 import {
   type CacheLane,
   type CachePrediction,
+  type RenderTheme,
+  lastUsedLane,
   predictCacheHit,
+  predictCacheSwitchImpact,
   recordAssistantUsage,
+  renderSwitchImpact,
   scanCacheHistory,
 } from "./src/predictor.js";
 import { createFooterSlotRegistration } from "./src/footer-slot.js";
@@ -63,6 +67,7 @@ export default function cacheHitPredictor(pi: ExtensionAPI) {
   let history = scanCacheHistory([]);
   let pendingPredictionTimer: ReturnType<typeof setTimeout> | undefined;
   let displayedLane: CacheLane | undefined;
+  let activeLane: CacheLane | undefined;
 
   const rebuild = (ctx: ExtensionContext) => {
     history = scanCacheHistory(
@@ -71,25 +76,67 @@ export default function cacheHitPredictor(pi: ExtensionAPI) {
     );
   };
 
+  const setCurrentLane = (model: ModelIdentity) => {
+    activeLane = laneFor(model, pi.getThinkingLevel());
+  };
+
+  const setActiveLaneFromHistory = (ctx: ExtensionContext) => {
+    activeLane = lastUsedLane(ctx.sessionManager.getBranch());
+  };
+
   const clearPrediction = (ctx: ExtensionContext) => {
     displayedLane = undefined;
     ctx.ui.setStatus(STATUS_KEY, undefined);
   };
 
-  const appendPrediction = (
+  const legacyPredictionText = (
     ctx: ExtensionContext,
-    model: ModelIdentity,
-    thinkingLevel: string,
-  ) => {
-    if (ctx.mode !== "tui") return;
+    lane: CacheLane,
+  ): string => {
     const contextTokens = ctx.getContextUsage()?.tokens ?? null;
-    const prediction = predictCacheHit(
+    const prediction = predictCacheHit(history, lane, contextTokens);
+    return predictionText(prediction);
+  };
+
+  const renderImpact = (ctx: ExtensionContext, dest: CacheLane): string | undefined => {
+    if (ctx.mode !== "tui") return undefined;
+    if (!activeLane || sameLane(activeLane, dest)) return undefined;
+
+    const contextUsage = ctx.getContextUsage();
+    const currentPromptTokens = contextUsage?.tokens ?? null;
+    const contextWindow = contextUsage?.contextWindow
+      ?? ctx.model?.contextWindow
+      ?? null;
+
+    const impact = predictCacheSwitchImpact(
       history,
-      laneFor(model, thinkingLevel),
-      contextTokens,
+      activeLane,
+      dest,
+      currentPromptTokens,
+      contextWindow,
     );
-    displayedLane = prediction.lane;
-    ctx.ui.setStatus(STATUS_KEY, predictionText(prediction));
+
+    if (impact.sourceTokens === 0 && impact.destTokens === 0) {
+      return undefined;
+    }
+
+    if (currentPromptTokens === null || contextWindow === null) {
+      return legacyPredictionText(ctx, dest);
+    }
+
+    const theme = (ctx.ui as { theme?: RenderTheme }).theme;
+    return renderSwitchImpact(impact, theme);
+  };
+
+  const showImpact = (ctx: ExtensionContext, dest: CacheLane) => {
+    const text = renderImpact(ctx, dest);
+    if (text) {
+      displayedLane = dest;
+      ctx.ui.setStatus(STATUS_KEY, text);
+    } else {
+      clearPrediction(ctx);
+    }
+    activeLane = dest;
   };
 
   const schedulePrediction = (
@@ -97,10 +144,11 @@ export default function cacheHitPredictor(pi: ExtensionAPI) {
     model: ModelIdentity,
     thinkingLevel: string,
   ) => {
+    const dest = laneFor(model, thinkingLevel);
     if (pendingPredictionTimer) clearTimeout(pendingPredictionTimer);
     pendingPredictionTimer = setTimeout(() => {
       pendingPredictionTimer = undefined;
-      appendPrediction(ctx, model, thinkingLevel);
+      showImpact(ctx, dest);
     }, 0);
   };
 
@@ -108,15 +156,19 @@ export default function cacheHitPredictor(pi: ExtensionAPI) {
     footerSlot.register();
     clearPrediction(ctx);
     rebuild(ctx);
+    setActiveLaneFromHistory(ctx);
   });
   pi.on("session_tree", async (_event, ctx) => {
     clearPrediction(ctx);
     rebuild(ctx);
+    setActiveLaneFromHistory(ctx);
   });
   pi.on("session_compact", async (_event, ctx) => {
     clearPrediction(ctx);
     rebuild(ctx);
+    setActiveLaneFromHistory(ctx);
   });
+
 
   pi.on("message_end", async (event, ctx) => {
     if (event.message.role !== "assistant") return;
@@ -126,6 +178,7 @@ export default function cacheHitPredictor(pi: ExtensionAPI) {
       id: event.message.model,
     }, pi.getThinkingLevel());
     recordAssistantUsage(history, event.message, responseLane);
+    activeLane = responseLane;
     if (
       displayedLane
       && event.message.stopReason !== "aborted"
@@ -140,15 +193,16 @@ export default function cacheHitPredictor(pi: ExtensionAPI) {
   });
 
   pi.on("model_select", async (event, ctx) => {
+    if (!ctx.model) return;
     if (event.source === "restore" || !event.previousModel) {
       if (pendingPredictionTimer) clearTimeout(pendingPredictionTimer);
       pendingPredictionTimer = undefined;
       clearPrediction(ctx);
+      setCurrentLane(event.model);
       return;
     }
     schedulePrediction(ctx, event.model, pi.getThinkingLevel());
   });
-
 
   pi.on("session_shutdown", async (_event, ctx) => {
     if (pendingPredictionTimer) clearTimeout(pendingPredictionTimer);
