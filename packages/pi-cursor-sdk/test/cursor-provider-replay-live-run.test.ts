@@ -24,6 +24,7 @@ import {
 	connectMcpClient,
 	createBuiltinToolInfo,
 	createTestToolInfo,
+	delayBeforeToolCompletion,
 	cursorModelItems,
 	type CursorDeltaHandler,
 	type CursorStepHandler,
@@ -45,6 +46,98 @@ import { join } from "node:path";
 
 describe("streamCursor native replay live run", () => {
 	beforeEach(resetCursorProviderTestState);
+
+	it("shows only the completed bash replay card for a delayed shell call", async () => {
+		process.env.PI_CURSOR_NATIVE_TOOL_DISPLAY = "1";
+		const registeredTools: RegisteredTool[] = [];
+		await registerNativeToolDisplayForTest(registeredTools);
+
+		const command = "sleep 1 && printf done";
+		let resolveRun: (result: { id: string; status: "finished"; result: string }) => void = () => {};
+		const runWait = vi.fn(
+			() =>
+				new Promise<{ id: string; status: "finished"; result: string }>((resolve) => {
+					resolveRun = resolve;
+				}),
+		);
+		const mockSend = vi.fn().mockImplementation(async (_msg: unknown, opts: { onDelta: CursorDeltaHandler }) => {
+			const startedShellCall = { name: "shell", args: { command } };
+			opts.onDelta({ update: { type: "partial-tool-call", toolCall: startedShellCall, callId: "shell-1" } });
+			opts.onDelta({ update: { type: "tool-call-started", toolCall: startedShellCall, callId: "shell-1" } });
+			opts.onDelta({
+				update: {
+					type: "shell-output-delta",
+					event: { case: "stdout", value: { data: "done\n" } },
+				},
+			});
+			await delayBeforeToolCompletion();
+			opts.onDelta({
+				update: {
+					type: "tool-call-completed",
+					toolCall: {
+						name: "shell",
+						result: { status: "success", value: { stdout: "", stderr: "", exitCode: 0 } },
+					},
+					callId: "shell-1",
+				},
+			});
+			return asMockCursorRun({
+				id: "run-1",
+				agentId: "agent-1",
+				status: "running",
+				wait: runWait,
+				cancel: vi.fn(),
+				supports: () => true,
+				unsupportedReason: () => undefined,
+			});
+		});
+		mockCreatedAgent({
+			agentId: "agent-1",
+			send: mockSend,
+			[Symbol.asyncDispose]: vi.fn().mockResolvedValue(undefined),
+		});
+
+		const firstEvents = await collectEvents(streamCursor(makeModel(), makeContext(), { apiKey: "test-key" }));
+		const firstDone = getDoneEvent(firstEvents);
+		const toolCall = firstDone.message.content.find(isToolCallBlock);
+		const bashTool = registeredTools.find((tool) => tool.name === "bash");
+		const toolResult = await bashTool!.execute(
+			toolCall!.id,
+			toolCall!.arguments,
+			undefined,
+			undefined,
+			createExtensionTestContext(),
+		);
+
+		resolveRun({ id: "run-1", status: "finished", result: "Done." });
+		const replayContext = makeContext();
+		replayContext.messages = [
+			...replayContext.messages,
+			firstDone.message,
+			{
+				role: "toolResult",
+				toolCallId: toolCall!.id,
+				toolName: "bash",
+				content: toolResult.content,
+				details: toolResult.details,
+				isError: false,
+				timestamp: 2,
+			},
+		];
+		await collectEvents(streamCursor(makeModel(), replayContext, { apiKey: "test-key" }));
+
+		const trace = collectThinkingDeltas(firstEvents);
+		expect(trace).not.toContain("Cursor shell:");
+		expect(trace).not.toContain("Cursor shell stdout:");
+		expect(trace).not.toContain("Cursor shell stderr:");
+		expect(firstDone.reason).toBe("toolUse");
+		expect(toolCall).toMatchObject({ name: "bash", arguments: { command } });
+		expect(toolResult).toMatchObject({
+			content: [{ type: "text", text: "done" }],
+			terminate: false,
+		});
+		expect(cursorProviderTestUtils.pendingCursorNativeRunCount()).toBe(0);
+	});
 
 	it("uses bounded approximate usage on the final native replay stop turn when no turn-ended usage arrives", async () => {
 		process.env.PI_CURSOR_NATIVE_TOOL_DISPLAY = "1";

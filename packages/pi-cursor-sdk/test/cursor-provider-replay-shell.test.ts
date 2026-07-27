@@ -24,6 +24,7 @@ import {
 	connectMcpClient,
 	createBuiltinToolInfo,
 	createTestToolInfo,
+	delayBeforeToolCompletion,
 	cursorModelItems,
 	type CursorDeltaHandler,
 	type CursorStepHandler,
@@ -90,7 +91,7 @@ it("uses Cursor shell-output-delta as display-only fallback when completed shell
 		const firstDone = getDoneEvent(firstEvents);
 		const toolCall = firstDone.message.content.find(isToolCallBlock);
 
-		expect(collectThinkingDeltas(firstEvents)).toContain("Cursor shell stdout: background job done");
+		expect(collectThinkingDeltas(firstEvents)).not.toContain("Cursor shell stdout: background job done");
 		expect(firstDone.reason).toBe("toolUse");
 		expect(toolCall!.name).toBe("bash");
 		expect(toolCall!.arguments).toEqual({ command });
@@ -121,6 +122,63 @@ it("uses Cursor shell-output-delta as display-only fallback when completed shell
 		const replayEvents = await collectEvents(streamCursor(makeModel(), replayContext, { apiKey: "test-key" }));
 		const replayText = collectTextDeltas(replayEvents);
 		expect(replayText).toBe("Done.");
+	});
+
+	it("keeps delayed lifecycle and output progress when bash is inactive", async () => {
+		process.env.PI_CURSOR_NATIVE_TOOL_DISPLAY = "1";
+		await registerNativeToolDisplayForTest([]);
+
+		const command = "sleep 1 && printf done";
+		const mockSend = vi.fn().mockImplementation(async (_msg: unknown, opts: { onDelta: CursorDeltaHandler }) => {
+			opts.onDelta({
+				update: {
+					type: "tool-call-started",
+					toolCall: { name: "shell", args: { command } },
+					callId: "shell-1",
+				},
+			});
+			opts.onDelta({
+				update: {
+					type: "shell-output-delta",
+					event: { case: "stdout", value: { data: "working\n" } },
+				},
+			});
+			await delayBeforeToolCompletion();
+			opts.onDelta({
+				update: {
+					type: "tool-call-completed",
+					toolCall: {
+						name: "shell",
+						result: { status: "success", value: { stdout: "done\n", stderr: "", exitCode: 0 } },
+					},
+					callId: "shell-1",
+				},
+			});
+			return asMockCursorRun({
+				id: "run-1",
+				agentId: "agent-1",
+				status: "finished",
+				wait: vi.fn().mockResolvedValue({ id: "run-1", status: "finished", result: "Done." }),
+				cancel: vi.fn(),
+				supports: () => true,
+				unsupportedReason: () => undefined,
+			});
+		});
+		mockCreatedAgent({
+			agentId: "agent-1",
+			send: mockSend,
+			[Symbol.asyncDispose]: vi.fn().mockResolvedValue(undefined),
+		});
+
+		const context = makeContext();
+		context.tools = [{ name: "read", description: "Read files", parameters: Type.Object({}) }];
+		const events = await collectEvents(streamCursor(makeModel(), context, { apiKey: "test-key" }));
+		const trace = collectThinkingDeltas(events);
+
+		expect(trace).toContain(`Cursor shell: ${command}`);
+		expect(trace).toContain("Cursor shell stdout: working");
+		expect(trace).toContain("Cursor bash:");
+		expect(hasEventType(events, "toolcall_start")).toBe(false);
 	});
 
 	it("drops shell-output-delta fallback data when overlapping shell calls make attribution ambiguous", async () => {

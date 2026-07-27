@@ -13,6 +13,7 @@ import {
 	hasEventType,
 	isToolCallBlock,
 	registerNativeToolDisplayForTest,
+	delayBeforeToolCompletion,
 	type CursorDeltaHandler,
 	type RegisteredTool,
 	mockCreatedAgent,
@@ -67,6 +68,60 @@ describe("streamCursor incomplete native replay tools", () => {
 		expect(collectThinkingDeltas(events)).toContain("Cursor grep did not complete");
 		expect(collectThinkingDeltas(events)).toContain("aborted");
 		expect(getEventsOfType(events, "toolcall_start")).toHaveLength(0);
+		expect(cursorProviderTestUtils.pendingCursorNativeRunCount()).toBe(0);
+		expect(cancelRun).toHaveBeenCalled();
+		expect(mockDispose).toHaveBeenCalledTimes(1);
+	});
+
+	it("surfaces card-only shell failure on abort without stale progress", async () => {
+		process.env.PI_CURSOR_NATIVE_TOOL_DISPLAY = "1";
+		const registeredTools: RegisteredTool[] = [];
+		await registerNativeToolDisplayForTest(registeredTools);
+
+		const controller = new AbortController();
+		const mockDispose = vi.fn().mockResolvedValue(undefined);
+		const cancelRun = vi.fn().mockResolvedValue(undefined);
+		const runWait = vi.fn(() => new Promise<{ id: string; status: "finished"; result: string }>(() => {}));
+		const mockSend = vi.fn().mockImplementation(async (_msg: unknown, opts: { onDelta: CursorDeltaHandler }) => {
+			opts.onDelta({
+				update: {
+					type: "tool-call-started",
+					toolCall: { name: "shell", args: { command: "sleep 10" } },
+					callId: "shell-1",
+				},
+			});
+			opts.onDelta({
+				update: {
+					type: "shell-output-delta",
+					event: { case: "stdout", value: { data: "still running\n" } },
+				},
+			});
+			return {
+				id: "run-1",
+				agentId: "agent-1",
+				status: "running",
+				wait: runWait,
+				cancel: cancelRun,
+				supports: () => true,
+				unsupportedReason: () => undefined,
+			};
+		});
+		mockCreatedAgent({ send: mockSend, [Symbol.asyncDispose]: mockDispose });
+
+		const eventsPromise = collectEvents(streamCursor(makeModel(), makeContext(), { apiKey: "test-key", signal: controller.signal }));
+		await vi.waitFor(() => expect(mockSend).toHaveBeenCalled());
+		await delayBeforeToolCompletion();
+		controller.abort();
+		const events = await eventsPromise;
+		const trace = collectThinkingDeltas(events);
+
+		expect(getErrorEvent(events).reason).toBe("aborted");
+		expect(trace).not.toContain("Cursor shell:");
+		expect(trace).not.toContain("Cursor shell stdout:");
+		expect(trace).toContain("Cursor shell did not complete");
+		expect(trace).toContain("aborted");
+		expect(getEventsOfType(events, "toolcall_start")).toHaveLength(0);
+		expect(nativeToolDisplayTestUtils.nativeToolResultCount()).toBe(0);
 		expect(cursorProviderTestUtils.pendingCursorNativeRunCount()).toBe(0);
 		expect(cancelRun).toHaveBeenCalled();
 		expect(mockDispose).toHaveBeenCalledTimes(1);

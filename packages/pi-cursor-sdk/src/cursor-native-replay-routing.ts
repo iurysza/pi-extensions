@@ -11,6 +11,9 @@ export interface NativeReplayRoutingInput {
 	hasLiveRun: boolean;
 }
 
+export type CursorShellProgressMode = "transcript" | "card-only";
+export type CursorShellProgressRoutingInput = Omit<NativeReplayRoutingInput, "toolName">;
+
 export function isNativeToolActiveInContext(toolName: string, activeToolNames?: ReadonlySet<string>): boolean {
 	return activeToolNames === undefined || activeToolNames.has(toolName);
 }
@@ -30,6 +33,12 @@ export function resolveNativeReplayDisposition(input: NativeReplayRoutingInput):
 		return "inactive_trace";
 	}
 	return "transcript_trace";
+}
+
+export function resolveCursorShellProgressMode(input: CursorShellProgressRoutingInput): CursorShellProgressMode {
+	return resolveNativeReplayDisposition({ ...input, toolName: "bash" }) === "queue_replay"
+		? "card-only"
+		: "transcript";
 }
 
 export function partitionNativeToolsByActiveContext<T extends { toolName: string }>(

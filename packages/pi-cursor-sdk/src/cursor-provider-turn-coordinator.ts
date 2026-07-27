@@ -33,6 +33,7 @@ import {
 	getToolFingerprint,
 } from "./cursor-provider-turn-tool-ledger.js";
 import { readCursorSdkTurnUsageFromUpdate, type CursorSdkTurnUsage } from "./cursor-usage-accounting.js";
+import { resolveCursorShellProgressMode } from "./cursor-native-replay-routing.js";
 
 export interface CursorSdkTurnCoordinatorOptions {
 	stream: AssistantMessageEventStream;
@@ -185,10 +186,25 @@ export class CursorSdkTurnCoordinator {
 			if (this.liveRun?.bridgeRun?.isBridgeMcpToolCall(update.toolCall)) {
 				if (typeof update.callId === "string") this.ledger.markBridgeStarted(update.callId);
 			} else {
-				this.lifecycleEmitter.maybeSchedule(update.callId, update.toolCall);
+				const shellCallId =
+					isCursorShellToolCall(update.toolCall) && typeof update.callId === "string"
+						? update.callId
+						: undefined;
+				const shellProgressMode = shellCallId
+					? resolveCursorShellProgressMode({
+							useNativeToolReplay: this.useNativeToolReplay,
+							activeToolNames: this.activeToolNames,
+							hasLiveRun: this.liveRun !== undefined,
+						})
+					: undefined;
+				if (shellCallId && shellProgressMode === "card-only") {
+					this.lifecycleEmitter.cancel(shellCallId);
+				} else {
+					this.lifecycleEmitter.maybeSchedule(update.callId, update.toolCall);
+				}
 				this.ledger.registerStartedToolCall(update.callId, update.toolCall);
-				if (isCursorShellToolCall(update.toolCall) && typeof update.callId === "string") {
-					this.shellOutput.onShellToolStarted(update.callId);
+				if (shellCallId) {
+					this.shellOutput.onShellToolStarted(shellCallId, { progressMode: shellProgressMode });
 				}
 			}
 			return;

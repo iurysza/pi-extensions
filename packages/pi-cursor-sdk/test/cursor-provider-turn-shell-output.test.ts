@@ -28,6 +28,29 @@ describe("CursorShellOutputTracker", () => {
 		});
 	});
 
+	it("buffers card-only stdout/stderr without returning progress previews", () => {
+		const tracker = new CursorShellOutputTracker();
+		tracker.onShellToolStarted("shell-1", { progressMode: "card-only" });
+
+		expect(tracker.appendShellOutputDelta({ stream: "stdout", data: "line one\n" })).toBeUndefined();
+		expect(tracker.appendShellOutputDelta({ stream: "stderr", data: "warn\n" })).toBeUndefined();
+		expect(tracker.takeDeltasForCall("shell-1")).toEqual({
+			stdout: ["line one\n"],
+			stderr: ["warn\n"],
+		});
+	});
+
+	it("clears card-only mode and buffered output", () => {
+		const tracker = new CursorShellOutputTracker();
+		tracker.onShellToolStarted("shell-1", { progressMode: "card-only" });
+		tracker.appendShellOutputDelta({ stream: "stdout", data: "hidden\n" });
+		tracker.clear();
+		tracker.onShellToolStarted("shell-1");
+
+		expect(tracker.appendShellOutputDelta({ stream: "stdout", data: "visible\n" })).toBeDefined();
+		expect(tracker.takeDeltasForCall("shell-1")?.stdout).toEqual(["visible\n"]);
+	});
+
 	it("bounds user-visible shell output progress per call", () => {
 		const tracker = new CursorShellOutputTracker();
 		tracker.onShellToolStarted("shell-1");

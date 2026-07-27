@@ -3,6 +3,7 @@ import { asRecord, getField, hasUsableText } from "./cursor-record-utils.js";
 import { scrubSensitiveText } from "./cursor-sensitive-text.js";
 import { truncateCursorDisplayLine } from "./cursor-display-text.js";
 import { classifyCursorToolVisibility } from "./cursor-tool-visibility.js";
+import type { CursorShellProgressMode } from "./cursor-native-replay-routing.js";
 
 export interface CursorShellOutputDelta {
 	stream: "stdout" | "stderr";
@@ -16,6 +17,10 @@ export interface CursorShellOutputDeltas {
 
 export interface CursorShellOutputProgressDelta extends CursorShellOutputDelta {
 	callId: string;
+}
+
+export interface CursorShellStartOptions {
+	progressMode?: CursorShellProgressMode;
 }
 
 const SHELL_OUTPUT_PROGRESS_MAX_DELTAS_PER_CALL = 3;
@@ -90,15 +95,18 @@ export class CursorShellOutputTracker {
 	private readonly ambiguousShellOutputCallIds = new Set<string>();
 	private readonly shellOutputDeltasByCallId = new Map<string, CursorShellOutputDeltas>();
 	private readonly shellOutputProgressCountsByCallId = new Map<string, number>();
+	private readonly shellProgressModesByCallId = new Map<string, CursorShellProgressMode>();
 
-	onShellToolStarted(callId: string): void {
+	onShellToolStarted(callId: string, options?: CursorShellStartOptions): void {
 		this.activeShellCallIds.add(callId);
+		this.shellProgressModesByCallId.set(callId, options?.progressMode ?? "transcript");
 	}
 
 	onShellToolCleared(callId: string): void {
 		this.activeShellCallIds.delete(callId);
 		this.ambiguousShellOutputCallIds.delete(callId);
 		this.shellOutputProgressCountsByCallId.delete(callId);
+		this.shellProgressModesByCallId.delete(callId);
 	}
 
 	appendShellOutputDelta(delta: CursorShellOutputDelta): CursorShellOutputProgressDelta | undefined {
@@ -119,6 +127,7 @@ export class CursorShellOutputTracker {
 		}
 		deltas[delta.stream].push(delta.data);
 
+		if (this.shellProgressModesByCallId.get(callId) === "card-only") return undefined;
 		if (!getCursorShellOutputProgressPreview(delta.data)) return undefined;
 		const progressCount = this.shellOutputProgressCountsByCallId.get(callId) ?? 0;
 		if (progressCount >= SHELL_OUTPUT_PROGRESS_MAX_DELTAS_PER_CALL) return undefined;
@@ -130,6 +139,7 @@ export class CursorShellOutputTracker {
 		const deltas = this.shellOutputDeltasByCallId.get(callId);
 		this.shellOutputDeltasByCallId.delete(callId);
 		this.shellOutputProgressCountsByCallId.delete(callId);
+		this.shellProgressModesByCallId.delete(callId);
 		return deltas;
 	}
 
@@ -138,5 +148,6 @@ export class CursorShellOutputTracker {
 		this.ambiguousShellOutputCallIds.clear();
 		this.shellOutputDeltasByCallId.clear();
 		this.shellOutputProgressCountsByCallId.clear();
+		this.shellProgressModesByCallId.clear();
 	}
 }
