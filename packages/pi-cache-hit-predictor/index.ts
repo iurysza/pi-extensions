@@ -5,7 +5,8 @@ import type {
 import {
   type CacheLane,
   type CachePrediction,
-  type RenderTheme,
+  CACHE_ICON,
+  formatTokens,
   lastUsedLane,
   predictCacheHit,
   predictCacheSwitchImpact,
@@ -23,27 +24,13 @@ interface ModelIdentity {
   id: string;
 }
 
-function formatTokens(tokens: number): string {
-  if (tokens < 1_000) return Math.round(tokens).toString();
-  if (tokens < 1_000_000) {
-    return `${(tokens / 1_000).toFixed(tokens < 10_000 ? 1 : 0)}k`;
-  }
-  return `${(tokens / 1_000_000).toFixed(tokens < 10_000_000 ? 1 : 0)}m`;
-}
-
 function predictionText(prediction: CachePrediction): string {
-  const lane = `${prediction.lane.model} · ${prediction.lane.thinkingLevel}`;
-  if (!prediction.hasLaneHistory) {
-    const prompt = prediction.currentPromptTokens
-      ? ` 0%/~${formatTokens(prediction.currentPromptTokens)}`
-      : "";
-    return `cache ${lane} · cold${prompt}`;
-  }
+  if (!prediction.hasLaneHistory) return `${CACHE_ICON} cold`;
 
   if (prediction.currentPromptTokens === null || prediction.percent === null) {
-    return `cache ${lane} · ~${formatTokens(prediction.estimatedCacheTokens)}`;
+    return `${CACHE_ICON} ~${formatTokens(prediction.estimatedCacheTokens)}`;
   }
-  return `cache ${lane} · ~${formatTokens(prediction.estimatedCacheTokens)}/~${formatTokens(prediction.currentPromptTokens)} ${Math.round(prediction.percent)}%`;
+  return `${CACHE_ICON} ~${formatTokens(prediction.estimatedCacheTokens)}/~${formatTokens(prediction.currentPromptTokens)} ${Math.round(prediction.percent)}%`;
 }
 
 function laneFor(model: ModelIdentity, thinkingLevel: string): CacheLane {
@@ -124,8 +111,7 @@ export default function cacheHitPredictor(pi: ExtensionAPI) {
       return legacyPredictionText(ctx, dest);
     }
 
-    const theme = (ctx.ui as { theme?: RenderTheme }).theme;
-    return renderSwitchImpact(impact, theme);
+    return renderSwitchImpact(impact);
   };
 
   const showImpact = (ctx: ExtensionContext, dest: CacheLane) => {

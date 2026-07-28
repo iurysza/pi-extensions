@@ -37,10 +37,6 @@ export interface CacheSwitchImpact {
 	windowImpactPercent: number | null;
 }
 
-export interface RenderTheme {
-	fg(color: "success" | "error" | "dim" | "muted" | "warning", text: string): string;
-}
-
 export function cacheLaneKey(lane: CacheLane): string {
 	return JSON.stringify([
 		lane.provider,
@@ -230,73 +226,21 @@ export function predictCacheSwitchImpact(
 	};
 }
 
-const BLOCK = "█";
-const DIM = "░";
-const DEFAULT_BAR_WIDTH = 8;
+export const CACHE_ICON = "\u{f01bc}";
 
-function allocateSegments(values: readonly number[], width: number): number[] {
-	const total = values.reduce((sum, value) => sum + value, 0);
-	if (total === 0) return values.map(() => 0);
-
-	const raw = values.map((value) => (value / total) * width);
-	const floors = raw.map(Math.floor);
-	const remainders = raw
-		.map((value, index) => ({ remainder: value - floors[index], index }))
-		.sort((a, b) => b.remainder - a.remainder);
-	let sum = floors.reduce((a, b) => a + b, 0);
-
-	for (const { index } of remainders) {
-		if (sum >= width) break;
-		floors[index]++;
-		sum++;
+export function formatTokens(tokens: number): string {
+	if (tokens < 1_000) return Math.round(tokens).toString();
+	if (tokens < 1_000_000) {
+		return `${(tokens / 1_000).toFixed(tokens < 10_000 ? 1 : 0)}k`;
 	}
-
-	return floors;
+	return `${(tokens / 1_000_000).toFixed(tokens < 10_000_000 ? 1 : 0)}m`;
 }
 
-export function renderSwitchImpact(
-	impact: CacheSwitchImpact,
-	theme?: RenderTheme,
-	options?: { barWidth?: number },
-): string {
-	const lane = `${impact.destLane.model} · ${impact.destLane.thinkingLevel}`;
-
+export function renderSwitchImpact(impact: CacheSwitchImpact): string {
 	if (impact.sourceTokens === 0 && impact.destTokens === 0) {
-		return `cache ${lane} · cold`;
+		return `${CACHE_ICON} cold`;
 	}
+	if (impact.sourceTokens === 0) return `${CACHE_ICON} warm`;
 
-	const barWidth = options?.barWidth ?? DEFAULT_BAR_WIDTH;
-	const totalTokens = Math.max(
-		impact.contextWindow ?? 0,
-		impact.currentPromptTokens ?? 0,
-		impact.destTokens + impact.lostTokens,
-	);
-	const carried = impact.destTokens;
-	const lost = impact.lostTokens;
-	const rest = Math.max(0, totalTokens - carried - lost);
-	const [carriedWidth, lostWidth, restWidth] = allocateSegments(
-		[carried, lost, rest],
-		barWidth,
-	);
-
-	const color = (name: "success" | "error" | "dim", text: string) =>
-		theme ? theme.fg(name, text) : text;
-	const segments: string[] = [];
-	if (carriedWidth > 0) segments.push(color("success", BLOCK.repeat(carriedWidth)));
-	if (lostWidth > 0) segments.push(color("error", BLOCK.repeat(lostWidth)));
-	if (restWidth > 0) segments.push(color("dim", DIM.repeat(restWidth)));
-	const bar = segments.join("");
-
-	let label: string;
-	if (impact.lostTokens > 0 && impact.dropPercent !== null) {
-		label = `↓${Math.round(impact.dropPercent)}%`;
-	} else if (impact.sourceTokens > 0) {
-		label = "↓0%";
-	} else if (impact.destTokens > 0) {
-		label = "warm";
-	} else {
-		label = "cold";
-	}
-
-	return `cache ${lane} ${label} [${bar}]`;
+	return `${CACHE_ICON} ↓${formatTokens(impact.lostTokens)}/${formatTokens(impact.sourceTokens)}`;
 }

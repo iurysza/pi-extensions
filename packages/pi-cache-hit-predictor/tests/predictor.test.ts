@@ -114,12 +114,6 @@ const otherLane = {
   thinkingLevel: "low",
 } as const;
 
-const testTheme = {
-  fg(color: string, text: string) {
-    return `[${color}:${text}]`;
-  },
-};
-
 describe("cache switch impact", () => {
   test("reports no loss when destination carries more than source", () => {
     const history = scanCacheHistory([
@@ -190,17 +184,17 @@ describe("cache switch impact", () => {
 });
 
 describe("switch impact rendering", () => {
-  test("renders a full drop with a small red segment inside the window", () => {
+  test("renders a full drop as lost tokens over source cache", () => {
     const history = scanCacheHistory([
       thinking("low"),
       assistant("gpt-test", 20_000, 1_000, 8_000),
     ]);
     const impact = predictCacheSwitchImpact(history, lowLane, otherLane, 20_000, 200_000);
-    const text = renderSwitchImpact(impact, testTheme, { barWidth: 8 });
-    assert.equal(text, "cache gpt-other · low ↓100% [[error:█][dim:░░░░░░░]]");
+    const text = renderSwitchImpact(impact);
+    assert.equal(text, "󰆼 ↓20k/20k");
   });
 
-  test("renders a partial drop with green, red, and dim segments", () => {
+  test("renders a partial drop as lost tokens over source cache", () => {
     const history = scanCacheHistory([
       thinking("low"),
       assistant("gpt-test", 25_000, 1_000, 8_000),
@@ -208,18 +202,18 @@ describe("switch impact rendering", () => {
       assistant("gpt-test", 100_000, 2_000, 24_000),
     ]);
     const impact = predictCacheSwitchImpact(history, highLane, lowLane, 100_000, 200_000);
-    const text = renderSwitchImpact(impact, testTheme, { barWidth: 8 });
-    assert.equal(text, "cache gpt-test · low ↓75% [[success:█][error:███][dim:░░░░]]");
+    const text = renderSwitchImpact(impact);
+    assert.equal(text, "󰆼 ↓75k/100k");
   });
 
-  test("renders a warm destination with no red segment", () => {
+  test("renders a warm destination without a source comparison", () => {
     const history = scanCacheHistory([
       thinking("high"),
       assistant("gpt-test", 100_000, 1_000, 20_000),
     ]);
     const impact = predictCacheSwitchImpact(history, lowLane, highLane, 100_000, 200_000);
-    const text = renderSwitchImpact(impact, testTheme, { barWidth: 8 });
-    assert.equal(text, "cache gpt-test · high warm [[success:████][dim:░░░░]]");
+    const text = renderSwitchImpact(impact);
+    assert.equal(text, "󰆼 warm");
   });
 
   test("renders no-loss switch from a warm source lane", () => {
@@ -230,15 +224,15 @@ describe("switch impact rendering", () => {
       assistant("gpt-test", 100_000, 2_000, 24_000),
     ]);
     const impact = predictCacheSwitchImpact(history, lowLane, highLane, 100_000, 200_000);
-    const text = renderSwitchImpact(impact, testTheme, { barWidth: 8 });
-    assert.equal(text, "cache gpt-test · high ↓0% [[success:████][dim:░░░░]]");
+    const text = renderSwitchImpact(impact);
+    assert.equal(text, "󰆼 ↓0/25k");
   });
 
   test("falls back to cold label when both lanes are cold", () => {
     const history = scanCacheHistory([]);
     const impact = predictCacheSwitchImpact(history, lowLane, otherLane, 100_000, 200_000);
-    const text = renderSwitchImpact(impact, testTheme, { barWidth: 8 });
-    assert.equal(text, "cache gpt-other · low · cold");
+    const text = renderSwitchImpact(impact);
+    assert.equal(text, "󰆼 cold");
   });
 });
 

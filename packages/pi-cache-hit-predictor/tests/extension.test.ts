@@ -159,10 +159,7 @@ test("shows a full cache drop when switching to a cold model", async () => {
     source: "set",
   });
   await waitForPrediction();
-  assert.equal(
-    harness.statuses.at(-1),
-    "cache gpt-new · high ↓100% [<error>█</error><dim>░░░░░░░</dim>]",
-  );
+  assert.equal(harness.statuses.at(-1), "󰆼 ↓25k/25k");
 });
 
 test("shows a partial drop when switching to a smaller cached lane", async () => {
@@ -180,10 +177,7 @@ test("shows a partial drop when switching to a smaller cached lane", async () =>
     source: "set",
   });
   await waitForPrediction();
-  assert.equal(
-    harness.statuses.at(-1),
-    "cache gpt-old · high ↓75% [<success>█</success><error>███</error><dim>░░░░</dim>]",
-  );
+  assert.equal(harness.statuses.at(-1), "󰆼 ↓75k/100k");
 });
 
 test("shows a warm destination with no loss", async () => {
@@ -204,10 +198,7 @@ test("shows a warm destination with no loss", async () => {
     previousLevel: "low",
   });
   await waitForPrediction();
-  assert.equal(
-    harness.statuses.at(-1),
-    "cache gpt-old · high ↓0% [<success>████</success><dim>░░░░</dim>]",
-  );
+  assert.equal(harness.statuses.at(-1), "󰆼 ↓0/25k");
 });
 
 test("coalesces paired model and thinking changes into one status", async () => {
@@ -224,10 +215,7 @@ test("coalesces paired model and thinking changes into one status", async () => 
   });
   await waitForPrediction();
   assert.equal(harness.statuses.filter(Boolean).length, 1);
-  assert.equal(
-    harness.statuses.at(-1),
-    "cache gpt-new · high ↓100% [<error>█</error><dim>░░░░░░░</dim>]",
-  );
+  assert.equal(harness.statuses.at(-1), "󰆼 ↓25k/25k");
 });
 
 test("clears only after a successful response on the predicted lane", async () => {
@@ -270,7 +258,7 @@ test("falls back to legacy text when context usage is unavailable", async () => 
     source: "set",
   });
   await waitForPrediction();
-  assert.equal(harness.statuses.at(-1), "cache gpt-new · high · cold");
+  assert.equal(harness.statuses.at(-1), "󰆼 cold");
 });
 
 test("registers priority metadata and cleans up at shutdown", async () => {

@@ -1,5 +1,19 @@
 # @iurysza/pi-cache-hit-predictor
 
+## 0.2.1
+
+### Changes
+
+- Replace the context-window bar with a compact, model-agnostic cache-loss readout:
+
+  ```text
+  󰆼 ↓75k/100k
+  ```
+
+  It means switching may discard 75k of the 100k prompt-cache tokens the current lane would likely reuse.
+
+- Use `warm` and `cold` only when no source-lane comparison is available.
+
 ## 0.2.0
 
 ### Changes
