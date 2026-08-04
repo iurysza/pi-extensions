@@ -41,6 +41,7 @@ Omit a resource type to load all of it. Use an empty array to load none.
 | [pi-sem](extensions/pi-sem) | Entity-aware Git diff, context, history, blame, and impact tools powered by `sem`. |
 | [Pi Telescope](extensions/pi-telescope) | Native fuzzy finder for sessions, files, commands, and other providers. |
 | [Custom Footer](extensions/custom-footer) | Core session line plus one bounded prioritized extension-status line. |
+| [Startup Screen](extensions/startup-screen) | Centred PI wordmark coloured by the active theme, with a responsive compact fallback. |
 | [Tool Presentation](extensions/tool-presentation) | Tidy compact built-in cards with lazy highlighted edit/write details. |
 | [Permissions](extensions/permissions) | Switchable `yolo`, `safe`, and `read-only` command policies. |
 | [Session Query](extensions/session-query) | Ask focused questions about previous Pi session files. |
@@ -85,6 +86,12 @@ Use `/mode` to switch policy:
 
 Rules merge from project `.agents/permissions.json`, global
 `~/.pi/agent/permissions.json`, and built-ins.
+
+### Startup screen
+
+The startup screen replaces only Pi's built-in header. It centres a PI wordmark,
+uses active theme roles for its colour sweep, shows the current path, and falls
+back to a compact π mark when the terminal is narrower than the full logo.
 
 ### Compact tools and footer
 

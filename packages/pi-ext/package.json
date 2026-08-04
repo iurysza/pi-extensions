@@ -61,7 +61,7 @@
   "homepage": "https://github.com/iurysza/pi-extensions/tree/main/packages/pi-ext#readme",
   "scripts": {
     "sem:evaluate": "node extensions/pi-sem/bin/sem-eval.mjs",
-    "test": "npm run test:pi-sem && npm run test:tool-presentation && node --test tests/leader-key/favourite-models.test.mjs tests/leader-key/skill-editor.test.mjs tests/chat-to-md/chat-to-md.test.mjs tests/handoff/dependency-contract.test.mjs",
+    "test": "npm run test:pi-sem && npm run test:tool-presentation && node --test tests/leader-key/favourite-models.test.mjs tests/leader-key/skill-editor.test.mjs tests/chat-to-md/chat-to-md.test.mjs tests/handoff/dependency-contract.test.mjs tests/startup-screen/startup-screen.test.mjs",
     "test:pi-sem": "node --test tests/pi-sem/core.test.mjs tests/review/sem-guidance.test.mjs",
     "test:tool-presentation": "node scripts/test-tool-presentation.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
@@ -72,6 +72,7 @@
   "pi": {
     "extensions": [
       "./extensions/custom-footer/custom-footer.ts",
+      "./extensions/startup-screen/index.ts",
       "./extensions/review/review.ts",
       "./extensions/leader-key/index.ts",
       "./extensions/chat-to-md/index.ts",
