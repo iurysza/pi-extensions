@@ -42,6 +42,7 @@ Omit a resource type to load all of it. Use an empty array to load none.
 | [Pi Telescope](extensions/pi-telescope) | Native fuzzy finder for sessions, files, commands, and other providers. |
 | [Custom Footer](extensions/custom-footer) | Core session line plus one bounded prioritized extension-status line. |
 | [Startup Screen](extensions/startup-screen) | Centred PI wordmark coloured by the active theme, with a responsive compact fallback. |
+| [File Search](extensions/file-search) | First-class typed `fd` file discovery and `rg` content search. |
 | [Tool Presentation](extensions/tool-presentation) | Tidy compact built-in cards with lazy highlighted edit/write details. |
 | [Permissions](extensions/permissions) | Switchable `yolo`, `safe`, and `read-only` command policies. |
 | [Session Query](extensions/session-query) | Ask focused questions about previous Pi session files. |
@@ -92,6 +93,14 @@ Rules merge from project `.agents/permissions.json`, global
 The startup screen replaces only Pi's built-in header. It centres a PI wordmark,
 uses active theme roles for its colour sweep, shows the current path, and falls
 back to a compact π mark when the terminal is narrower than the full logo.
+
+### File search
+
+File Search gives models typed `fd` and `rg` tools. It prefers compatible system
+binaries and can install checksum-pinned managed fallbacks under Pi's agent
+directory. Set `PI_OFFLINE=1` to forbid downloads; existing system and managed
+binaries remain usable. Search output is bounded, with complete output retained
+in a temporary file only when the visible result is truncated.
 
 ### Compact tools and footer
 
