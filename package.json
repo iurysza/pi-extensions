@@ -45,6 +45,7 @@
       "./packages/pi-ext/extensions/session-store/index.ts",
       "./packages/pi-ext/extensions/cmux/index.ts",
       "./packages/pi-ext/extensions/handoff/index.ts",
+      "./packages/pi-ext/extensions/herdr-attention/index.ts",
       "./packages/pi-ext/extensions/session-snap/index.ts",
       "./packages/pi-ext/extensions/pi-telescope/index.ts",
       "./packages/pi-ext/extensions/pi-sem/index.ts",
