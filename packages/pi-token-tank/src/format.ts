@@ -5,6 +5,10 @@ interface ThemeLike {
   fg(color: "success" | "warning" | "error" | "dim" | "text" | "accent", text: string): string;
 }
 
+function roundPercent(percent: number): number {
+  return Number(percent.toFixed(1));
+}
+
 function thresholdColor(percent: number): "success" | "warning" | "error" {
   if (percent >= 90) return "error";
   if (percent >= 70) return "warning";
@@ -52,10 +56,11 @@ function formatFooterWindow(
   theme: ThemeLike,
   nowMs: number,
 ): string {
-  const percent = `${window.usedPercent}%${stale ? "~" : ""}`;
+  const roundedPercent = roundPercent(window.usedPercent);
+  const percent = `${roundedPercent}%${stale ? "~" : ""}`;
   const reset = window.resetsAt ? `  ↻ ${formatResetDuration(window.resetsAt - nowMs)}` : "";
   const prefix = label ? `${window.shortLabel}  ` : "";
-  return `${theme.fg("dim", `${prefix}${formatGauge(window.usedPercent)}  `)}${theme.fg(thresholdColor(window.usedPercent), percent)}${theme.fg("dim", reset)}`;
+  return `${theme.fg("dim", `${prefix}${formatGauge(window.usedPercent)}  `)}${theme.fg(thresholdColor(roundedPercent), percent)}${theme.fg("dim", reset)}`;
 }
 
 export function formatFooter(

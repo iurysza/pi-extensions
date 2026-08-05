@@ -35,6 +35,11 @@ describe("footer gauges", () => {
     assert.equal(formatFooter(quota, "full", plainTheme, undefined, NOW_MS), "5h  ▰▱▱▱  24%  ↻ 3h 25m   ·   7d  ▰▱▱▱  15%  ↻ 4d 11h");
   });
 
+  it("removes floating-point artifacts from percentages", () => {
+    const quota = liveQuota("codex", 7.000000000000001, 15);
+    assert.equal(formatFooter(quota, "minimal", plainTheme, undefined, NOW_MS), "▰▱▱▱  7%  ↻ 3h 25m");
+  });
+
   it("falls back to and labels a remaining weekly window", () => {
     const quota = liveQuota("codex", 24, 34);
     quota.windows = quota.windows.filter((window) => window.id === "weekly");
@@ -66,13 +71,14 @@ describe("footer gauges", () => {
     assert.equal(formatFooter(quota, "minimal", plainTheme, undefined, NOW_MS), "▰▰▱▱  48%~  ↻ 3h 25m");
   });
 
-  it("colors only exact percentages at thresholds", () => {
+  it("colors only rounded percentages at thresholds", () => {
     const warning = formatFooter(liveQuota("codex", 70, 89), "full", theme);
     assert.ok(warning.includes("[warning:70%]"));
     assert.ok(warning.includes("[warning:89%]"));
     assert.ok(warning.includes("[dim:5h  ▰▰▰▱  ]"));
     assert.ok(!warning.includes("[warning:5h"));
     assert.ok(formatFooter(liveQuota("codex", 69, 90), "full", theme).includes("[error:90%]"));
+    assert.ok(formatFooter(liveQuota("codex", 69.96, 15), "minimal", theme).includes("[warning:70%]"));
   });
 
   it("formats reset timestamps in local wall-clock time", () => {
