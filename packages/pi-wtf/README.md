@@ -12,10 +12,16 @@ Use it for recurring process or tooling problems worth fixing. Do not use it for
 
 ## Install
 
+```bash
+pi install npm:@iurysza/pi-wtf
+```
+
+Reload Pi after installation with `/reload`.
+
+### Local checkout
+
 From a clone of the `pi-extensions` repository:
 
 ```bash
 pi install /absolute/path/to/pi-extensions/packages/pi-wtf
 ```
-
-Reload Pi after installation with `/reload`.

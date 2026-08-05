@@ -10,7 +10,7 @@ model and adds provider quota, usage pressure, and reset timing to the footer.
 ## Install
 
 ```bash
-pi install npm:@iurysouza/pi-token-tank
+pi install npm:@iurysza/pi-token-tank
 ```
 
 Authenticate the providers you use, then restart Pi or run `/reload`:

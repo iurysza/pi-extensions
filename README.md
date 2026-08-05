@@ -17,6 +17,14 @@ all-or-nothing setup: install the packages that fit your workflow.
 | [@iurysza/pi-secret-env](packages/pi-secret-env) | Load shared credentials while blocking and redacting secret access. |
 | [@iurysza/pi-wtf](packages/pi-wtf) | Append timestamped friction notes to a repository-local WTF log. |
 
+## Install
+
+```bash
+pi install npm:@iurysza/<package-name>
+```
+
+See each package's README for setup and usage.
+
 ## Development
 
 ```bash
@@ -46,11 +54,3 @@ the sandbox on exit.
 The root [MIT license](LICENSE) covers Iury-owned packages. `pi-ext` and
 `pi-ghost-in-the-machine` retain their own licenses and attribution notices.
 See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
-
-## Install
-
-```bash
-pi install npm:@iurysza/<package-name>
-```
-
-See each package's README for setup and usage.
