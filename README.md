@@ -16,6 +16,7 @@ all-or-nothing setup: install the packages that fit your workflow.
 | [@iurysza/pi-context-audit](packages/pi-context-audit) | Inspect prompt, tool-schema, context, and MCP overhead. |
 | [@iurysza/pi-secret-env](packages/pi-secret-env) | Load shared credentials while blocking and redacting secret access. |
 | [@iurysza/pi-wtf](packages/pi-wtf) | Append timestamped friction notes to a repository-local WTF log. |
+| [@iurysza/pi-herdr-attention](packages/pi-herdr-attention) | Map Pi user-wait states to Herdr blocked events. |
 
 ## Install
 

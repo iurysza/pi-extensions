@@ -35,6 +35,18 @@ export function attentionLabelForTool(event: ToolExecutionEvent): string | undef
 		return "configure subagents";
 	}
 
+	if (
+		event.toolName === "bash" &&
+		event.args !== null &&
+		typeof event.args === "object" &&
+		typeof (event.args as { command?: unknown }).command === "string" &&
+		/^plannotator\s+setup-goal\s+interview(?:\s|$)/.test(
+			(event.args as { command: string }).command.trim(),
+		)
+	) {
+		return "answer goal interview";
+	}
+
 	return undefined;
 }
 

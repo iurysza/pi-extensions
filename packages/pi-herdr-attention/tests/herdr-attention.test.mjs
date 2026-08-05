@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import herdrAttention, { attentionLabelForTool } from "../../extensions/herdr-attention/index.ts";
+import herdrAttention, { attentionLabelForTool } from "../src/index.ts";
 
 function createHarness() {
 	const handlers = new Map();
@@ -26,6 +26,32 @@ describe("Herdr attention", () => {
 		assert.equal(attentionLabelForTool({ toolCallId: "1", toolName: "cursor_ask_question" }), "question");
 		assert.equal(attentionLabelForTool({ toolCallId: "1", toolName: "subagent", args: { clarify: true } }), "configure subagents");
 		assert.equal(attentionLabelForTool({ toolCallId: "1", toolName: "subagent", args: { clarify: false } }), undefined);
+		assert.equal(
+			attentionLabelForTool({
+				toolCallId: "1",
+				toolName: "bash",
+				args: {
+					command: "plannotator setup-goal interview ai-artifacts/goals/new-feature/interview.json --json > ai-artifacts/goals/new-feature/interview-result.json",
+				},
+			}),
+			"answer goal interview",
+		);
+		assert.equal(
+			attentionLabelForTool({
+				toolCallId: "1",
+				toolName: "bash",
+				args: { command: "plannotator annotate ai-artifacts/goals/new-feature/plan.md --gate" },
+			}),
+			undefined,
+		);
+		assert.equal(
+			attentionLabelForTool({
+				toolCallId: "1",
+				toolName: "bash",
+				args: { command: "plannotator setup-goal facts ai-artifacts/goals/new-feature/facts-review.json --json" },
+			}),
+			undefined,
+		);
 		assert.equal(attentionLabelForTool({ toolCallId: "1", toolName: "bash" }), undefined);
 	});
 
@@ -38,6 +64,25 @@ describe("Herdr attention", () => {
 
 		assert.deepEqual(emitted, [
 			{ name: "herdr:blocked", data: { active: true, label: "question" } },
+			{ name: "herdr:blocked", data: { active: false } },
+		]);
+	});
+
+	it("clears a Plannotator goal interview wait when bash finishes", () => {
+		const { handlers, emitted } = createHarness();
+		const event = {
+			toolCallId: "interview-1",
+			toolName: "bash",
+			args: {
+				command: "plannotator setup-goal interview ai-artifacts/goals/new-feature/interview.json --json > ai-artifacts/goals/new-feature/interview-result.json",
+			},
+		};
+
+		handlers.get("tool_execution_start")(event, { mode: "tui" });
+		handlers.get("tool_execution_end")(event, { mode: "tui" });
+
+		assert.deepEqual(emitted, [
+			{ name: "herdr:blocked", data: { active: true, label: "answer goal interview" } },
 			{ name: "herdr:blocked", data: { active: false } },
 		]);
 	});
@@ -56,13 +101,22 @@ describe("Herdr attention", () => {
 
 		events.get("permissions:request")({ sessionId: "session-1" });
 		events.get("permissions:resolved")({ sessionId: "session-1" });
-		handlers.get("tool_execution_start")({ toolCallId: "plan-1", toolName: "plannotator_submit_plan" }, { mode: "tui" });
+		handlers.get("tool_execution_start")(
+			{
+				toolCallId: "interview-1",
+				toolName: "bash",
+				args: {
+					command: "plannotator setup-goal interview ai-artifacts/goals/new-feature/interview.json --json > ai-artifacts/goals/new-feature/interview-result.json",
+				},
+			},
+			{ mode: "tui" },
+		);
 		handlers.get("session_shutdown")({}, { mode: "tui" });
 
 		assert.deepEqual(emitted, [
 			{ name: "herdr:blocked", data: { active: true, label: "permission" } },
 			{ name: "herdr:blocked", data: { active: false } },
-			{ name: "herdr:blocked", data: { active: true, label: "review plan" } },
+			{ name: "herdr:blocked", data: { active: true, label: "answer goal interview" } },
 			{ name: "herdr:blocked", data: { active: false } },
 		]);
 	});

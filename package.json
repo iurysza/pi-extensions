@@ -45,7 +45,6 @@
       "./packages/pi-ext/extensions/session-store/index.ts",
       "./packages/pi-ext/extensions/cmux/index.ts",
       "./packages/pi-ext/extensions/handoff/index.ts",
-      "./packages/pi-ext/extensions/herdr-attention/index.ts",
       "./packages/pi-ext/extensions/session-snap/index.ts",
       "./packages/pi-ext/extensions/pi-telescope/index.ts",
       "./packages/pi-ext/extensions/pi-sem/index.ts",
@@ -55,6 +54,7 @@
       "./packages/pi-token-tank/src/index.ts",
       "./packages/pi-context-audit/src/index.ts",
       "./packages/pi-wtf/src/index.ts",
+      "./packages/pi-herdr-attention/src/index.ts",
       "./packages/pi-secret-env/src/index.ts",
       "./packages/pi-ghost-in-the-machine/src/index.ts",
       "./packages/artifact-explorer/index.ts"
