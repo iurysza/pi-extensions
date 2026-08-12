@@ -2,17 +2,15 @@
 
 Semantic Git tooling for Pi, powered by [`sem`](https://github.com/Ataraxy-Labs/sem).
 
-The extension exposes entity-aware tools to the model instead of making it reason over raw line hunks only.
+The package keeps three focused entity-aware tools active. Use raw Git and file tools for diffs, history, blame, and line-level evidence.
 
-## Included tools
+## Active tools
 
-- `sem_diff` - entity-level diff for working tree, staged changes, commits, or ranges
 - `sem_impact` - dependency / blast-radius analysis for an entity
 - `sem_context` - token-budgeted semantic context for a focused entity
-- `sem_log` - entity history across git commits
 - `sem_entities` - structural inventory of a file
-- `sem_blame` - entity-level blame for a file
-- `sem_eval` - compares `sem diff` against raw `git diff` for coverage and prompt footprint
+
+[`tool-trim`](../tool-trim/) deactivates `sem_diff`, `sem_eval`, `sem_log`, and `sem_blame` after the extension registers them.
 
 ## Installation notes
 
@@ -61,16 +59,15 @@ Important: our first local runs showed that `sem diff --format json` is **not al
 
 Good prompts once the extension is loaded:
 
-- “What changed in this branch? Use sem.”
-- “Use `sem_eval` to compare semantic diff vs git diff on the current changes.”
 - “What tests are affected by changes to `buildReport`? Use `sem_impact`.”
 - “Give me focused context for `buildReport` with a 4000 token budget using `sem_context`."
+- “List the entities in this file using `sem_entities`."
 
 Recommended default posture:
 
 - prefer **`sem_context`** for one suspicious function/class
 - prefer **`sem_impact`** for blast radius and test selection
-- use **`sem_diff`** once for overview / counts / review framing
-- keep **raw `git diff` and file reads** for exact line-level evidence
+- use **`sem_entities`** to inventory a large file
+- use **raw `git diff` and file reads** for exact change evidence
 
 If the review extension is loaded too, `/review` now adds this semantic workflow directly into its review prompt.

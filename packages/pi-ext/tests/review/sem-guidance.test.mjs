@@ -11,17 +11,18 @@ test("getSemToolAvailability detects active sem review tools", () => {
 	assert.equal(availability.any, true);
 });
 
-test("buildSemReviewGuidance for commit review includes selective sem workflow", () => {
+test("buildSemReviewGuidance for commit review uses only retained sem tools", () => {
 	const guidance = buildSemReviewGuidance(
 		{ type: "commit", sha: "abc1234" },
-		getSemToolAvailability(["sem_diff", "sem_context", "sem_impact", "sem_entities"]),
+		getSemToolAvailability(["sem_context", "sem_impact", "sem_entities"]),
 	);
 
 	assert.ok(guidance);
 	assert.match(guidance, /Semantic tooling for this diff review/);
-	assert.match(guidance, /sem_diff.*abc1234/);
+	assert.doesNotMatch(guidance, /sem_diff/);
 	assert.match(guidance, /sem_impact/);
 	assert.match(guidance, /sem_context/);
+	assert.match(guidance, /sem_entities/);
 	assert.match(guidance, /confirm final findings with raw `git diff`, `read`, or direct file inspection/);
 });
 

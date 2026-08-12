@@ -38,7 +38,7 @@ Omit a resource type to load all of it. Use an empty array to load none.
 | [Leader Key](extensions/leader-key) | `Ctrl+X` command palette for sessions, models, thinking levels, labels, and extension commands. |
 | [Chat to Markdown](extensions/chat-to-md) | Save the last assistant response under `ai-artifacts/chat/` with `/chat-to-md` or `Ctrl+X`, then `w`. |
 | [Code Review](extensions/review) | `/review` workflows for pull requests, branches, commits, and uncommitted changes. |
-| [pi-sem](extensions/pi-sem) | Entity-aware Git diff, context, history, blame, and impact tools powered by `sem`. |
+| [pi-sem](extensions/pi-sem) | Focused entity context, impact analysis, and file inventories powered by `sem`. |
 | [Pi Telescope](extensions/pi-telescope) | Native fuzzy finder for sessions, files, commands, and other providers. |
 | [Custom Footer](extensions/custom-footer) | Core session line plus one bounded prioritized extension-status line. |
 | [Startup Screen](extensions/startup-screen) | Centred PI wordmark coloured by the active theme, with a responsive compact fallback. |
@@ -52,7 +52,7 @@ Omit a resource type to load all of it. Use an empty array to load none.
 | [Split Fork](extensions/split-fork) | Fork the current session into a tmux, cmux, or Herdr split or tab. |
 | [Ask User](extensions/ask-user-question) | Structured single- or multi-select questions with an interactive Pi UI. |
 | [cmux](extensions/cmux) | Notifications, status, browser, and workspace integration for cmux. |
-| [Superconductor](extensions/superconductor) | Worktree status and controls when Pi runs under Superconductor. |
+| [Tool Trim](extensions/tool-trim) | Keep `sem_context`, `sem_impact`, and `sem_entities`; deactivate the other semantic tools. |
 
 ### Leader Key
 
@@ -128,11 +128,11 @@ Projects can add `REVIEW_GUIDELINES.md`.
 
 When `pi-sem` is loaded, review agents can use:
 
-- `sem_diff` for changed entities;
 - `sem_impact` for dependents and affected tests;
-- `sem_context` for focused function or class context;
-- `sem_log`, `sem_entities`, and `sem_blame` for history and ownership; and
-- `sem_eval` to compare semantic and raw Git diff coverage.
+- `sem_context` for focused function or class context; and
+- `sem_entities` for structural file inventories.
+
+Use raw Git diff and file reads for change, history, blame, and line-level evidence.
 
 The optional `@ataraxy-labs/sem` dependency installs automatically when the
 platform supports it. You can also install `sem` with Homebrew or Cargo.
@@ -155,7 +155,6 @@ Multiplexer integrations stay quiet when their host application is absent.
 | [github](skills/github) | Work with issues, pull requests, and CI through `gh`. |
 | [pr-review-comments](skills/pr-review-comments) | Triage and resolve pull-request review comments. |
 | [sem](skills/sem) | Apply entity-aware context and impact analysis during code review. |
-| [session-query](skills/session-query) | Recover decisions and details from previous Pi sessions. |
 | [visit-webpage](skills/visit-webpage) | Extract readable Markdown or download an image from a URL. |
 | [web-search](skills/web-search) | Search the web through Jina without opening a browser. |
 
@@ -169,7 +168,7 @@ on the [Catppuccin](https://github.com/catppuccin/catppuccin) palette.
 - Pi
 - Node.js 22.19 or newer
 - Optional host tools only for their matching integrations: `gh`, `sem`, Herdr,
-  tmux, cmux, or Superconductor
+  tmux, or cmux
 
 ## License
 
