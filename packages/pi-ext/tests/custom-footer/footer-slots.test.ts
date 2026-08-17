@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { visibleWidth } from "@earendil-works/pi-tui";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import customFooter from "../../extensions/custom-footer/custom-footer.js";
 import {
   FOOTER_SLOT_HOST_READY,
   FOOTER_SLOT_REGISTER,
@@ -57,6 +58,51 @@ describe("footer slot registry", () => {
     registry.priorities.set("temporary", 1);
     registry.clear();
     assert.equal(registry.priorities.size, 0);
+  });
+});
+
+describe("custom footer", () => {
+  it("does not render permission state", async () => {
+    const events = fakeEvents();
+    const handlers = new Map<string, (event: unknown, ctx: any) => Promise<void>>();
+    let footerFactory: ((tui: unknown, theme: unknown, data: unknown) => unknown) | undefined;
+    let widgetFactory: ((tui: unknown, theme: unknown) => { render(width: number): string[] }) | undefined;
+    const pi = {
+      events,
+      on(name: string, handler: (event: unknown, ctx: any) => Promise<void>) {
+        handlers.set(name, handler);
+      },
+      getThinkingLevel: () => "off",
+    } as unknown as ExtensionAPI;
+    const theme = {
+      fg(_role: string, text: string) { return text; },
+    };
+    const ctx = {
+      cwd: "/repo",
+      model: { id: "test-model", provider: "test", contextWindow: 128_000 },
+      getContextUsage: () => ({ percent: 20, contextWindow: 128_000 }),
+      ui: {
+        setFooter(factory: unknown) {
+          footerFactory = factory as (tui: unknown, theme: unknown, data: unknown) => unknown;
+        },
+        setWidget(_name: string, factory: unknown) {
+          widgetFactory = factory as (tui: unknown, theme: unknown) => { render(width: number): string[] };
+        },
+      },
+    };
+
+    customFooter(pi);
+    await handlers.get("session_start")?.({}, ctx);
+    footerFactory?.({}, theme, {
+      getExtensionStatuses: () => new Map(),
+      getGitBranch: () => "main",
+      onBranchChange: () => () => {},
+    });
+    events.emit("mode:change", "yolo");
+
+    const footer = widgetFactory?.({ requestRender() {} }, theme).render(200).join("\n") ?? "";
+    assert.match(footer, /\/repo \(main\)/);
+    assert.doesNotMatch(footer, /YOLO|SAFE|READ-ONLY/);
   });
 });
 

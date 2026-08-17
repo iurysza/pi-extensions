@@ -8,14 +8,11 @@
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
-import type { PermissionMode } from "../permissions/permissions.js";
 import {
   buildPathString,
   fmtTokens,
-  modePillWidth,
   renderContextUsage,
   renderModelInfo,
-  renderModePill,
   renderPath,
 } from "./renderers.js";
 import { createFooterSlotRegistry, packFooterStatuses } from "./footer-slots.js";
@@ -28,9 +25,6 @@ type FooterData = {
 
 type FooterTheme = {
   fg(role: any, text: string): string;
-  bold(text: string): string;
-  inverse(text: string): string;
-  bg(role: any, text: string): string;
 };
 
 export function formatResponseTime(endedAt: number): string {
@@ -52,7 +46,6 @@ export function formatResponseTime(endedAt: number): string {
 
 export default function customFooter(pi: ExtensionAPI) {
   const slots = createFooterSlotRegistry(pi.events);
-  let currentMode: PermissionMode = "safe";
   let tuiRef: { requestRender(): void } | null = null;
   let footerDataRef: FooterData | null = null;
   let responseEndedAt: number | null = null;
@@ -62,11 +55,6 @@ export default function customFooter(pi: ExtensionAPI) {
     if (responseAgeTimer) clearInterval(responseAgeTimer);
     responseAgeTimer = undefined;
   };
-
-  pi.events.on("mode:change", (data: unknown) => {
-    currentMode = data as PermissionMode;
-    tuiRef?.requestRender();
-  });
 
   pi.on("session_start", async (_event, ctx) => {
     clearTimer();
@@ -147,8 +135,6 @@ export default function customFooter(pi: ExtensionAPI) {
   ): string {
     const separator = theme.fg("dim", " │ ");
     const separatorWidth = 3;
-    const pill = renderModePill(currentMode, theme);
-    const pillWidth = modePillWidth(currentMode);
     const pathRaw = buildPathString(ctx.cwd, footerDataRef?.getGitBranch() ?? null);
 
     const usage = ctx.getContextUsage();
@@ -165,10 +151,10 @@ export default function customFooter(pi: ExtensionAPI) {
 
     const responseTimeWidth = responseTimeRaw ? separatorWidth + visibleWidth(responseTimeRaw) : 0;
     const rightBlockWidth = visibleWidth(contextRaw) + responseTimeWidth + separatorWidth + model.rawWidth;
-    const pathBudget = width - pillWidth - separatorWidth - rightBlockWidth - separatorWidth;
+    const pathBudget = width - rightBlockWidth - separatorWidth;
     const pathDisplay = renderPath(pathRaw, pathBudget, theme);
 
-    const segments: string[] = [pill];
+    const segments: string[] = [];
     if (pathDisplay) segments.push(pathDisplay);
     segments.push(context);
     if (responseTime) segments.push(responseTime);
