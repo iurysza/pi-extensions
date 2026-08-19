@@ -8,7 +8,6 @@
     "packages/*"
   ],
   "allowScripts": {
-    "@ataraxy-labs/sem@0.3.24": true,
     "@google/genai@1.52.0": true,
     "better-sqlite3@12.11.1": true,
     "esbuild@0.28.1": true,
@@ -45,8 +44,6 @@
       "./packages/pi-ext/extensions/handoff/index.ts",
       "./packages/pi-ext/extensions/session-snap/index.ts",
       "./packages/pi-ext/extensions/pi-telescope/index.ts",
-      "./packages/pi-ext/extensions/pi-sem/index.ts",
-      "./packages/pi-ext/extensions/tool-trim/tool-trim.ts",
       "./packages/pi-agent-explorer/extensions/agent-explorer.ts",
       "./packages/pi-cursor-sdk/src/index.ts",
       "./packages/pi-cache-hit-predictor/index.ts",
@@ -63,7 +60,6 @@
       "./packages/pi-ext/skills/github",
       "./packages/pi-ext/skills/visit-webpage",
       "./packages/pi-ext/skills/web-search",
-      "./packages/pi-ext/skills/sem",
       "./packages/pi-ext/skills/pr-review-comments"
     ],
     "themes": [

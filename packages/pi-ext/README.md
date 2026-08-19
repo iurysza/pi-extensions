@@ -23,7 +23,7 @@ To load only selected resources, filter the package in `settings.json`:
         "extensions/leader-key/index.ts",
         "extensions/review/review.ts"
       ],
-      "skills": ["skills/sem"]
+      "skills": ["skills/commit"]
     }
   ]
 }
@@ -38,7 +38,6 @@ Omit a resource type to load all of it. Use an empty array to load none.
 | [Leader Key](extensions/leader-key) | `Ctrl+X` command palette for sessions, models, thinking levels, labels, and extension commands. |
 | [Chat to Markdown](extensions/chat-to-md) | Save the last assistant response under `ai-artifacts/chat/` with `/chat-to-md` or `Ctrl+X`, then `w`. |
 | [Code Review](extensions/review) | `/review` workflows for pull requests, branches, commits, and uncommitted changes. |
-| [pi-sem](extensions/pi-sem) | Focused entity context, impact analysis, and file inventories powered by `sem`. |
 | [Pi Telescope](extensions/pi-telescope) | Native fuzzy finder for sessions, files, commands, and other providers. |
 | [Custom Footer](extensions/custom-footer) | Core session line plus one bounded prioritized extension-status line. |
 | [Startup Screen](extensions/startup-screen) | Centred PI wordmark coloured by the active theme, with a responsive compact fallback. |
@@ -51,7 +50,6 @@ Omit a resource type to load all of it. Use an empty array to load none.
 | [Split Fork](extensions/split-fork) | Fork the current session into a tmux, cmux, or Herdr split or tab. |
 | [Ask User](extensions/ask-user-question) | Structured single- or multi-select questions with an interactive Pi UI. |
 | [cmux](extensions/cmux) | Notifications, status, browser, and workspace integration for cmux. |
-| [Tool Trim](extensions/tool-trim) | Keep `sem_context`, `sem_impact`, and `sem_entities`; deactivate the other semantic tools. |
 
 ### Leader Key
 
@@ -111,22 +109,11 @@ values onto one auxiliary line. Optional metadata sorts known slots by priority;
 unregistered statuses remain compatible at priority zero. The highest-priority
 slot is the only slot that may truncate.
 
-### Review and semantic tools
+### Review
 
 `/review` can inspect a GitHub pull request, compare against a base branch,
 review uncommitted changes, inspect one commit, or follow custom instructions.
 Projects can add `REVIEW_GUIDELINES.md`.
-
-When `pi-sem` is loaded, review agents can use:
-
-- `sem_impact` for dependents and affected tests;
-- `sem_context` for focused function or class context; and
-- `sem_entities` for structural file inventories.
-
-Use raw Git diff and file reads for change, history, blame, and line-level evidence.
-
-The optional `@ataraxy-labs/sem` dependency installs automatically when the
-platform supports it. You can also install `sem` with Homebrew or Cargo.
 
 ### Session workflows
 
@@ -145,7 +132,6 @@ Multiplexer integrations stay quiet when their host application is absent.
 | [commit](skills/commit) | Create concise Conventional Commit messages from the current diff. |
 | [github](skills/github) | Work with issues, pull requests, and CI through `gh`. |
 | [pr-review-comments](skills/pr-review-comments) | Triage and resolve pull-request review comments. |
-| [sem](skills/sem) | Apply entity-aware context and impact analysis during code review. |
 | [visit-webpage](skills/visit-webpage) | Extract readable Markdown or download an image from a URL. |
 | [web-search](skills/web-search) | Search the web through Jina without opening a browser. |
 
@@ -158,8 +144,8 @@ on the [Catppuccin](https://github.com/catppuccin/catppuccin) palette.
 
 - Pi
 - Node.js 22.19 or newer
-- Optional host tools only for their matching integrations: `gh`, `sem`, Herdr,
-  tmux, or cmux
+- Optional host tools only for their matching integrations: `gh`, Herdr, tmux,
+  or cmux
 
 ## License
 

@@ -28,9 +28,6 @@
     "diff": "^7.0.0",
     "semver": "^7.8.5"
   },
-  "optionalDependencies": {
-    "@ataraxy-labs/sem": "^0.3.21"
-  },
   "peerDependencies": {
     "@earendil-works/pi-agent-core": "*",
     "@earendil-works/pi-ai": "*",
@@ -61,9 +58,7 @@
   },
   "homepage": "https://github.com/iurysza/pi-extensions/tree/main/packages/pi-ext#readme",
   "scripts": {
-    "sem:evaluate": "node extensions/pi-sem/bin/sem-eval.mjs",
-    "test": "npm run test:pi-sem && npm run test:tool-presentation && node --import tsx --test tests/custom-footer/footer-slots.test.ts && node --experimental-strip-types --test tests/tool-trim/tool-trim.test.ts && node --test tests/leader-key/favourite-models.test.mjs tests/leader-key/skill-editor.test.mjs tests/chat-to-md/chat-to-md.test.mjs tests/handoff/dependency-contract.test.mjs tests/startup-screen/startup-screen.test.mjs",
-    "test:pi-sem": "node --test tests/pi-sem/core.test.mjs tests/review/sem-guidance.test.mjs",
+    "test": "npm run test:tool-presentation && node --import tsx --test tests/custom-footer/footer-slots.test.ts && node --test tests/leader-key/favourite-models.test.mjs tests/leader-key/skill-editor.test.mjs tests/chat-to-md/chat-to-md.test.mjs tests/handoff/dependency-contract.test.mjs tests/startup-screen/startup-screen.test.mjs",
     "test:tool-presentation": "node scripts/test-tool-presentation.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "pack:check": "node scripts/check-pack.mjs",
@@ -86,16 +81,13 @@
       "./extensions/cmux/index.ts",
       "./extensions/handoff/index.ts",
       "./extensions/session-snap/index.ts",
-      "./extensions/pi-telescope/index.ts",
-      "./extensions/pi-sem/index.ts",
-      "./extensions/tool-trim/tool-trim.ts"
+      "./extensions/pi-telescope/index.ts"
     ],
     "skills": [
       "./skills/commit",
       "./skills/github",
       "./skills/visit-webpage",
       "./skills/web-search",
-      "./skills/sem",
       "./skills/pr-review-comments"
     ],
     "themes": [
