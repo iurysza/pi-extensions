@@ -9,12 +9,13 @@ import type {
 import { TreeSelectorComponent, SessionSelectorComponent, SessionManager } from "@earendil-works/pi-coding-agent";
 import type { TopLevelEntry } from "./types.js";
 import { tryNavigateTree, trySwitchSession } from "./context-helpers.js";
+import { withHerdrNavigationPassthrough } from "./herdr-navigation.js";
 
 async function openSessionTree(pi: ExtensionAPI, ctx: ExtensionContext) {
 	const tree = ctx.sessionManager.getTree();
 	const currentLeafId = ctx.sessionManager.getLeafId();
 
-	const selectedId = await ctx.ui.custom<string | null>(
+	const selectedId = await withHerdrNavigationPassthrough(() => ctx.ui.custom<string | null>(
 		(tui, _theme, _kb, done) => {
 			const termRows = tui.terminal?.rows ?? 40;
 			const selector = new TreeSelectorComponent(
@@ -43,7 +44,7 @@ async function openSessionTree(pi: ExtensionAPI, ctx: ExtensionContext) {
 				maxHeight: "85%",
 			},
 		},
-	);
+	));
 
 	if (selectedId && selectedId !== currentLeafId) {
 		await tryNavigateTree(ctx, selectedId);
@@ -61,7 +62,7 @@ async function openSessionPicker(pi: ExtensionAPI, ctx: ExtensionContext) {
 		return SessionManager.listAll(onProgress);
 	};
 
-	const selectedPath = await ctx.ui.custom<string | null>(
+	const selectedPath = await withHerdrNavigationPassthrough(() => ctx.ui.custom<string | null>(
 		(tui, _theme, _kb, done) => {
 			const selector = new SessionSelectorComponent(
 				currentSessionsLoader,
@@ -98,7 +99,7 @@ async function openSessionPicker(pi: ExtensionAPI, ctx: ExtensionContext) {
 				maxHeight: "85%",
 			},
 		},
-	);
+	));
 
 	if (selectedPath) {
 		await trySwitchSession(ctx, selectedPath);

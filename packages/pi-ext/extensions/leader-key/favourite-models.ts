@@ -12,6 +12,7 @@ import { OverlayFrame } from "../shared/overlay.js";
 import { ALL_THINKING_LEVELS } from "./model-switcher.js";
 import { THINKING_ROLES } from "../shared/thinking-colors.js";
 import { buildPickerViewModel, loadModelCatalog } from "./model-catalog.mjs";
+import { withHerdrNavigationPassthrough } from "./herdr-navigation.js";
 
 interface FavouriteModelEntry {
 	label: string;
@@ -131,7 +132,7 @@ export async function runFavouriteModels(pi: ExtensionAPI, ctx: ExtensionContext
 	const rows = buildDisplayRows(favourites);
 	const firstModelRow = rows.findIndex((r) => r.type === "model");
 
-	const selected = await ctx.ui.custom<PickerResult | null>(
+	const selected = await withHerdrNavigationPassthrough(() => ctx.ui.custom<PickerResult | null>(
 		(tui, theme, _kb, done) => {
 			let highlightedIndex = firstModelRow >= 0 ? firstModelRow : 0;
 			const th = theme;
@@ -281,7 +282,7 @@ export async function runFavouriteModels(pi: ExtensionAPI, ctx: ExtensionContext
 				maxHeight: "80%",
 			},
 		},
-	);
+	));
 
 	if (!selected) return;
 

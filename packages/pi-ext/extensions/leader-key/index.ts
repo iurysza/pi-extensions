@@ -35,6 +35,10 @@ import type { ActionItem, ActionGroup, TopLevelEntry } from "./types.js";
 import { buildSessionEntries } from "./session-actions.js";
 import { buildLabelEntries } from "./label-actions.js";
 import { registerBridgeCommands } from "./context-helpers.js";
+import {
+	clearHerdrNavigationPassthrough,
+	withHerdrNavigationPassthrough,
+} from "./herdr-navigation.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Build top-level entries
@@ -792,7 +796,7 @@ export default function leaderKeyExtension(pi: ExtensionAPI) {
 
 		const entries = buildEntries(pi, ctx, openFavouriteModels);
 
-		const selected = await ctx.ui.custom<ActionItem | null>(
+		const selected = await withHerdrNavigationPassthrough(() => ctx.ui.custom<ActionItem | null>(
 			(tui, theme, _kb, done) => {
 				const overlay = new LeaderKeyOverlay(entries, theme, done);
 				return {
@@ -813,7 +817,7 @@ export default function leaderKeyExtension(pi: ExtensionAPI) {
 					maxHeight: "80%",
 				},
 			},
-		);
+		));
 
 		if (selected) {
 			try {
@@ -827,6 +831,7 @@ export default function leaderKeyExtension(pi: ExtensionAPI) {
 	pi.on("session_start", async (_event, ctx) => {
 		if (!ctx.hasUI) return;
 
+		clearHerdrNavigationPassthrough();
 		stopFavouriteModelsShortcut?.();
 		stopFavouriteModelsShortcut = ctx.ui.onTerminalInput((data) => {
 			if (parseKey(data) !== Key.ctrl("m")) return;
@@ -836,6 +841,7 @@ export default function leaderKeyExtension(pi: ExtensionAPI) {
 	});
 
 	pi.on("session_shutdown", async () => {
+		clearHerdrNavigationPassthrough();
 		stopFavouriteModelsShortcut?.();
 		stopFavouriteModelsShortcut = undefined;
 	});

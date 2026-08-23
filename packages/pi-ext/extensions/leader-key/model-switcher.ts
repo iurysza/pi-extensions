@@ -14,6 +14,7 @@ import type { ThinkingLevel } from "@earendil-works/pi-agent-core";
 import { SettingsManager } from "@earendil-works/pi-coding-agent";
 import { fuzzyFilter, Key, matchesKey } from "@earendil-works/pi-tui";
 import { OverlayFrame } from "../shared/overlay.js";
+import { withHerdrNavigationPassthrough } from "./herdr-navigation.js";
 
 export const ALL_THINKING_LEVELS: ThinkingLevel[] = ["off", "minimal", "low", "medium", "high", "xhigh"];
 
@@ -131,7 +132,7 @@ export async function searchableSelect<T extends string>(
 ): Promise<T | null> {
 	const defaultIndex = defaultValue ? items.findIndex((i) => i.value === defaultValue) : -1;
 	let alternateValue: T | null = null;
-	const selected = await ctx.ui.custom<T | null>((tui, theme, _kb, done) => {
+	const selected = await withHerdrNavigationPassthrough(() => ctx.ui.custom<T | null>((tui, theme, _kb, done) => {
 		let searchText = "";
 		let filteredItems = [...items];
 		let highlightedIndex = defaultIndex >= 0 ? defaultIndex : 0;
@@ -351,7 +352,7 @@ export async function searchableSelect<T extends string>(
 			minWidth: 50,
 			maxHeight: "80%",
 		},
-	});
+	}));
 
 	const pendingAlternate = alternateValue as T | null;
 	if (pendingAlternate !== null && alternateAction) {

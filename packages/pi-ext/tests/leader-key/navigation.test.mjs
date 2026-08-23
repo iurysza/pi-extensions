@@ -1,8 +1,19 @@
 import assert from "node:assert/strict";
+import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
 
 import { LeaderKeyOverlay } from "../../extensions/leader-key/index.ts";
+import { withHerdrNavigationPassthrough } from "../../extensions/leader-key/herdr-navigation.ts";
 import { searchableSelect } from "../../extensions/leader-key/model-switcher.ts";
+
+const inheritedHerdrPaneId = process.env.HERDR_PANE_ID;
+delete process.env.HERDR_PANE_ID;
+test.after(() => {
+	if (inheritedHerdrPaneId === undefined) delete process.env.HERDR_PANE_ID;
+	else process.env.HERDR_PANE_ID = inheritedHerdrPaneId;
+});
 
 const CTRL_H = "\b";
 const CTRL_J = "\n";
@@ -63,6 +74,46 @@ function createSearchablePicker({ alternateAction } = {}) {
 		renderRequests: () => renderRequests,
 	};
 }
+
+test("Herdr passthrough metadata follows the overlay lifetime", async (t) => {
+	const tempDir = mkdtempSync(join(tmpdir(), "leader-key-navigation-"));
+	const fakeHerdr = join(tempDir, "herdr");
+	const logPath = join(tempDir, "calls.log");
+	const previousBinPath = process.env.HERDR_BIN_PATH;
+
+	writeFileSync(fakeHerdr, "#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"$HERDR_TEST_LOG\"\n");
+	chmodSync(fakeHerdr, 0o755);
+	process.env.HERDR_PANE_ID = "test:pane";
+	process.env.HERDR_BIN_PATH = fakeHerdr;
+	process.env.HERDR_TEST_LOG = logPath;
+
+	t.after(() => {
+		delete process.env.HERDR_PANE_ID;
+		delete process.env.HERDR_TEST_LOG;
+		if (previousBinPath === undefined) delete process.env.HERDR_BIN_PATH;
+		else process.env.HERDR_BIN_PATH = previousBinPath;
+		rmSync(tempDir, { recursive: true, force: true });
+	});
+
+	let closeOverlay;
+	const result = withHerdrNavigationPassthrough(() => new Promise((resolve) => {
+		closeOverlay = resolve;
+	}));
+
+	const opened = readFileSync(logPath, "utf8").trim().split("\n");
+	assert.deepEqual(opened, [
+		`pane report-metadata test:pane --source pi-leader-key --token pi_leader_key_navigation=${process.pid}`,
+	]);
+
+	closeOverlay("closed");
+	assert.equal(await result, "closed");
+
+	const closed = readFileSync(logPath, "utf8").trim().split("\n");
+	assert.deepEqual(closed, [
+		`pane report-metadata test:pane --source pi-leader-key --token pi_leader_key_navigation=${process.pid}`,
+		"pane report-metadata test:pane --source pi-leader-key --clear-token pi_leader_key_navigation",
+	]);
+});
 
 test("Ctrl+J/K/H/L navigate groups and expanded palette entries", () => {
 	const groupAction = action("a", "Group action");
