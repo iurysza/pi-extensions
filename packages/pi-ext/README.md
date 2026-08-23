@@ -57,6 +57,11 @@ Press `Ctrl+X` to open the palette. Actions are grouped by single-character
 keys and include model switching, favourite models, thinking level, session
 operations, labels, extension commands, and workflow shortcuts.
 
+In the main palette and searchable pickers, press `Ctrl+J` or `Ctrl+K` to move
+down or up. Press `Ctrl+H` to collapse or go back. Press `Ctrl+L` to expand or
+enter the highlighted item. The existing arrow, `Tab`, `Enter`, `Shift+Enter`,
+`Backspace`, and `Escape` controls still work.
+
 Favourite model presets live in
 `extensions/leader-key/favourite-models.json`. Optional display roles live in
 `extensions/leader-key/model-nicknames.json`.

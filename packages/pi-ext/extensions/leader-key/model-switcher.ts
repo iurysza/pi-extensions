@@ -159,6 +159,23 @@ export async function searchableSelect<T extends string>(
 			}
 		};
 
+		const selectHighlighted = () => {
+			if (filteredItems.length > 0 && highlightedIndex < filteredItems.length) {
+				done(filteredItems[highlightedIndex].value as T);
+			}
+		};
+
+		const enterOrExpand = () => {
+			const item = filteredItems[highlightedIndex];
+			if (!item) return;
+			if (item.description && expandedDescriptionIndex !== highlightedIndex) {
+				expandedDescriptionIndex = highlightedIndex;
+				tui.requestRender();
+				return;
+			}
+			selectHighlighted();
+		};
+
 		return {
 			render: (width: number) => {
 				const f = new OverlayFrame(width, th);
@@ -224,16 +241,17 @@ export async function searchableSelect<T extends string>(
 
 				// Footer
 				lines.push(f.separator());
-				const defaultHint = [
+				const primaryHint = [
 					"type search",
-					"↑↓ nav",
+					"↑↓ or C-j/k nav",
 					"tab expand",
 					...(alternateAction ? [`S-Enter ${alternateAction.label}`] : []),
-					"enter select",
-					"esc cancel",
 				].join(" • ");
-				const hint = helpText ?? defaultHint;
-				lines.push(f.row(th.fg("dim", hint)));
+				const hintLines = helpText ? [helpText] : [primaryHint];
+				hintLines.push("C-h back/collapse • C-l enter/expand • enter select • esc cancel");
+				for (const hint of hintLines) {
+					lines.push(f.row(th.fg("dim", hint)));
+				}
 				lines.push(f.bottom());
 
 				return lines;
@@ -243,6 +261,17 @@ export async function searchableSelect<T extends string>(
 				// Escape / Ctrl+C: cancel
 				if (matchesKey(data, "escape") || matchesKey(data, Key.ctrl("c"))) {
 					done(null);
+					return;
+				}
+
+				// Ctrl+H: collapse an expanded description, otherwise go back.
+				if (matchesKey(data, Key.ctrl("h"))) {
+					if (expandedDescriptionIndex !== null) {
+						expandedDescriptionIndex = null;
+						tui.requestRender();
+					} else {
+						done(null);
+					}
 					return;
 				}
 
@@ -271,13 +300,13 @@ export async function searchableSelect<T extends string>(
 				}
 
 				// Navigation
-				if (matchesKey(data, "up") || matchesKey(data, Key.ctrl("p"))) {
+				if (matchesKey(data, "up") || matchesKey(data, Key.ctrl("p")) || matchesKey(data, Key.ctrl("k"))) {
 					highlightedIndex = Math.max(0, highlightedIndex - 1);
 					ensureVisible();
 					tui.requestRender();
 					return;
 				}
-				if (matchesKey(data, "down") || matchesKey(data, Key.ctrl("n"))) {
+				if (matchesKey(data, "down") || matchesKey(data, Key.ctrl("n")) || matchesKey(data, Key.ctrl("j"))) {
 					highlightedIndex = Math.min(filteredItems.length - 1, highlightedIndex + 1);
 					ensureVisible();
 					tui.requestRender();
@@ -293,11 +322,15 @@ export async function searchableSelect<T extends string>(
 					return;
 				}
 
-				// Enter: select highlighted
+				// Ctrl+L expands the highlighted description, then selects it.
+				if (matchesKey(data, Key.ctrl("l"))) {
+					enterOrExpand();
+					return;
+				}
+
+				// Enter keeps its existing select behaviour.
 				if (matchesKey(data, "enter")) {
-					if (filteredItems.length > 0 && highlightedIndex < filteredItems.length) {
-						done(filteredItems[highlightedIndex].value as T);
-					}
+					selectHighlighted();
 					return;
 				}
 

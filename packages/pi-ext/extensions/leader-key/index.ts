@@ -9,6 +9,8 @@
  *
  * Navigation:
  *   - Chord keys shown in the palette (e.g. "s" for Session, "m" for Model)
+ *   - Ctrl+J / Ctrl+K to move down / up
+ *   - Ctrl+H to go back or collapse; Ctrl+L to enter or expand
  *   - Backspace / Escape to go back or close
  *   - Direct key press executes the action immediately
  *
@@ -417,7 +419,7 @@ function parsePaletteKey(data: string): { key: string; shifted: boolean } | null
 	return null;
 }
 
-class LeaderKeyOverlay {
+export class LeaderKeyOverlay {
 	private view: View = { type: "root" };
 	private entries: TopLevelEntry[];
 	private theme: Theme;
@@ -490,32 +492,65 @@ class LeaderKeyOverlay {
 		return action;
 	}
 
-	handleInput(data: string): void {
-		if (matchesKey(data, "escape") || matchesKey(data, Key.ctrl("c"))) {
-			if (this.isExpanded) {
-				this.collapseExpanded();
-				return;
-			}
-			if (this.view.type === "group") {
-				this.view = { type: "root" };
-				this.highlightedIndex = 0;
-			} else {
-				this.done(null);
+	private goBack(): void {
+		if (this.isExpanded) {
+			this.collapseExpanded();
+			return;
+		}
+		if (this.view.type === "group") {
+			this.view = { type: "root" };
+			this.highlightedIndex = 0;
+		} else {
+			this.done(null);
+		}
+	}
+
+	private selectHighlighted(): void {
+		if (this.isExpanded) {
+			const entry = this.entries[this.expandedEntryIndex!];
+			if (entry?.type === "action" && entry.expandableItems) {
+				const action = entry.expandableItems[this.expandedHighlightIndex];
+				if (action) {
+					this.done(action);
+				}
 			}
 			return;
 		}
 
-		if (matchesKey(data, "backspace")) {
-			if (this.isExpanded) {
-				this.collapseExpanded();
+		const items = this.currentItems;
+		if (this.highlightedIndex < 0 || this.highlightedIndex >= items.length) return;
+
+		const item = items[this.highlightedIndex];
+		if (this.view.type === "root") {
+			this.handleRootSelection(item.key);
+			return;
+		}
+
+		const action = this.view.group.items.find((candidate) => candidate.key === item.key);
+		if (action) {
+			this.done(action);
+		}
+	}
+
+	private enterOrExpand(): void {
+		if (!this.isExpanded && this.view.type === "root") {
+			const entry = this.entries[this.highlightedIndex];
+			if (entry?.type === "action" && entry.expandableItems && entry.expandableItems.length > 0) {
+				this.expandCurrent();
 				return;
 			}
-			if (this.view.type === "group") {
-				this.view = { type: "root" };
-				this.highlightedIndex = 0;
-			} else {
-				this.done(null);
-			}
+		}
+		this.selectHighlighted();
+	}
+
+	handleInput(data: string): void {
+		if (matchesKey(data, "escape") || matchesKey(data, Key.ctrl("c"))) {
+			this.goBack();
+			return;
+		}
+
+		if (matchesKey(data, Key.ctrl("h")) || matchesKey(data, "backspace")) {
+			this.goBack();
 			return;
 		}
 
@@ -529,8 +564,8 @@ class LeaderKeyOverlay {
 			return;
 		}
 
-		// Arrow keys for highlighting
-		if (matchesKey(data, "up")) {
+		// Arrow and control keys for highlighting
+		if (matchesKey(data, "up") || matchesKey(data, Key.ctrl("k"))) {
 			if (this.isExpanded) {
 				this.expandedHighlightIndex = Math.max(0, this.expandedHighlightIndex - 1);
 				this.ensureExpandedVisible();
@@ -539,7 +574,7 @@ class LeaderKeyOverlay {
 			}
 			return;
 		}
-		if (matchesKey(data, "down")) {
+		if (matchesKey(data, "down") || matchesKey(data, Key.ctrl("j"))) {
 			const items = this.currentItems;
 			if (this.isExpanded) {
 				this.expandedHighlightIndex = Math.min(items.length - 1, this.expandedHighlightIndex + 1);
@@ -550,30 +585,15 @@ class LeaderKeyOverlay {
 			return;
 		}
 
-		// Enter to select highlighted item
+		// Ctrl+L expands an expandable entry, otherwise it selects it.
+		if (matchesKey(data, Key.ctrl("l"))) {
+			this.enterOrExpand();
+			return;
+		}
+
+		// Enter keeps its existing select behaviour.
 		if (matchesKey(data, "enter") || matchesKey(data, "return")) {
-			if (this.isExpanded) {
-				const entry = this.entries[this.expandedEntryIndex!];
-				if (entry?.type === "action" && entry.expandableItems) {
-					const action = entry.expandableItems[this.expandedHighlightIndex];
-					if (action) {
-						this.done(action);
-					}
-				}
-				return;
-			}
-			const items = this.currentItems;
-			if (this.highlightedIndex >= 0 && this.highlightedIndex < items.length) {
-				const item = items[this.highlightedIndex];
-				if (this.view.type === "root") {
-					this.handleRootSelection(item.key);
-				} else {
-					const action = this.view.group.items.find((a) => a.key === item.key);
-					if (action) {
-						this.done(action);
-					}
-				}
-			}
+			this.selectHighlighted();
 			return;
 		}
 
@@ -730,11 +750,11 @@ class LeaderKeyOverlay {
 		lines.push(f.separator());
 
 		if (this.isExpanded) {
-			lines.push(f.row(th.fg("dim", "↑↓ scroll | enter run | tab collapse | esc back")));
+			lines.push(f.row(th.fg("dim", "↑↓ or C-j/k scroll | C-l/enter run | C-h/tab collapse | esc back")));
 		} else if (this.view.type === "root") {
-			lines.push(f.row(th.fg("dim", "press key to select | tab expand | esc close")));
+			lines.push(f.row(th.fg("dim", "C-j/k nav | C-l enter/expand | key select | tab expand | esc close")));
 		} else {
-			lines.push(f.row(th.fg("dim", "press key run | ⇧ key tab | bksp back | esc close")));
+			lines.push(f.row(th.fg("dim", "C-j/k nav | C-h back | C-l/enter run | key run | esc close")));
 		}
 
 		lines.push(f.bottom());
