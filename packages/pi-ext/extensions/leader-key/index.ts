@@ -151,15 +151,18 @@ function buildEntries(
 	const skillCommands = categorizedSkillCommands.map(({ command }) => command);
 
 	if (skillCommands.length > 0) {
-		const skItems = skillCommands.map((cmd) => ({
-			key: cmd.name[0],
-			label: cmd.name,
-			description: cmd.description || "skill",
-			action: (ctx: ExtensionContext) => {
-				ctx.ui.setEditorText(`/${cmd.name} `);
-				ctx.ui.notify(`Type your prompt after /${cmd.name}`, "info");
-			},
-		}));
+		const skItems = skillCommands.map((cmd) => {
+			const label = skillCommandLabel(cmd.name);
+			return {
+				key: label[0],
+				label,
+				description: cmd.description || "skill",
+				action: (ctx: ExtensionContext) => {
+					ctx.ui.setEditorText(`/${cmd.name} `);
+					ctx.ui.notify(`Type your prompt after /${cmd.name}`, "info");
+				},
+			};
+		});
 		entries.push({
 			type: "action",
 			key: "k",
@@ -168,7 +171,7 @@ function buildEntries(
 			action: async (ctx) => {
 				const items = categorizedSkillCommands.map(({ command, category }) => ({
 					value: command.name,
-					label: command.name,
+					label: skillCommandLabel(command.name),
 					description: command.description || "skill",
 					category,
 				}));

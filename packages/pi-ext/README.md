@@ -68,8 +68,9 @@ Favourite model presets live in
 
 Press `Ctrl+X`, then `k` to open the skills palette. Skills are grouped by the
 single `metadata.category` value in `SKILL.md`; missing or unknown categories
-appear under `Other`. Search matches skill names, descriptions, category IDs,
-and category labels. `Enter` stages the selected skill command; `Shift+Enter`
+appear under `Other`. Display labels omit the `skill:` command prefix. Search
+matches skill names, descriptions, category IDs, and category labels. `Enter`
+stages the selected skill command; `Shift+Enter`
 opens its `SKILL.md` in `$VISUAL` or `$EDITOR`. The editor opens in a modal Herdr
 popup when available, otherwise a tmux split, then a new terminal window. The
 bundled Herdr pane links itself on first use.
