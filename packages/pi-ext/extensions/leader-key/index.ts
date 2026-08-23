@@ -27,7 +27,7 @@ import { matchesKey, parseKey, Key } from "@earendil-works/pi-tui";
 import { searchableSelect } from "./model-switcher.js";
 import { runFavouriteModels } from "./favourite-models.js";
 import { launchSkillEditor } from "./skill-editor.js";
-import { findWritingStyleCommands, writingStyleLabel } from "./writing-styles.js";
+import { categorizeSkillCommands, skillCommandLabel } from "./skill-categories.js";
 import { OverlayFrame } from "../shared/overlay.js";
 import { copyToClipboard } from "../pi-telescope/clipboard.js";
 import { saveLastResponse } from "../chat-to-md/index.js";
@@ -147,7 +147,8 @@ function buildEntries(
 	}
 
 	// ── Skills ──────────────────────────────────────────────────────────
-	const skillCommands = commands.filter((c) => c.source === "skill");
+	const categorizedSkillCommands = categorizeSkillCommands(commands);
+	const skillCommands = categorizedSkillCommands.map(({ command }) => command);
 
 	if (skillCommands.length > 0) {
 		const skItems = skillCommands.map((cmd) => ({
@@ -165,10 +166,11 @@ function buildEntries(
 			label: "Skills",
 			description: `${skillCommands.length} skill${skillCommands.length !== 1 ? "s" : ""}`,
 			action: async (ctx) => {
-				const items = skillCommands.map((cmd) => ({
-					value: cmd.name,
-					label: cmd.name,
-					description: cmd.description || "skill",
+				const items = categorizedSkillCommands.map(({ command, category }) => ({
+					value: command.name,
+					label: command.name,
+					description: command.description || "skill",
+					category,
 				}));
 
 				const selected = await searchableSelect<string>(
@@ -203,11 +205,13 @@ function buildEntries(
 	}
 
 	// ── Writing styles ──────────────────────────────────────────────────
-	const writingStyleCommands = findWritingStyleCommands(skillCommands);
+	const writingStyleCommands = categorizedSkillCommands
+		.filter(({ category }) => category.id === "writing-style")
+		.map(({ command }) => command);
 
 	if (writingStyleCommands.length > 0) {
 		const writingStyleItems = writingStyleCommands.map((cmd) => {
-			const label = writingStyleLabel(cmd.name);
+			const label = skillCommandLabel(cmd.name);
 			return {
 				key: label[0],
 				label,
@@ -227,7 +231,7 @@ function buildEntries(
 			action: async (ctx) => {
 				const items = writingStyleCommands.map((cmd) => ({
 					value: cmd.name,
-					label: writingStyleLabel(cmd.name),
+					label: skillCommandLabel(cmd.name),
 					description: cmd.description || "writing style",
 				}));
 
@@ -244,10 +248,10 @@ function buildEntries(
 							if (!command) return;
 							try {
 								const target = await launchSkillEditor(pi, command.sourceInfo.path);
-								ctx.ui.notify(`Opened ${writingStyleLabel(skillName)} in ${target}`, "info");
+								ctx.ui.notify(`Opened ${skillCommandLabel(skillName)} in ${target}`, "info");
 							} catch (error) {
 								const message = error instanceof Error ? error.message : String(error);
-								ctx.ui.notify(`Unable to open ${writingStyleLabel(skillName)}: ${message}`, "error");
+								ctx.ui.notify(`Unable to open ${skillCommandLabel(skillName)}: ${message}`, "error");
 							}
 						},
 					},

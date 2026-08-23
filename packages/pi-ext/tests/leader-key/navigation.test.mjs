@@ -6,7 +6,11 @@ import test from "node:test";
 
 import { LeaderKeyOverlay } from "../../extensions/leader-key/index.ts";
 import { withHerdrNavigationPassthrough } from "../../extensions/leader-key/herdr-navigation.ts";
-import { searchableSelect } from "../../extensions/leader-key/model-switcher.ts";
+import {
+	filterSearchableItems,
+	getSearchableWindow,
+	searchableSelect,
+} from "../../extensions/leader-key/model-switcher.ts";
 
 const inheritedHerdrPaneId = process.env.HERDR_PANE_ID;
 delete process.env.HERDR_PANE_ID;
@@ -40,21 +44,24 @@ function createOverlay(entries) {
 	};
 }
 
-function createSearchablePicker({ alternateAction } = {}) {
+function createSearchablePicker({
+	alternateAction,
+	items = [
+		{ value: "first", label: "First", description: "First description" },
+		{ value: "second", label: "Second", description: "Second description" },
+	],
+	theme = {},
+} = {}) {
 	let component;
 	let settled = false;
 	let renderRequests = 0;
-	const items = [
-		{ value: "first", label: "First", description: "First description" },
-		{ value: "second", label: "Second", description: "Second description" },
-	];
 	const ctx = {
 		ui: {
 			custom(factory) {
 				return new Promise((resolve) => {
 					component = factory(
 						{ requestRender: () => renderRequests++ },
-						{},
+						theme,
 						{},
 						(value) => {
 							settled = true;
@@ -177,6 +184,63 @@ test("arrow, Tab, Enter, and Escape palette controls still work", () => {
 	const cancelled = createOverlay([{ type: "action", ...action("p", "Plain") }]);
 	cancelled.overlay.handleInput("\x1b");
 	assert.equal(cancelled.selected(), null);
+});
+
+test("search matches category names and preserves grouped order", () => {
+	const writing = { id: "writing-style", label: "Writing & voice", order: 0 };
+	const planning = { id: "planning-architecture", label: "Planning & architecture", order: 1 };
+	const items = [
+		{ value: "adr", label: "ADR", category: planning },
+		{ value: "bro", label: "Bro", category: writing },
+		{ value: "rephrase", label: "Rephrase", category: writing },
+	];
+
+	assert.deepEqual(
+		filterSearchableItems(items, "writing").map((item) => item.value),
+		["bro", "rephrase"],
+	);
+	assert.deepEqual(
+		filterSearchableItems(items, "").map((item) => item.value),
+		["bro", "rephrase", "adr"],
+	);
+});
+
+test("grouped picker renders dividers and category-only search results", async () => {
+	const writing = { id: "writing-style", label: "Writing & voice", order: 0 };
+	const planning = { id: "planning-architecture", label: "Planning & architecture", order: 1 };
+	const picker = createSearchablePicker({
+		items: [
+			{ value: "adr", label: "ADR", category: planning },
+			{ value: "bro", label: "Bro", category: writing },
+		],
+		theme: {
+			fg: (_role, text) => text,
+			bold: (text) => text,
+		},
+	});
+
+	assert.match(picker.component.render(80).join("\n"), /── Writing & voice/);
+	assert.match(picker.component.render(80).join("\n"), /── Planning & architecture/);
+	for (const character of "planning") picker.component.handleInput(character);
+	const filtered = picker.component.render(80).join("\n");
+	assert.doesNotMatch(filtered, /Writing & voice/);
+	assert.match(filtered, /Planning & architecture/);
+	picker.component.handleInput("\x1b");
+	assert.equal(await picker.result, null);
+});
+
+test("category dividers count toward the visible row budget", () => {
+	const writing = { id: "writing-style", label: "Writing & voice", order: 0 };
+	const planning = { id: "planning-architecture", label: "Planning & architecture", order: 1 };
+	const items = [
+		{ value: "bro", label: "Bro", category: writing },
+		{ value: "rephrase", label: "Rephrase", category: writing },
+		{ value: "adr", label: "ADR", category: planning },
+	];
+
+	const window = getSearchableWindow(items, 0, 3);
+	assert.deepEqual(window.items.map((item) => item.value), ["bro", "rephrase"]);
+	assert.equal(window.endIndex, 2);
 });
 
 test("Ctrl+J/K move and Ctrl+L expands then selects searchable items", async () => {

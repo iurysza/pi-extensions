@@ -1,6 +1,8 @@
 ---
 name: visit-webpage
 description: Visit a webpage and extract its content as markdown, or fetch images. Use for reading articles, documentation, or any web page content. Handles both HTML pages (via Jina Reader) and image URLs (downloads and saves locally).
+metadata:
+  category: browser-automation
 ---
 
 # Visit Webpage

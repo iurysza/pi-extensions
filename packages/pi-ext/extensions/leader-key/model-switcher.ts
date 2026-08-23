@@ -91,10 +91,17 @@ export function getModelsForProvider(ctx: ExtensionContext, provider: string) {
 // Searchable select UI — styled to match leader-key overlay
 // ─────────────────────────────────────────────────────────────────────────────
 
-interface SearchableItem {
+export interface SearchableCategory {
+	id: string;
+	label: string;
+	order: number;
+}
+
+export interface SearchableItem {
 	value: string;
 	label: string;
 	description?: string;
+	category?: SearchableCategory;
 }
 
 export interface SearchableSelectAlternateAction<T extends string> {
@@ -103,6 +110,51 @@ export interface SearchableSelectAlternateAction<T extends string> {
 }
 
 const MAX_VISIBLE = 15;
+
+export function filterSearchableItems(
+	items: readonly SearchableItem[],
+	searchText: string,
+): SearchableItem[] {
+	const filtered = searchText === ""
+		? [...items]
+		: fuzzyFilter([...items], searchText, (item) => [
+			item.label,
+			item.value,
+			item.description,
+			item.category?.id,
+			item.category?.label,
+		].filter(Boolean).join(" "));
+
+	if (!filtered.some((item) => item.category)) return filtered;
+
+	return filtered.sort((left, right) =>
+		(left.category?.order ?? Number.MAX_SAFE_INTEGER) - (right.category?.order ?? Number.MAX_SAFE_INTEGER)
+		|| left.label.localeCompare(right.label),
+	);
+}
+
+export function getSearchableWindow(
+	items: readonly SearchableItem[],
+	startIndex: number,
+	maxRows: number,
+): { items: SearchableItem[]; endIndex: number } {
+	let endIndex = startIndex;
+	let usedRows = 0;
+	let previousCategoryId: string | undefined;
+
+	while (endIndex < items.length) {
+		const item = items[endIndex];
+		const categoryChanged = item.category !== undefined && item.category.id !== previousCategoryId;
+		const requestedRows = 1 + (categoryChanged ? 1 : 0);
+		if (endIndex > startIndex && usedRows + requestedRows > maxRows) break;
+
+		usedRows += requestedRows;
+		previousCategoryId = item.category?.id;
+		endIndex++;
+	}
+
+	return { items: items.slice(startIndex, endIndex), endIndex };
+}
 
 /** Simple word-wrap: split text into lines of at most maxWidth visible chars. */
 function wrapText(text: string, maxWidth: number): string[] {
@@ -130,11 +182,11 @@ export async function searchableSelect<T extends string>(
 	defaultValue?: string,
 	alternateAction?: SearchableSelectAlternateAction<T>,
 ): Promise<T | null> {
-	const defaultIndex = defaultValue ? items.findIndex((i) => i.value === defaultValue) : -1;
 	let alternateValue: T | null = null;
 	const selected = await withHerdrNavigationPassthrough(() => ctx.ui.custom<T | null>((tui, theme, _kb, done) => {
 		let searchText = "";
-		let filteredItems = [...items];
+		let filteredItems = filterSearchableItems(items, searchText);
+		const defaultIndex = defaultValue ? filteredItems.findIndex((item) => item.value === defaultValue) : -1;
 		let highlightedIndex = defaultIndex >= 0 ? defaultIndex : 0;
 		let scrollOffset = 0;
 		let expandedDescriptionIndex: number | null = null;
@@ -142,11 +194,7 @@ export async function searchableSelect<T extends string>(
 		const th = theme;
 
 		const applyFilter = () => {
-			if (searchText === "") {
-				filteredItems = [...items];
-			} else {
-				filteredItems = fuzzyFilter(items, searchText, (item) => `${item.label} ${item.value}`);
-			}
+			filteredItems = filterSearchableItems(items, searchText);
 			highlightedIndex = 0;
 			scrollOffset = 0;
 			expandedDescriptionIndex = null;
@@ -155,8 +203,13 @@ export async function searchableSelect<T extends string>(
 		const ensureVisible = () => {
 			if (highlightedIndex < scrollOffset) {
 				scrollOffset = highlightedIndex;
-			} else if (highlightedIndex >= scrollOffset + MAX_VISIBLE) {
-				scrollOffset = highlightedIndex - MAX_VISIBLE + 1;
+				return;
+			}
+
+			let window = getSearchableWindow(filteredItems, scrollOffset, MAX_VISIBLE);
+			while (highlightedIndex >= window.endIndex && scrollOffset < highlightedIndex) {
+				scrollOffset++;
+				window = getSearchableWindow(filteredItems, scrollOffset, MAX_VISIBLE);
 			}
 		};
 
@@ -199,16 +252,25 @@ export async function searchableSelect<T extends string>(
 				if (filteredItems.length === 0) {
 					lines.push(f.row(th.fg("warning", "  no matches")));
 				} else {
-					const visibleEnd = Math.min(scrollOffset + MAX_VISIBLE, filteredItems.length);
+					const window = getSearchableWindow(filteredItems, scrollOffset, MAX_VISIBLE);
 
 					if (scrollOffset > 0) {
 						lines.push(f.row(th.fg("dim", `  ↑ ${scrollOffset} more`)));
 					}
 
-					for (let i = scrollOffset; i < visibleEnd; i++) {
-						const item = filteredItems[i];
+					let previousCategoryId: string | undefined;
+					for (let visibleIndex = 0; visibleIndex < window.items.length; visibleIndex++) {
+						const i = scrollOffset + visibleIndex;
+						const item = window.items[visibleIndex];
 						const isHighlighted = i === highlightedIndex;
 						const isExpanded = i === expandedDescriptionIndex;
+
+						if (item.category && item.category.id !== previousCategoryId) {
+							const heading = `── ${item.category.label} `;
+							const divider = heading + "─".repeat(Math.max(0, f.innerWidth - heading.length));
+							lines.push(f.row(th.fg("muted", divider)));
+						}
+						previousCategoryId = item.category?.id;
 
 						const label = isHighlighted
 							? th.fg("accent", th.bold(item.label))
@@ -234,7 +296,7 @@ export async function searchableSelect<T extends string>(
 						lines.push(f.rowTruncated(line));
 					}
 
-					const remaining = filteredItems.length - visibleEnd;
+					const remaining = filteredItems.length - window.endIndex;
 					if (remaining > 0) {
 						lines.push(f.row(th.fg("dim", `  ↓ ${remaining} more`)));
 					}

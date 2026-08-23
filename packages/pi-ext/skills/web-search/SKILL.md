@@ -1,6 +1,8 @@
 ---
 name: web-search
 description: Web search using Jina Search API. Returns search results with titles, URLs, and descriptions. Use for finding documentation, facts, current information, or any web content. Lightweight, no browser required.
+metadata:
+  category: browser-automation
 ---
 
 # Web Search

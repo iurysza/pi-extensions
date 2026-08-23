@@ -66,10 +66,13 @@ Favourite model presets live in
 `extensions/leader-key/favourite-models.json`. Optional display roles live in
 `extensions/leader-key/model-nicknames.json`.
 
-Press `Ctrl+X`, then `k` to open the skills palette. `Enter` stages the selected
-skill command; `Shift+Enter` opens its `SKILL.md` in `$VISUAL` or `$EDITOR`. The
-editor opens in a modal Herdr popup when available, otherwise a tmux split, then
-a new terminal window. The bundled Herdr pane links itself on first use.
+Press `Ctrl+X`, then `k` to open the skills palette. Skills are grouped by the
+single `metadata.category` value in `SKILL.md`; missing or unknown categories
+appear under `Other`. Search matches skill names, descriptions, category IDs,
+and category labels. `Enter` stages the selected skill command; `Shift+Enter`
+opens its `SKILL.md` in `$VISUAL` or `$EDITOR`. The editor opens in a modal Herdr
+popup when available, otherwise a tmux split, then a new terminal window. The
+bundled Herdr pane links itself on first use.
 
 Press `Ctrl+X`, then `t` to open the writing-style palette. It includes only
 skills whose frontmatter sets `metadata.category` to `writing-style`. Names omit
