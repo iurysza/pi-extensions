@@ -25,6 +25,7 @@ import { matchesKey, parseKey, Key } from "@earendil-works/pi-tui";
 import { searchableSelect } from "./model-switcher.js";
 import { runFavouriteModels } from "./favourite-models.js";
 import { launchSkillEditor } from "./skill-editor.js";
+import { findWritingStyleCommands, writingStyleLabel } from "./writing-styles.js";
 import { OverlayFrame } from "../shared/overlay.js";
 import { copyToClipboard } from "../pi-telescope/clipboard.js";
 import { saveLastResponse } from "../chat-to-md/index.js";
@@ -192,6 +193,66 @@ function buildEntries(
 				}
 			},
 			expandableItems: skItems,
+		});
+	}
+
+	// ── Writing styles ──────────────────────────────────────────────────
+	const writingStyleCommands = findWritingStyleCommands(skillCommands);
+
+	if (writingStyleCommands.length > 0) {
+		const writingStyleItems = writingStyleCommands.map((cmd) => {
+			const label = writingStyleLabel(cmd.name);
+			return {
+				key: label[0],
+				label,
+				description: cmd.description || "writing style",
+				action: (ctx: ExtensionContext) => {
+					ctx.ui.setEditorText(`/${cmd.name} `);
+					ctx.ui.notify(`Type your prompt after /${cmd.name}`, "info");
+				},
+			};
+		});
+
+		entries.push({
+			type: "action",
+			key: "t",
+			label: "Writing style",
+			description: `${writingStyleCommands.length} style${writingStyleCommands.length !== 1 ? "s" : ""}`,
+			action: async (ctx) => {
+				const items = writingStyleCommands.map((cmd) => ({
+					value: cmd.name,
+					label: writingStyleLabel(cmd.name),
+					description: cmd.description || "writing style",
+				}));
+
+				const selected = await searchableSelect<string>(
+					ctx,
+					"Select Writing Style",
+					items,
+					undefined,
+					undefined,
+					{
+						label: "open",
+						run: async (skillName) => {
+							const command = writingStyleCommands.find((candidate) => candidate.name === skillName);
+							if (!command) return;
+							try {
+								const target = await launchSkillEditor(pi, command.sourceInfo.path);
+								ctx.ui.notify(`Opened ${writingStyleLabel(skillName)} in ${target}`, "info");
+							} catch (error) {
+								const message = error instanceof Error ? error.message : String(error);
+								ctx.ui.notify(`Unable to open ${writingStyleLabel(skillName)}: ${message}`, "error");
+							}
+						},
+					},
+				);
+
+				if (selected) {
+					ctx.ui.setEditorText(`/${selected} `);
+					ctx.ui.notify(`Type your prompt after /${selected}`, "info");
+				}
+			},
+			expandableItems: writingStyleItems,
 		});
 	}
 
