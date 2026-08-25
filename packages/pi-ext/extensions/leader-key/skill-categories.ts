@@ -33,42 +33,76 @@ export const SKILL_CATEGORIES: readonly SkillCategory[] = [
 export const OTHER_SKILL_CATEGORY: SkillCategory = {
 	id: "other",
 	label: "Other",
-	order: SKILL_CATEGORIES.length,
+	order: Number.MAX_SAFE_INTEGER,
 };
 
 const SKILL_CATEGORY_BY_ID = new Map(
 	SKILL_CATEGORIES.map((category) => [category.id, category]),
 );
 
+function categoryLabel(categoryId: string): string {
+	const words = categoryId.split(/[^a-zA-Z0-9]+/).filter(Boolean);
+	return words.length > 0
+		? words.map((word) => word[0].toUpperCase() + word.slice(1)).join(" ")
+		: categoryId;
+}
+
+function dynamicSkillCategory(categoryId: string, order: number): SkillCategory {
+	return { id: categoryId, label: categoryLabel(categoryId), order };
+}
+
 export function parseSkillCategory(content: string): string | undefined {
 	try {
 		const { frontmatter } = parseFrontmatter<SkillFrontmatter>(content);
 		const category = frontmatter.metadata?.category;
-		return typeof category === "string" && category.length > 0 ? category : undefined;
+		return typeof category === "string" ? category.trim() || undefined : undefined;
 	} catch {
 		return undefined;
 	}
 }
 
 export function resolveSkillCategory(categoryId: string | undefined): SkillCategory {
-	return categoryId ? SKILL_CATEGORY_BY_ID.get(categoryId) ?? OTHER_SKILL_CATEGORY : OTHER_SKILL_CATEGORY;
+	if (!categoryId || categoryId === OTHER_SKILL_CATEGORY.id) return OTHER_SKILL_CATEGORY;
+	return SKILL_CATEGORY_BY_ID.get(categoryId)
+		?? dynamicSkillCategory(categoryId, SKILL_CATEGORIES.length);
 }
 
 export function categorizeSkillCommands(
 	commands: readonly SlashCommandInfo[],
 	readSkill: ReadSkill = (path) => readFileSync(path, "utf8"),
 ): CategorizedSkillCommand[] {
-	return commands
+	const skillCommands = commands
 		.filter((command) => command.source === "skill")
 		.map((command) => {
-			let category = OTHER_SKILL_CATEGORY;
 			try {
-				category = resolveSkillCategory(parseSkillCategory(readSkill(command.sourceInfo.path)));
+				return { command, categoryId: parseSkillCategory(readSkill(command.sourceInfo.path)) };
 			} catch {
 				// Unreadable or malformed third-party skills remain available under Other.
+				return { command, categoryId: undefined };
 			}
-			return { command, category };
-		})
+		});
+
+	const dynamicCategories = new Map(
+		[...new Set(skillCommands.map(({ categoryId }) => categoryId))]
+			.filter((categoryId): categoryId is string =>
+				categoryId !== undefined
+				&& categoryId !== OTHER_SKILL_CATEGORY.id
+				&& !SKILL_CATEGORY_BY_ID.has(categoryId),
+			)
+			.sort((left, right) => left.localeCompare(right))
+			.map((categoryId, index) => [
+				categoryId,
+				dynamicSkillCategory(categoryId, SKILL_CATEGORIES.length + index),
+			]),
+	);
+
+	return skillCommands
+		.map(({ command, categoryId }) => ({
+			command,
+			category: categoryId
+				? dynamicCategories.get(categoryId) ?? resolveSkillCategory(categoryId)
+				: OTHER_SKILL_CATEGORY,
+		}))
 		.sort((left, right) =>
 			left.category.order - right.category.order
 			|| left.command.name.localeCompare(right.command.name),
