@@ -186,26 +186,27 @@ test("arrow, Tab, Enter, and Escape palette controls still work", () => {
 	assert.equal(cancelled.selected(), null);
 });
 
-test("search matches category names and preserves grouped order", () => {
+test("search ranks by relevance while empty search preserves grouped order", () => {
 	const writing = { id: "writing-style", label: "Writing & voice", order: 0 };
 	const planning = { id: "planning-architecture", label: "Planning & architecture", order: 1 };
+	const browser = { id: "browser-automation", label: "Browser & automation", order: 5 };
 	const items = [
-		{ value: "adr", label: "ADR", category: planning },
-		{ value: "bro", label: "Bro", category: writing },
-		{ value: "rephrase", label: "Rephrase", category: writing },
+		{ value: "skill:adr", label: "ADR", description: "Architecture decisions", category: planning },
+		{ value: "skill:gpt-bridge", label: "gpt-bridge", description: "Review ChatGPT conversations", category: browser },
+		{ value: "skill:technical-writing", label: "Technical writing", description: "Bridge ideas clearly", category: writing },
 	];
 
 	assert.deepEqual(
-		filterSearchableItems(items, "writing").map((item) => item.value),
-		["bro", "rephrase"],
+		filterSearchableItems(items, "bridge").map((item) => item.value),
+		["skill:gpt-bridge", "skill:technical-writing"],
 	);
 	assert.deepEqual(
 		filterSearchableItems(items, "").map((item) => item.value),
-		["bro", "rephrase", "adr"],
+		["skill:technical-writing", "skill:adr", "skill:gpt-bridge"],
 	);
 });
 
-test("grouped picker renders dividers and category-only search results", async () => {
+test("picker groups browsing results and shows inline categories during search", async () => {
 	const writing = { id: "writing-style", label: "Writing & voice", order: 0 };
 	const planning = { id: "planning-architecture", label: "Planning & architecture", order: 1 };
 	const picker = createSearchablePicker({
@@ -224,12 +225,13 @@ test("grouped picker renders dividers and category-only search results", async (
 	for (const character of "planning") picker.component.handleInput(character);
 	const filtered = picker.component.render(80).join("\n");
 	assert.doesNotMatch(filtered, /Writing & voice/);
-	assert.match(filtered, /Planning & architecture/);
+	assert.doesNotMatch(filtered, /── Planning & architecture/);
+	assert.match(filtered, /> ADR  Planning & architecture/);
 	picker.component.handleInput("\x1b");
 	assert.equal(await picker.result, null);
 });
 
-test("category dividers count toward the visible row budget", () => {
+test("only visible category dividers count toward the row budget", () => {
 	const writing = { id: "writing-style", label: "Writing & voice", order: 0 };
 	const planning = { id: "planning-architecture", label: "Planning & architecture", order: 1 };
 	const items = [
@@ -238,9 +240,13 @@ test("category dividers count toward the visible row budget", () => {
 		{ value: "adr", label: "ADR", category: planning },
 	];
 
-	const window = getSearchableWindow(items, 0, 3);
-	assert.deepEqual(window.items.map((item) => item.value), ["bro", "rephrase"]);
-	assert.equal(window.endIndex, 2);
+	const groupedWindow = getSearchableWindow(items, 0, 3);
+	assert.deepEqual(groupedWindow.items.map((item) => item.value), ["bro", "rephrase"]);
+	assert.equal(groupedWindow.endIndex, 2);
+
+	const searchWindow = getSearchableWindow(items, 0, 3, false);
+	assert.deepEqual(searchWindow.items.map((item) => item.value), ["bro", "rephrase", "adr"]);
+	assert.equal(searchWindow.endIndex, 3);
 });
 
 test("Ctrl+J/K move and Ctrl+L expands then selects searchable items", async () => {

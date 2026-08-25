@@ -115,19 +115,20 @@ export function filterSearchableItems(
 	items: readonly SearchableItem[],
 	searchText: string,
 ): SearchableItem[] {
-	const filtered = searchText === ""
-		? [...items]
-		: fuzzyFilter([...items], searchText, (item) => [
+	if (searchText !== "") {
+		return fuzzyFilter([...items], searchText, (item) => [
 			item.label,
 			item.value,
 			item.description,
 			item.category?.id,
 			item.category?.label,
 		].filter(Boolean).join(" "));
+	}
 
-	if (!filtered.some((item) => item.category)) return filtered;
+	const unfiltered = [...items];
+	if (!unfiltered.some((item) => item.category)) return unfiltered;
 
-	return filtered.sort((left, right) =>
+	return unfiltered.sort((left, right) =>
 		(left.category?.order ?? Number.MAX_SAFE_INTEGER) - (right.category?.order ?? Number.MAX_SAFE_INTEGER)
 		|| left.label.localeCompare(right.label),
 	);
@@ -137,6 +138,7 @@ export function getSearchableWindow(
 	items: readonly SearchableItem[],
 	startIndex: number,
 	maxRows: number,
+	showCategoryHeadings = true,
 ): { items: SearchableItem[]; endIndex: number } {
 	let endIndex = startIndex;
 	let usedRows = 0;
@@ -144,7 +146,9 @@ export function getSearchableWindow(
 
 	while (endIndex < items.length) {
 		const item = items[endIndex];
-		const categoryChanged = item.category !== undefined && item.category.id !== previousCategoryId;
+		const categoryChanged = showCategoryHeadings
+			&& item.category !== undefined
+			&& item.category.id !== previousCategoryId;
 		const requestedRows = 1 + (categoryChanged ? 1 : 0);
 		if (endIndex > startIndex && usedRows + requestedRows > maxRows) break;
 
@@ -252,7 +256,13 @@ export async function searchableSelect<T extends string>(
 				if (filteredItems.length === 0) {
 					lines.push(f.row(th.fg("warning", "  no matches")));
 				} else {
-					const window = getSearchableWindow(filteredItems, scrollOffset, MAX_VISIBLE);
+					const showCategoryHeadings = searchText === "";
+					const window = getSearchableWindow(
+						filteredItems,
+						scrollOffset,
+						MAX_VISIBLE,
+						showCategoryHeadings,
+					);
 
 					if (scrollOffset > 0) {
 						lines.push(f.row(th.fg("dim", `  ↑ ${scrollOffset} more`)));
@@ -265,7 +275,11 @@ export async function searchableSelect<T extends string>(
 						const isHighlighted = i === highlightedIndex;
 						const isExpanded = i === expandedDescriptionIndex;
 
-						if (item.category && item.category.id !== previousCategoryId) {
+						if (
+							showCategoryHeadings
+							&& item.category
+							&& item.category.id !== previousCategoryId
+						) {
 							const heading = `── ${item.category.label} `;
 							const divider = heading + "─".repeat(Math.max(0, f.innerWidth - heading.length));
 							lines.push(f.row(th.fg("muted", divider)));
@@ -275,11 +289,16 @@ export async function searchableSelect<T extends string>(
 						const label = isHighlighted
 							? th.fg("accent", th.bold(item.label))
 							: th.fg("text", item.label);
+						const categoryLabel = !showCategoryHeadings && item.category
+							? th.fg("muted", `  ${item.category.label}`)
+							: "";
 
 						// Expanded view: spacious card with colored description
 						if (isExpanded && item.description) {
 							lines.push(f.row(""));
-							lines.push(f.row(`${isHighlighted ? "> " : "  "}${th.fg("accent", th.bold("▸ " + item.label))}`));
+							lines.push(f.row(
+								`${isHighlighted ? "> " : "  "}${th.fg("accent", th.bold("▸ " + item.label))}${categoryLabel}`,
+							));
 							const wrapped = wrapText(item.description, f.innerWidth - 4);
 							for (const wrappedLine of wrapped) {
 								lines.push(f.row("    " + th.fg("text", wrappedLine)));
@@ -289,7 +308,7 @@ export async function searchableSelect<T extends string>(
 						}
 
 						// Compact inline view
-						let line = `${isHighlighted ? "> " : "  "}${label}`;
+						let line = `${isHighlighted ? "> " : "  "}${label}${categoryLabel}`;
 						if (item.description && !isExpanded) {
 							line += "  " + th.fg("dim", item.description);
 						}
