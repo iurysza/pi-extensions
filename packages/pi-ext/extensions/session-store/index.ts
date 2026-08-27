@@ -66,7 +66,7 @@ function maybeIndexCurrent(ctx: ExtensionContext): void {
 }
 
 /** Catch-up scan: index all sessions not yet in DB */
-async function catchUpScan(ctx: ExtensionContext): Promise<void> {
+async function catchUpScan(): Promise<string | undefined> {
   if (initialCatchUpDone) return;
   initialCatchUpDone = true;
 
@@ -116,15 +116,12 @@ async function catchUpScan(ctx: ExtensionContext): Promise<void> {
   if (newCount > 0 || removedCount > 0 || errorCount > 0) {
     const stats = getStats();
     const removed = removedCount > 0 ? `, pruned ${removedCount}` : "";
-    const msg = `🔍 Indexed ${newCount} sessions${removed} (${stats.totalSessions} total, ${formatBytes(stats.dbSizeBytes)})`;
-    if (ctx.hasUI) {
-      ctx.ui.setStatus("session-store", msg);
-      setTimeout(() => ctx.ui.setStatus("session-store", undefined), 5000);
-    }
+    return `🔍 Indexed ${newCount} sessions${removed} (${stats.totalSessions} total, ${formatBytes(stats.dbSizeBytes)})`;
   }
 }
 
 export default function (pi: ExtensionAPI) {
+  let clearStatusTimer: ReturnType<typeof setTimeout> | undefined;
   // ── /search — Interactive FTS search ──
   pi.registerCommand("search", {
     description: "Search across all indexed sessions via FTS5 + BM25",
@@ -279,7 +276,14 @@ export default function (pi: ExtensionAPI) {
   // ── session_start — catch-up scan ──
   pi.on("session_start", async (_event, ctx) => {
     try {
-      await catchUpScan(ctx);
+      const status = await catchUpScan();
+      if (!status || !ctx.hasUI) return;
+
+      ctx.ui.setStatus("session-store", status);
+      clearStatusTimer = setTimeout(() => {
+        clearStatusTimer = undefined;
+        ctx.ui.setStatus("session-store", undefined);
+      }, 5000);
     } catch (err) {
       console.error("[session-store] Catch-up scan failed:", err);
     }
@@ -295,7 +299,14 @@ export default function (pi: ExtensionAPI) {
   });
 
   // ── session_shutdown — close DB ──
-  pi.on("session_shutdown", async () => {
+  pi.on("session_shutdown", async (_event, ctx) => {
+    if (clearStatusTimer !== undefined) {
+      clearTimeout(clearStatusTimer);
+      clearStatusTimer = undefined;
+    }
+    if (ctx.hasUI) {
+      ctx.ui.setStatus("session-store", undefined);
+    }
     closeDb();
     initialCatchUpDone = false;
   });
