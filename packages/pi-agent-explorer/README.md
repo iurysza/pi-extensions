@@ -27,6 +27,13 @@ The snapshot opens with `nvim -R` from Pi's cache directory. If your Neovim
 configuration enables Neo-tree for directories, it appears there; otherwise
 Neovim's built-in directory browser does.
 
+The snapshot keeps extension and tool views separate:
+
+- `Extensions/<extension>/README.md` describes the extension.
+- `Extensions/<extension>/TOOLS.md` links to the tools that extension provides.
+- `Tools/<tool>.md` contains one flat Markdown entry per loaded tool and links
+  back to its extension.
+
 ## Requirements
 
 - Pi

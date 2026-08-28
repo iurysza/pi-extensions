@@ -32,6 +32,9 @@
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": "*"
   },
+  "scripts": {
+    "test": "node --test tests/*.test.mjs"
+  },
   "pi": {
     "extensions": [
       "./extensions/agent-explorer.ts"

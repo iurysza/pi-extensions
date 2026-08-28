@@ -13,6 +13,11 @@ type ExplorerExtension = {
 	commands: string[];
 };
 
+type NamedExplorerExtension = ExplorerExtension & {
+	name: string;
+	directoryName: string;
+};
+
 function safeName(name: string): string {
 	return name.replace(/[^a-zA-Z0-9._-]+/g, "_");
 }
@@ -134,6 +139,20 @@ function inferExtensions(pi: ExtensionAPI): ExplorerExtension[] {
 	return Array.from(extensions.values());
 }
 
+function nameExtensions(extensions: ExplorerExtension[]): NamedExplorerExtension[] {
+	const counts = new Map<string, number>();
+	return extensions.map((extension) => {
+		const name = extensionName(extension.sourceInfo);
+		const count = (counts.get(name) ?? 0) + 1;
+		counts.set(name, count);
+		return {
+			...extension,
+			name,
+			directoryName: safeName(count === 1 ? name : `${name}-${count}`),
+		};
+	});
+}
+
 async function writeSnapshot(path: string, content: string): Promise<void> {
 	await writeFile(path, content, "utf8");
 	await chmod(path, 0o444);
@@ -147,26 +166,31 @@ async function linkSnapshot(path: string, target: string): Promise<void> {
 	}
 }
 
-async function createExplorerSnapshot(pi: ExtensionAPI, ctx: ExtensionCommandContext): Promise<string> {
+export async function createExplorerSnapshot(
+	pi: ExtensionAPI,
+	ctx: ExtensionCommandContext,
+	root = join(getAgentDir(), "cache", "agent-explorer", stamp()),
+): Promise<string> {
 	const options = ctx.getSystemPromptOptions();
-	const root = join(getAgentDir(), "cache", "agent-explorer", stamp());
 	const skillsDir = join(root, "Skills");
 	const extensionsDir = join(root, "Extensions");
+	const toolsDir = join(root, "Tools");
 	const commandsDir = join(root, "Commands");
 	const contextDir = join(root, "Context");
-	await Promise.all([root, skillsDir, extensionsDir, commandsDir, contextDir].map((path) => mkdir(path, { recursive: true })));
+	await Promise.all([root, skillsDir, extensionsDir, toolsDir, commandsDir, contextDir].map((path) => mkdir(path, { recursive: true })));
 
 	const tools = pi.getAllTools();
 	const activeTools = new Set(pi.getActiveTools());
 	const commands = pi.getCommands().filter((command) => command.source === "extension");
-	const extensions = inferExtensions(pi);
+	const extensions = nameExtensions(inferExtensions(pi));
+	const extensionsBySource = new Map(extensions.map((extension) => [sourceKey(extension.sourceInfo), extension]));
 	const sessionDirectory = ctx.sessionManager.getSessionDir();
 	const sessionFile = ctx.sessionManager.getSessionFile();
 	const contextUsage = renderContextUsage(pi, ctx);
 
 	await writeSnapshot(
 		join(root, "README.md"),
-		`# Pi Agent Explorer\n\nSnapshot: ${new Date().toISOString()}\n\n- Model: ${ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : "unknown"}\n- CWD: ${pathLink(ctx.cwd, "project directory")}\n- Active tools: ${activeTools.size}/${tools.length}\n- Skills: ${(options.skills ?? []).length}\n- Extensions: ${extensions.length}\n- Extension commands: ${commands.length}\n- Context files: ${(options.contextFiles ?? []).length}\n\n## Session\n\n- **Sessions folder:** ${pathLink(sessionDirectory, "sessions folder")}\n- **Current session file:** ${sessionFile ? pathLink(sessionFile, "current session") : "ephemeral (not saved)"}\n\n## Context Usage\n\n\`\`\`text\n${contextUsage}\n\`\`\`\n\nThis is a runtime snapshot. Extension and command files are generated metadata; skill and context files link to their loaded source. Tools are grouped under the extension that provides them. Neovim launches in read-only mode.\n`,
+		`# Pi Agent Explorer\n\nSnapshot: ${new Date().toISOString()}\n\n- Model: ${ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : "unknown"}\n- CWD: ${pathLink(ctx.cwd, "project directory")}\n- Active tools: ${activeTools.size}/${tools.length}\n- Skills: ${(options.skills ?? []).length}\n- Extensions: ${extensions.length}\n- Extension commands: ${commands.length}\n- Context files: ${(options.contextFiles ?? []).length}\n\n## Session\n\n- **Sessions folder:** ${pathLink(sessionDirectory, "sessions folder")}\n- **Current session file:** ${sessionFile ? pathLink(sessionFile, "current session") : "ephemeral (not saved)"}\n\n## Context Usage\n\n\`\`\`text\n${contextUsage}\n\`\`\`\n\nThis is a runtime snapshot. Tool metadata lives in the top-level Tools folder, and each extension links to the tools it provides. Extension and command files are generated metadata; skill and context files link to their loaded source. Neovim launches in read-only mode.\n`,
 	);
 
 	for (const skill of options.skills ?? []) {
@@ -179,15 +203,9 @@ async function createExplorerSnapshot(pi: ExtensionAPI, ctx: ExtensionCommandCon
 		);
 	}
 
-	const extensionNameCounts = new Map<string, number>();
 	for (const extension of extensions) {
-		const name = extensionName(extension.sourceInfo);
-		const count = (extensionNameCounts.get(name) ?? 0) + 1;
-		extensionNameCounts.set(name, count);
-		const directoryName = safeName(count === 1 ? name : `${name}-${count}`);
-		const extensionDir = join(extensionsDir, directoryName);
-		const extensionToolsDir = join(extensionDir, "Tools");
-		await mkdir(extensionToolsDir, { recursive: true });
+		const extensionDir = join(extensionsDir, extension.directoryName);
+		await mkdir(extensionDir, { recursive: true });
 
 		const readme =
 			extension.sourceInfo.source === "builtin" || extension.sourceInfo.source === "sdk"
@@ -195,17 +213,27 @@ async function createExplorerSnapshot(pi: ExtensionAPI, ctx: ExtensionCommandCon
 				: await projectReadme(extension.sourceInfo.path);
 		await writeSnapshot(
 			join(extensionDir, "README.md"),
-			`# ${name}\n\n- Source: ${pathLink(extension.sourceInfo.path)}\n- Scope: ${extension.sourceInfo.scope}\n- Tools: ${extension.tools.length ? extension.tools.join(", ") : "(none)"}\n- Commands: ${extension.commands.length ? extension.commands.map((name) => `/${name}`).join(", ") : "(none)"}\n\n## Project README\n\n${readme ? `Source: ${pathLink(readme.path)}\n\n${readme.content}` : "(No project README available for this provider.)"}\n`,
+			`# ${extension.name}\n\n- Source: ${pathLink(extension.sourceInfo.path)}\n- Scope: ${extension.sourceInfo.scope}\n- Tools: ${pathLink("TOOLS.md", extension.tools.length.toString())}\n- Commands: ${extension.commands.length ? extension.commands.map((name) => `/${name}`).join(", ") : "(none)"}\n\n## Project README\n\n${readme ? `Source: ${pathLink(readme.path)}\n\n${readme.content}` : "(No project README available for this provider.)"}\n`,
 		);
+		await writeSnapshot(
+			join(extensionDir, "TOOLS.md"),
+			`# ${extension.name} tools\n\n${
+				extension.tools.length
+					? extension.tools.map((toolName) => `- [${toolName}](../../Tools/${safeName(toolName)}.md)`).join("\n")
+					: "(none)"
+			}\n`,
+		);
+	}
 
-		for (const toolName of extension.tools) {
-			const tool = tools.find((candidate) => candidate.name === toolName);
-			if (!tool) continue;
-			await writeSnapshot(
-				join(extensionToolsDir, `${safeName(tool.name)}.md`),
-				`# ${tool.name}\n\n- Active: ${activeTools.has(tool.name) ? "yes" : "no"}\n- Source: ${tool.sourceInfo.source}\n- Scope: ${tool.sourceInfo.scope}\n- Path: ${pathLink(tool.sourceInfo.path)}\n\n## Description\n\n${tool.description ?? "(none)"}\n\n## Parameters\n\n\`\`\`json\n${JSON.stringify(tool.parameters ?? {}, null, 2)}\n\`\`\`\n`,
-			);
-		}
+	for (const tool of tools) {
+		const extension = extensionsBySource.get(sourceKey(tool.sourceInfo));
+		const extensionLink = extension
+			? pathLink(`../Extensions/${extension.directoryName}/README.md`, extension.name)
+			: "(unknown)";
+		await writeSnapshot(
+			join(toolsDir, `${safeName(tool.name)}.md`),
+			`# ${tool.name}\n\n- Active: ${activeTools.has(tool.name) ? "yes" : "no"}\n- Extension: ${extensionLink}\n- Source: ${tool.sourceInfo.source}\n- Scope: ${tool.sourceInfo.scope}\n- Path: ${pathLink(tool.sourceInfo.path)}\n\n## Description\n\n${tool.description ?? "(none)"}\n\n## Parameters\n\n\`\`\`json\n${JSON.stringify(tool.parameters ?? {}, null, 2)}\n\`\`\`\n`,
+		);
 	}
 
 	for (const command of commands) {
