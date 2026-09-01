@@ -54,8 +54,13 @@ for (const entry of entries) {
 
   let report;
   try {
-    [report] = JSON.parse(result.stdout);
+    const parsed = JSON.parse(result.stdout);
+    report = Array.isArray(parsed) ? parsed[0] : parsed[manifest.name];
   } catch {
+    failures.push(`${manifest.name} returned invalid npm pack JSON`);
+    continue;
+  }
+  if (!report || typeof report !== "object") {
     failures.push(`${manifest.name} returned invalid npm pack JSON`);
     continue;
   }

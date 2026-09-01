@@ -333,7 +333,9 @@ if (!windows.includes("for($i=0;$i -lt 10") || !windows.includes("$w=$e.Replace(
 	it("packages smoke scripts and platform smoke docs", () => {
 		const result = run("npm", ["pack", "--dry-run", "--json"]);
 		expect(result.status).toBe(0);
-		const [pack] = JSON.parse(result.stdout) as Array<{ name: string; version: string; files: Array<{ path: string }> }>;
+		const packed = JSON.parse(result.stdout) as Array<{ name: string; version: string; files: Array<{ path: string }> }> | Record<string, { name: string; version: string; files: Array<{ path: string }> }>;
+		const pack = Array.isArray(packed) ? packed[0] : Object.values(packed)[0];
+		if (!pack) throw new Error("npm pack produced no package metadata");
 		const paths = new Set(pack.files.map((file) => file.path));
 
 		expect(pack.name).toBe("@iurysza/pi-cursor-sdk");
