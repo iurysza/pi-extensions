@@ -63,17 +63,14 @@ describe("discoverModels", () => {
 		const modelIds = models.map((model) => model.id);
 		expect(modelIds).toEqual(
 			expect.arrayContaining([
-				"claude-opus-4-7@1m",
-				"claude-opus-4-7@300k",
-				"claude-opus-4-8@1m",
 				"claude-opus-4-8@300k",
-				"claude-sonnet-4-6@1m",
-				"claude-sonnet-4-6@200k",
+				"claude-opus-5@300k",
 				"composer-2.5",
 				"composer-2-5",
 				"composer-latest",
-				"gpt-5.5@1m",
-				"gpt-5.5@272k",
+				"gpt-5.6-terra@1m",
+				"gpt-5.6-terra@272k",
+				"grok-4.6",
 			]),
 		);
 		expect(modelIds.length).toBeGreaterThan(20);
@@ -95,7 +92,7 @@ describe("discoverModels", () => {
 		process.env.CURSOR_API_KEY = "   ";
 		const issues: CursorModelFallbackIssue[] = [];
 		const models = await discoverModels({ onFallback: (issue) => issues.push(issue) });
-		expect(models.some((model) => model.id === "gpt-5.5@1m")).toBe(true);
+		expect(models.some((model) => model.id === "gpt-5.6-terra@1m")).toBe(true);
 		expect(issues).toEqual([expect.objectContaining({ reason: "missing-api-key" })]);
 		expect(mockedList).not.toHaveBeenCalled();
 	});
@@ -910,7 +907,7 @@ describe("discoverModels", () => {
 		const issues: CursorModelFallbackIssue[] = [];
 		mockedList.mockResolvedValueOnce([]);
 		const models = await discoverModels({ onFallback: (issue) => issues.push(issue) });
-		expect(models.some((model) => model.id === "claude-opus-4-8@1m")).toBe(true);
+		expect(models.some((model) => model.id === "claude-opus-4-8@300k")).toBe(true);
 		expect(issues).toEqual([
 			expect.objectContaining({
 				reason: "empty-model-list",

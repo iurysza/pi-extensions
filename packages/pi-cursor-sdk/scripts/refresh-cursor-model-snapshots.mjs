@@ -171,7 +171,7 @@ function formatContextWindows(models, checkpointWindows, fallbackContextWindow) 
 }
 
 const args = parseRefreshArgs(process.argv.slice(2));
-const sdkVersion = JSON.parse(readFileSync(new URL("../node_modules/@cursor/sdk/package.json", import.meta.url), "utf8")).version;
+const sdkVersion = JSON.parse(readFileSync(new URL("../../package.json", import.meta.resolve("@cursor/sdk")), "utf8")).version;
 let rawModels;
 try {
 	rawModels = await Cursor.models.list({ apiKey: args.apiKey });
