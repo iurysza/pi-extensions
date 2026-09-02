@@ -16,6 +16,25 @@ function makeModel(provider, id, name) {
   return { provider, id, name };
 }
 
+function themedCatalog(overrides = {}) {
+  return {
+    schemaVersion: 2,
+    kind: "themed-tier-catalog",
+    defaultModel: "Heavy",
+    display: {
+      mode: "tiers",
+      showProviderGroups: false,
+      showModelNames: false,
+    },
+    entries: [
+      { nickname: "Fly", provider: "kimi-coding", model: "kimi-for-coding", thinking: "high" },
+      { nickname: "Mid", provider: "openai", model: "gpt-5.6-terra", thinking: "high" },
+      { nickname: "Heavy", provider: "openai-codex", model: "gpt-5.6-sol", thinking: "medium" },
+    ],
+    ...overrides,
+  };
+}
+
 describe("catalogPath", () => {
   it("prefers explicit agentDir override", () => {
     const p = catalogPath({ agentDir: "/tmp/agent" });
@@ -140,6 +159,86 @@ describe("buildPickerViewModel", () => {
     const view = buildPickerViewModel({ catalog, availableModels: [current], currentModel: current, currentThinking: "medium" });
     assert.deepStrictEqual(view.entries.map((entry) => entry.label), ["Deep — GPT-5.6 Sol", "Coder — GPT-5.6 Sol"]);
     assert.strictEqual(view.fallbackHint, undefined);
+  });
+
+  it("keeps standard sidecar presentation unchanged", () => {
+    const catalog = { defaultModel: "Deep", entries: [
+      { nickname: "Deep", provider: "openai-codex", model: "gpt-5.6-sol", thinking: "xhigh" },
+    ], setupHint: "unused" };
+    const view = buildPickerViewModel({ catalog, availableModels: [current], currentModel: current, currentThinking: "medium" });
+    assert.deepStrictEqual(view, {
+      entries: [{
+        label: "Deep — GPT-5.6 Sol",
+        provider: "openai-codex",
+        model: "gpt-5.6-sol",
+        thinking: "xhigh",
+        active: true,
+      }],
+      fallbackHint: undefined,
+    });
+  });
+
+  it("renders themed tiers as exact labels without provider groups or model names", () => {
+    const available = [
+      makeModel("kimi-coding", "kimi-for-coding", "Kimi for Coding"),
+      makeModel("openai", "gpt-5.6-terra", "GPT-5.6 Terra"),
+      makeModel("openai-codex", "gpt-5.6-sol", "GPT-5.6 Sol"),
+    ];
+    const view = buildPickerViewModel({
+      catalog: themedCatalog(),
+      availableModels: available,
+      currentModel: available[2],
+      currentThinking: "medium",
+    });
+    assert.deepStrictEqual(view.entries.map(({ label, thinking, active }) => ({ label, thinking, active })), [
+      { label: "Fly", thinking: "high", active: false },
+      { label: "Mid", thinking: "high", active: false },
+      { label: "Heavy", thinking: "medium", active: true },
+    ]);
+    assert.strictEqual(view.tierMode, true);
+    assert.strictEqual(view.showProviderGroups, false);
+    assert.strictEqual(view.showModelNames, false);
+    assert.strictEqual(view.error, undefined);
+  });
+
+  it("accepts duplicate provider and model IDs when thinking differs", () => {
+    const model = makeModel("openai-codex", "gpt-5.6-sol", "GPT-5.6 Sol");
+    const catalog = themedCatalog({
+      entries: [
+        { nickname: "Fly", provider: "openai-codex", model: "gpt-5.6-sol", thinking: "low" },
+        { nickname: "Mid", provider: "openai-codex", model: "gpt-5.6-sol", thinking: "medium" },
+        { nickname: "Heavy", provider: "openai-codex", model: "gpt-5.6-sol", thinking: "high" },
+      ],
+    });
+    const view = buildPickerViewModel({ catalog, availableModels: [model], currentModel: model, currentThinking: "medium" });
+    assert.deepStrictEqual(view.entries.map((entry) => entry.active), [false, true, false]);
+  });
+
+  it("shows no active tier when the current tuple is custom", () => {
+    const available = [
+      makeModel("kimi-coding", "kimi-for-coding", "Kimi for Coding"),
+      makeModel("openai", "gpt-5.6-terra", "GPT-5.6 Terra"),
+      makeModel("openai-codex", "gpt-5.6-sol", "GPT-5.6 Sol"),
+    ];
+    const view = buildPickerViewModel({ catalog: themedCatalog(), availableModels: available, currentModel: available[2], currentThinking: "high" });
+    assert.deepStrictEqual(view.entries.map((entry) => entry.active), [false, false, false]);
+  });
+
+  it("rejects missing, unavailable, and collapsed themed tiers", () => {
+    const available = [makeModel("openai-codex", "gpt-5.6-sol", "GPT-5.6 Sol")];
+    const missing = themedCatalog({ entries: themedCatalog().entries.slice(0, 2) });
+    assert.match(buildPickerViewModel({ catalog: missing, availableModels: available }).error, /Fly, Mid, and Heavy/);
+
+    assert.match(buildPickerViewModel({ catalog: themedCatalog(), availableModels: available }).error, /unavailable tier Fly/);
+
+    const collapsed = themedCatalog({
+      entries: [
+        { nickname: "Fly", provider: "openai-codex", model: "gpt-5.6-sol", thinking: "medium" },
+        { nickname: "Mid", provider: "openai-codex", model: "gpt-5.6-sol", thinking: "medium" },
+        { nickname: "Heavy", provider: "openai-codex", model: "gpt-5.6-sol", thinking: "high" },
+      ],
+    });
+    assert.match(buildPickerViewModel({ catalog: collapsed, availableModels: available }).error, /duplicate tuple/);
   });
 });
 

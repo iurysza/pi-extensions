@@ -19,6 +19,7 @@ interface FavouriteModelEntry {
 	provider: string;
 	model: string;
 	thinking?: ThinkingLevel;
+	active?: boolean;
 }
 
 interface ModelRow {
@@ -35,7 +36,7 @@ interface HeaderRow {
 
 type DisplayRow = ModelRow | HeaderRow;
 
-function buildDisplayRows(favourites: FavouriteModelEntry[]): DisplayRow[] {
+function buildDisplayRows(favourites: FavouriteModelEntry[], showProviderGroups: boolean): DisplayRow[] {
 	const providerCounts = new Map<string, number>();
 	for (const favourite of favourites) {
 		providerCounts.set(favourite.provider, (providerCounts.get(favourite.provider) ?? 0) + 1);
@@ -45,7 +46,7 @@ function buildDisplayRows(favourites: FavouriteModelEntry[]): DisplayRow[] {
 	let lastProvider = "";
 	for (let i = 0; i < favourites.length; i++) {
 		const favourite = favourites[i];
-		if (favourite.provider !== lastProvider) {
+		if (showProviderGroups && favourite.provider !== lastProvider) {
 			rows.push({
 				type: "header",
 				provider: favourite.provider,
@@ -98,7 +99,13 @@ function getPrintableKey(data: string): string | null {
 	return null;
 }
 
-function loadScopedModels(pi: ExtensionAPI, ctx: ExtensionContext): { entries: FavouriteModelEntry[]; fallbackHint?: string } {
+function loadScopedModels(pi: ExtensionAPI, ctx: ExtensionContext): {
+	entries: FavouriteModelEntry[];
+	fallbackHint?: string;
+	tierMode?: boolean;
+	showProviderGroups?: boolean;
+	error?: string;
+} {
 	return buildPickerViewModel({
 		catalog: loadModelCatalog(),
 		availableModels: ctx.modelRegistry.getAvailable(),
@@ -115,7 +122,11 @@ interface PickerResult {
 export async function runFavouriteModels(pi: ExtensionAPI, ctx: ExtensionContext): Promise<void> {
 	if (!ctx.hasUI) return;
 
-	const { entries: favourites, fallbackHint } = loadScopedModels(pi, ctx);
+	const { entries: favourites, fallbackHint, tierMode = false, showProviderGroups = true, error } = loadScopedModels(pi, ctx);
+	if (error) {
+		ctx.ui.notify(error, "error");
+		return;
+	}
 	if (favourites.length === 0) {
 		ctx.ui.notify(fallbackHint ?? "No scoped models available. Use /scoped-models or configure API keys", "warning");
 		return;
@@ -129,7 +140,7 @@ export async function runFavouriteModels(pi: ExtensionAPI, ctx: ExtensionContext
 		return idx >= 0 ? idx : ALL_THINKING_LEVELS.indexOf(currentThinking);
 	});
 
-	const rows = buildDisplayRows(favourites);
+	const rows = buildDisplayRows(favourites, showProviderGroups);
 	const firstModelRow = rows.findIndex((r) => r.type === "model");
 
 	const selected = await withHerdrNavigationPassthrough(() => ctx.ui.custom<PickerResult | null>(
@@ -148,7 +159,7 @@ export async function runFavouriteModels(pi: ExtensionAPI, ctx: ExtensionContext
 					const lines: string[] = [];
 
 					lines.push(f.top());
-					lines.push(f.row(th.fg("accent", th.bold("Scoped Models"))));
+					lines.push(f.row(th.fg("accent", th.bold(tierMode ? "Model Tiers" : "Scoped Models"))));
 					lines.push(f.separator());
 
 					let modelCounter = 0;
@@ -166,9 +177,9 @@ export async function runFavouriteModels(pi: ExtensionAPI, ctx: ExtensionContext
 						const isHighlighted = i === highlightedIndex;
 						const mi = row.modelIndex;
 
-						const isCurrent =
-							currentModel?.provider === fav.provider &&
-							currentModel?.id === fav.model;
+						const isCurrent = tierMode
+							? fav.active === true
+							: currentModel?.provider === fav.provider && currentModel?.id === fav.model;
 
 						const label = isHighlighted
 							? th.fg("accent", th.bold(fav.label))
@@ -178,20 +189,26 @@ export async function runFavouriteModels(pi: ExtensionAPI, ctx: ExtensionContext
 
 						const thinking = ALL_THINKING_LEVELS[thinkingIndices[mi]];
 						const thinkingRole = THINKING_ROLES[thinking] ?? "dim";
-						const thinkingTag = isHighlighted
-							? th.fg("dim", "‹") + th.fg(thinkingRole, ` ${thinking} `) + th.fg("dim", "›")
-							: th.fg(thinkingRole, thinking);
+						const thinkingTag = tierMode
+							? ""
+							: isHighlighted
+								? th.fg("dim", "‹") + th.fg(thinkingRole, ` ${thinking} `) + th.fg("dim", "›")
+								: th.fg(thinkingRole, thinking);
 
 						const num = modelCounter < 9 ? th.fg("dim", `${modelCounter + 1}`) : th.fg("dim", "·");
-						const line = `${isHighlighted ? "> " : "  "}${num} ${label}${currentBadge}  ${thinkingTag}`;
+						const line = `${isHighlighted ? "> " : "  "}${num} ${label}${currentBadge}${thinkingTag ? `  ${thinkingTag}` : ""}`;
 						lines.push(f.rowTruncated(line));
 						modelCounter++;
 					}
 
 					lines.push(f.separator());
 					if (fallbackHint) lines.push(f.rowTruncated(th.fg("warning", fallbackHint)));
-					lines.push(f.row(th.fg("dim", "j/k navigate | 1-9 jump | left/right cycle thinking")));
-					lines.push(f.row(th.fg("dim", "o/i/l/m/h/x set thinking | enter select | esc cancel")));
+					if (tierMode) {
+						lines.push(f.row(th.fg("dim", "j/k navigate | 1-3 jump | enter select | esc cancel")));
+					} else {
+						lines.push(f.row(th.fg("dim", "j/k navigate | 1-9 jump | left/right cycle thinking")));
+						lines.push(f.row(th.fg("dim", "o/i/l/m/h/x set thinking | enter select | esc cancel")));
+					}
 					lines.push(f.bottom());
 
 					return lines;
@@ -221,7 +238,7 @@ export async function runFavouriteModels(pi: ExtensionAPI, ctx: ExtensionContext
 						return;
 					}
 
-					if (matchesKey(data, "left")) {
+					if (!tierMode && matchesKey(data, "left")) {
 						const mi = getModelIndex();
 						if (mi >= 0) {
 							thinkingIndices[mi] = (thinkingIndices[mi] - 1 + ALL_THINKING_LEVELS.length) % ALL_THINKING_LEVELS.length;
@@ -229,7 +246,7 @@ export async function runFavouriteModels(pi: ExtensionAPI, ctx: ExtensionContext
 						}
 						return;
 					}
-					if (matchesKey(data, "right")) {
+					if (!tierMode && matchesKey(data, "right")) {
 						const mi = getModelIndex();
 						if (mi >= 0) {
 							thinkingIndices[mi] = (thinkingIndices[mi] + 1) % ALL_THINKING_LEVELS.length;
@@ -249,7 +266,7 @@ export async function runFavouriteModels(pi: ExtensionAPI, ctx: ExtensionContext
 						}
 					}
 
-					if (key) {
+					if (!tierMode && key) {
 						const shortcutThinking = THINKING_SHORTCUTS[key];
 						if (shortcutThinking) {
 							const mi = getModelIndex();
@@ -266,7 +283,9 @@ export async function runFavouriteModels(pi: ExtensionAPI, ctx: ExtensionContext
 						if (row?.type === "model") {
 							done({
 								fav: row.fav,
-								thinking: ALL_THINKING_LEVELS[thinkingIndices[row.modelIndex]],
+								thinking: tierMode && row.fav.thinking
+									? row.fav.thinking
+									: ALL_THINKING_LEVELS[thinkingIndices[row.modelIndex]],
 							});
 						}
 					}
