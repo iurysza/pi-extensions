@@ -247,11 +247,14 @@ export function registerNextMessageSuggestions(
     void generate(ctx, config, conversation.messages, controller.signal)
       .then((suggestions) => {
         if (
-          !suggestions ||
           controller.signal.aborted ||
           generation !== generationAtStart ||
           ctx.sessionManager.getLeafId() !== leafAtStart
         ) return;
+        if (!suggestions) {
+          if (activeController === controller) activeController = undefined;
+          return;
+        }
         selection = { suggestions, focusedIndex: undefined };
         activeController = undefined;
         renderWidget(ctx, selection);

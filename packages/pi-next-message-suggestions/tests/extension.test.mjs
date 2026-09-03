@@ -181,6 +181,22 @@ test("suppresses stale generation results when a new user message arrives", asyn
   assert.equal(h.widgets.at(-1).content, undefined);
 });
 
+test("releases a completed helper request with no suggestions", async () => {
+  const signals = [];
+  const h = createHarness({ generator: async (_ctx, _config, _context, signal) => {
+    signals.push(signal);
+    return signals.length === 1 ? undefined : ["one", "two", "three"];
+  } });
+  await h.fire("session_start");
+  await h.fire("agent_settled");
+  await flush();
+  await h.fire("agent_settled");
+  await flush();
+
+  assert.equal(signals[0].aborted, false);
+  assert.match(latestWidgetText(h), /· one/);
+});
+
 test("focuses, navigates, inserts, sends, and dismisses passive suggestions", async () => {
   const h = createHarness({ generator: async () => ["one", "two", "three"] });
   await h.fire("session_start");
