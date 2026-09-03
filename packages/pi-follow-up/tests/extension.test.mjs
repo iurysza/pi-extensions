@@ -3,7 +3,7 @@ import test from "node:test";
 
 import {
   generateSuggestions,
-  registerNextMessageSuggestions,
+  registerFollowUp,
 } from "../src/index.js";
 import { DEFAULT_CONFIG } from "../src/config.js";
 
@@ -40,17 +40,14 @@ function deferred() {
   return { promise, resolve, reject };
 }
 
-function createHarness({ generator, messages = branch() } = {}) {
+function createHarness({
+  generator,
+  messages = branch(),
+  config = { ...DEFAULT_CONFIG, threshold: 5 },
+  configPath = "/tmp/pi-follow-up.json",
+} = {}) {
   const handlers = new Map();
-  const flags = new Map([
-    ["next-message-suggestions-threshold", "5"],
-    ["next-message-suggestions-recent-messages", "3"],
-    ["next-message-suggestions-count", "3"],
-    ["next-message-suggestions-prompt", DEFAULT_CONFIG.prompt],
-    ["next-message-suggestions-provider", DEFAULT_CONFIG.provider],
-    ["next-message-suggestions-model", DEFAULT_CONFIG.model],
-    ["next-message-suggestions-thinking", DEFAULT_CONFIG.thinking],
-  ]);
+  const commands = new Map();
   const widgets = [];
   const pasted = [];
   const sent = [];
@@ -72,21 +69,20 @@ function createHarness({ generator, messages = branch() } = {}) {
   };
   const pi = {
     on(name, handler) { handlers.set(name, handler); },
-    registerFlag(name, options) { if (!flags.has(name)) flags.set(name, options.default); },
-    registerCommand() {},
-    getFlag(name) { return flags.get(name); },
+    registerCommand(name, command) { commands.set(name, command); },
     sendUserMessage(text) { sent.push(text); },
   };
-  registerNextMessageSuggestions(pi, generator);
+  registerFollowUp(pi, config, configPath, generator);
   return {
     ctx,
-    flags,
+    commands,
     widgets,
     pasted,
     sent,
     notifications,
     setBranch(value) { currentBranch = value; },
     async fire(name) { await handlers.get(name)?.({}, ctx); },
+    async command(name) { await commands.get(name)?.handler("", ctx); },
     input(raw) { return terminalInput?.(raw); },
   };
 }
@@ -99,9 +95,9 @@ function latestWidgetText(harness) {
   return factory({}, { fg: (_role, text) => text }).render(200).join("\n");
 }
 
-test("passes only recent conversational context to the fixed helper model", async () => {
+test("passes configured helper settings and only recent conversational context", async () => {
   const calls = [];
-  const model = { provider: "openai-codex", id: "gpt-5.6-luna" };
+  const model = { provider: "test-provider", id: "test-model" };
   const ctx = {
     model: { provider: "active", id: "expensive" },
     modelRegistry: {
@@ -109,7 +105,14 @@ test("passes only recent conversational context to the fixed helper model", asyn
       async getApiKeyAndHeaders() { return { ok: true, apiKey: "test", headers: {} }; },
     },
   };
-  const config = { ...DEFAULT_CONFIG, count: 4 };
+  const config = {
+    ...DEFAULT_CONFIG,
+    count: 4,
+    prompt: "Custom prompt",
+    provider: "test-provider",
+    model: "test-model",
+    thinking: "minimal",
+  };
   const result = await generateSuggestions(
     ctx,
     config,
@@ -123,16 +126,17 @@ test("passes only recent conversational context to the fixed helper model", asyn
       calls.push({ kind: "request", requestModel, requestContext, options });
       return {
         ...assistant(""),
-        content: [{ type: "toolCall", id: "next", name: "next_message_suggestions", arguments: { suggestions: ["Add tests.", "Explain this.", "Ship it.", "Show the diff."] } }],
+        content: [{ type: "toolCall", id: "next", name: "follow_up_suggestions", arguments: { suggestions: ["Add tests.", "Explain this.", "Ship it.", "Show the diff."] } }],
       };
     },
   );
 
   assert.deepEqual(result, ["Add tests.", "Explain this.", "Ship it.", "Show the diff."]);
-  assert.deepEqual(calls[0], { kind: "find", provider: "openai-codex", id: "gpt-5.6-luna" });
+  assert.deepEqual(calls[0], { kind: "find", provider: "test-provider", id: "test-model" });
   const request = calls[1];
   assert.equal(request.requestModel, model);
-  assert.equal(request.options.reasoningEffort, "low");
+  assert.equal(request.requestContext.systemPrompt, "Custom prompt");
+  assert.equal(request.options.reasoningEffort, "minimal");
   assert.equal(request.options.toolChoice, "required");
   assert.equal(request.requestContext.tools[0].constrainedSampling.strict, "require");
   assert.equal(request.requestContext.tools[0].parameters.properties.suggestions.minItems, 4);
@@ -142,6 +146,28 @@ test("passes only recent conversational context to the fixed helper model", asyn
     ["user", "Latest request"],
     ["assistant", "Current answer"],
   ]);
+});
+
+test("reports the active persistent configuration", async () => {
+  const h = createHarness({
+    config: {
+      ...DEFAULT_CONFIG,
+      threshold: 42,
+      recentMessages: 2,
+      count: 4,
+      provider: "test-provider",
+      model: "test-model",
+      thinking: "minimal",
+    },
+    configPath: "/tmp/custom-follow-up.json",
+  });
+
+  assert.deepEqual([...h.commands.keys()], ["follow-up"]);
+  await h.command("follow-up");
+  assert.deepEqual(h.notifications, [{
+    text: "pi-follow-up: 42 chars, 2 messages, 4 suggestions, test-provider/test-model/minimal; config: /tmp/custom-follow-up.json",
+    type: "info",
+  }]);
 });
 
 test("shows passive suggestions only after an eligible completed response", async () => {
@@ -163,7 +189,7 @@ test("shows passive suggestions only after an eligible completed response", asyn
 
   gate.resolve(["Add tests.", "Explain the trade-off.", "Ship it."]);
   await flush();
-  assert.match(latestWidgetText(h), /shift\+↑ choose/);
+  assert.match(latestWidgetText(h), /^Follow-up: shift\+↑ choose/m);
   assert.match(latestWidgetText(h), /· Add tests\./);
   assert.deepEqual(h.widgets.at(-1).options, { placement: "aboveEditor" });
   assert.equal(h.input("x"), undefined);

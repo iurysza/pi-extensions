@@ -1,7 +1,7 @@
 {
-  "name": "@iurysza/pi-next-message-suggestions",
+  "name": "@iurysza/pi-follow-up",
   "version": "0.1.0",
-  "description": "Suggest likely next user messages after long Pi replies.",
+  "description": "Suggest likely follow-up messages after long Pi replies.",
   "author": "Iury Souza",
   "license": "MIT",
   "type": "module",
@@ -9,7 +9,8 @@
     "pi-package",
     "pi-extension",
     "conversation",
-    "suggestions"
+    "suggestions",
+    "follow-up"
   ],
   "files": [
     "src",
@@ -22,12 +23,12 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/iurysza/pi-extensions.git",
-    "directory": "packages/pi-next-message-suggestions"
+    "directory": "packages/pi-follow-up"
   },
   "bugs": {
     "url": "https://github.com/iurysza/pi-extensions/issues"
   },
-  "homepage": "https://github.com/iurysza/pi-extensions/tree/main/packages/pi-next-message-suggestions#readme",
+  "homepage": "https://github.com/iurysza/pi-extensions/tree/main/packages/pi-follow-up#readme",
   "engines": {
     "node": ">=22.19.0"
   },

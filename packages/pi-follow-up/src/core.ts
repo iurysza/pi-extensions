@@ -64,6 +64,6 @@ export function selectSuggestion(
 
   const current = state.focusedIndex ?? 0;
   const delta = action === "up" ? -1 : 1;
-  const next = (current + delta + state.suggestions.length) % state.suggestions.length;
+  const next = Math.max(0, Math.min(state.suggestions.length - 1, current + delta));
   return { ...state, focusedIndex: next };
 }

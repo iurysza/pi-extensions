@@ -3,7 +3,11 @@ import { complete } from "@earendil-works/pi-ai/compat";
 import type { ExtensionAPI, ExtensionContext, SessionEntry } from "@earendil-works/pi-coding-agent";
 import { matchesKey, truncateToWidth } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
-import { readSuggestionConfig, registerSuggestionFlags, type SuggestionsConfig } from "./config.js";
+import {
+  followUpConfigPath,
+  loadOrCreateFollowUpConfig,
+  type FollowUpConfig,
+} from "./config.js";
 import {
   parseSuggestions,
   recentConversation,
@@ -14,8 +18,8 @@ import {
   type SuggestionSelection,
 } from "./core.js";
 
-const WIDGET_KEY = "next-message-suggestions";
-const TOOL_NAME = "next_message_suggestions";
+const WIDGET_KEY = "pi-follow-up";
+const TOOL_NAME = "follow_up_suggestions";
 
 function suggestionTool(count: number) {
   return {
@@ -87,7 +91,7 @@ function widgetLines(state: SuggestionSelection, focused: boolean): string[] {
   const hint = focused
     ? "↑↓ select · enter send · shift+enter insert · esc leave"
     : "shift+↑ choose";
-  const lines = [`Next: ${hint}`];
+  const lines = [`Follow-up: ${hint}`];
   for (const [index, suggestion] of state.suggestions.entries()) {
     lines.push(`${focused && state.focusedIndex === index ? "›" : "·"} ${suggestion}`);
   }
@@ -111,7 +115,7 @@ function renderWidget(ctx: ExtensionContext, state: SuggestionSelection | undefi
 
 export async function generateSuggestions(
   ctx: ExtensionContext,
-  config: SuggestionsConfig,
+  config: FollowUpConfig,
   conversation: readonly ConversationMessage[],
   signal: AbortSignal,
   completeRequest: typeof complete = complete,
@@ -142,13 +146,15 @@ export async function generateSuggestions(
 
 export type SuggestionGenerator = (
   ctx: ExtensionContext,
-  config: SuggestionsConfig,
+  config: FollowUpConfig,
   conversation: readonly ConversationMessage[],
   signal: AbortSignal,
 ) => Promise<readonly string[] | undefined>;
 
-export function registerNextMessageSuggestions(
+export function registerFollowUp(
   pi: ExtensionAPI,
+  config: FollowUpConfig,
+  configPath: string,
   generate: SuggestionGenerator = generateSuggestions,
 ): void {
   let selection: SuggestionSelection | undefined;
@@ -209,13 +215,11 @@ export function registerNextMessageSuggestions(
     return undefined;
   }
 
-  registerSuggestionFlags(pi);
-  pi.registerCommand("next-message-suggestions", {
-    description: "Show the active next-message suggestion configuration.",
+  pi.registerCommand("follow-up", {
+    description: "Show the active follow-up configuration.",
     handler: async (_args, ctx) => {
-      const config = readSuggestionConfig(pi);
       ctx.ui.notify(
-        `next-message-suggestions: ${config.threshold} chars, ${config.recentMessages} messages, ${config.count} suggestions, ${config.provider}/${config.model}/${config.thinking}`,
+        `pi-follow-up: ${config.threshold} chars, ${config.recentMessages} messages, ${config.count} suggestions, ${config.provider}/${config.model}/${config.thinking}; config: ${configPath}`,
         "info",
       );
     },
@@ -235,7 +239,6 @@ export function registerNextMessageSuggestions(
 
   pi.on("agent_settled", (_event, ctx) => {
     if (ctx.mode !== "tui") return;
-    const config = readSuggestionConfig(pi);
     const conversation = suggestionContext(ctx.sessionManager.getBranch(), config.recentMessages);
     if (!conversation || visibleUnicodeCharacterCount(conversation.triggerText) <= config.threshold) return;
 
@@ -274,6 +277,8 @@ export function registerNextMessageSuggestions(
   });
 }
 
-export default function nextMessageSuggestions(pi: ExtensionAPI): void {
-  registerNextMessageSuggestions(pi);
+export default async function followUp(pi: ExtensionAPI): Promise<void> {
+  const configPath = followUpConfigPath();
+  const config = await loadOrCreateFollowUpConfig(configPath);
+  registerFollowUp(pi, config, configPath);
 }
