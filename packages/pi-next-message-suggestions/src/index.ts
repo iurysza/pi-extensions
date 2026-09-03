@@ -257,6 +257,9 @@ export function registerNextMessageSuggestions(
         renderWidget(ctx, selection);
       })
       .catch(() => {
+        if (generation === generationAtStart && activeController === controller) {
+          activeController = undefined;
+        }
         // Suggestions are optional. Failures stay silent.
       });
   });

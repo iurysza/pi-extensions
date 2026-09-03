@@ -21,6 +21,25 @@ the active chat model:
 openai-codex / gpt-5.6-luna / low
 ```
 
+## Use
+
+Suggestions appear in Pi's supported widget area directly above the editor. This
+is the closest supported placement to the completed assistant response; they are
+not added to the conversation or sent back to the model.
+
+- `Shift+Up` focuses the list.
+- `Up` and `Down` select a suggestion.
+- `Enter` sends it.
+- `Shift+Enter` inserts it at the editor cursor.
+- `Esc` leaves selection while keeping suggestions visible.
+
+Ordinary typing does not hide suggestions. Pi's `input` lifecycle event fires
+when a message is submitted, so any submitted user message clears them and
+cancels an in-flight helper request.
+
+Terminals must report modified keys. Pi recognises legacy and Kitty `Shift+Up`
+sequences, plus Kitty and configured Ghostty `Shift+Enter` sequences.
+
 ## Configuration
 
 Use these Pi extension flags when starting Pi:

@@ -7,8 +7,8 @@ import {
   selectSuggestion,
   textFromContent,
   visibleUnicodeCharacterCount,
-} from "../src/core.ts";
-import { DEFAULT_CONFIG, readSuggestionConfig } from "../src/config.ts";
+} from "../src/core.js";
+import { DEFAULT_CONFIG, readSuggestionConfig } from "../src/config.js";
 
 test("counts visible Unicode code points instead of UTF-16 units", () => {
   assert.equal(visibleUnicodeCharacterCount("A😀é"), 3);

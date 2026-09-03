@@ -11,6 +11,7 @@ all-or-nothing setup: install the packages that fit your workflow.
 | [@iurysza/pi-ghost-in-the-machine](packages/pi-ghost-in-the-machine) | Reactive Ghostty shader face for Pi lifecycle states. |
 | [@iurysza/pi-token-tank](packages/pi-token-tank) | Subscription quota gauges for OpenAI Codex, Kimi, GitHub Copilot, and Cursor. |
 | [@iurysza/pi-cache-hit-predictor](packages/pi-cache-hit-predictor) | Predict reusable prompt-cache prefixes across model and reasoning lanes. |
+| [@iurysza/pi-next-message-suggestions](packages/pi-next-message-suggestions) | Suggest likely next user messages after long Pi replies. |
 | [@iurysza/pi-cursor-sdk](packages/pi-cursor-sdk) | Run Cursor SDK models in Pi with fail-closed recorded tool replay. |
 | [@iurysza/pi-agent-explorer](packages/pi-agent-explorer) | Read-only Neovim snapshot of Pi's loaded runtime. |
 | [@iurysza/pi-context-audit](packages/pi-context-audit) | Inspect prompt, tool-schema, context, and MCP overhead. |
