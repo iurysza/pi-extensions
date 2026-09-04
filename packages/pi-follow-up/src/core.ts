@@ -3,13 +3,6 @@ export type ConversationMessage = {
   readonly text: string;
 };
 
-export type SuggestionSelection = {
-  readonly suggestions: readonly string[];
-  readonly focusedIndex: number | undefined;
-};
-
-export type SuggestionAction = "focus" | "up" | "down" | "dismiss";
-
 export function visibleUnicodeCharacterCount(text: string): number {
   return Array.from(text).length;
 }
@@ -52,18 +45,4 @@ export function parseSuggestions(
     return undefined;
   }
   return suggestions;
-}
-
-export function selectSuggestion(
-  state: SuggestionSelection,
-  action: SuggestionAction,
-): SuggestionSelection {
-  if (state.suggestions.length === 0) return state;
-  if (action === "dismiss") return { ...state, focusedIndex: undefined };
-  if (action === "focus") return { ...state, focusedIndex: state.focusedIndex ?? 0 };
-
-  const current = state.focusedIndex ?? 0;
-  const delta = action === "up" ? -1 : 1;
-  const next = Math.max(0, Math.min(state.suggestions.length - 1, current + delta));
-  return { ...state, focusedIndex: next };
 }

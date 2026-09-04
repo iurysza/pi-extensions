@@ -4,7 +4,6 @@ import test from "node:test";
 import {
   parseSuggestions,
   recentConversation,
-  selectSuggestion,
   textFromContent,
   visibleUnicodeCharacterCount,
 } from "../src/core.js";
@@ -44,17 +43,4 @@ test("accepts only the exact structured suggestion contract", () => {
   assert.equal(parseSuggestions({ suggestions: ["one", "two", "ONE"] }, 3), undefined);
   assert.equal(parseSuggestions({ suggestions: ["one", "two", "three"], explanation: "no" }, 3), undefined);
   assert.equal(parseSuggestions(["one", "two", "three"], 3), undefined);
-});
-
-test("focuses, clamps navigation, and dismisses selection without deleting suggestions", () => {
-  const initial = { suggestions: ["one", "two", "three"], focusedIndex: undefined };
-  const focused = selectSuggestion(initial, "focus");
-  assert.equal(focused.focusedIndex, 0);
-  assert.equal(selectSuggestion(focused, "up").focusedIndex, 0);
-  assert.equal(selectSuggestion(focused, "down").focusedIndex, 1);
-  assert.equal(selectSuggestion({ ...focused, focusedIndex: 2 }, "down").focusedIndex, 2);
-  assert.deepEqual(selectSuggestion(focused, "dismiss"), {
-    suggestions: ["one", "two", "three"],
-    focusedIndex: undefined,
-  });
 });

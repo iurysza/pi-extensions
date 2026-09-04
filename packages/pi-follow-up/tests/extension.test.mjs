@@ -1,11 +1,35 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { matchesKey } from "@earendil-works/pi-tui";
 import {
   generateSuggestions,
   registerFollowUp,
 } from "../src/index.js";
 import { DEFAULT_CONFIG } from "../src/config.js";
+
+const SELECT_KEYS = {
+  "tui.select.up": "up",
+  "tui.select.down": "down",
+  "tui.select.confirm": "enter",
+  "tui.select.cancel": "escape",
+};
+
+function pickerKeybindings() {
+  return {
+    matches(data, id) {
+      const key = SELECT_KEYS[id];
+      return key ? matchesKey(data, key) : false;
+    },
+  };
+}
+
+function pickerTheme() {
+  return {
+    fg(_color, text) { return text; },
+    bold(text) { return text; },
+  };
+}
 
 function assistant(text) {
   return {
@@ -52,6 +76,8 @@ function createHarness({
   const pasted = [];
   const sent = [];
   const notifications = [];
+  const customCalls = [];
+  let resolveCustom;
   let terminalInput;
   let currentBranch = messages;
   const ctx = {
@@ -65,6 +91,10 @@ function createHarness({
       onTerminalInput(handler) { terminalInput = handler; return () => { terminalInput = undefined; }; },
       pasteToEditor(text) { pasted.push(text); },
       notify(text, type) { notifications.push({ text, type }); },
+      custom(factory, options) {
+        customCalls.push({ factory, options });
+        return new Promise((resolve) => { resolveCustom = resolve; });
+      },
     },
   };
   const pi = {
@@ -80,6 +110,8 @@ function createHarness({
     pasted,
     sent,
     notifications,
+    customCalls,
+    resolveCustom(value) { resolveCustom?.(value); },
     setBranch(value) { currentBranch = value; },
     async fire(name) { await handlers.get(name)?.({}, ctx); },
     async command(name) { await commands.get(name)?.handler("", ctx); },
@@ -189,11 +221,10 @@ test("shows passive suggestions only after an eligible completed response", asyn
 
   gate.resolve(["Add tests.", "Explain the trade-off.", "Ship it."]);
   await flush();
-  assert.match(latestWidgetText(h), /^Follow-up: shift\+↑ choose/m);
-  assert.match(latestWidgetText(h), /· Add tests\./);
+  assert.match(latestWidgetText(h), /^Follow-up: "Add tests\." \+2 more · shift\+↑ open/m);
   assert.deepEqual(h.widgets.at(-1).options, { placement: "aboveEditor" });
   assert.equal(h.input("x"), undefined);
-  assert.match(latestWidgetText(h), /· Add tests\./);
+  assert.match(latestWidgetText(h), /^Follow-up: "Add tests\." \+2 more · shift\+↑ open/m);
 });
 
 test("suppresses stale generation results when a new user message arrives", async () => {
@@ -220,31 +251,114 @@ test("releases a completed helper request with no suggestions", async () => {
   await flush();
 
   assert.equal(signals[0].aborted, false);
-  assert.match(latestWidgetText(h), /· one/);
+  assert.match(latestWidgetText(h), /^Follow-up: "one" \+2 more/);
 });
 
-test("focuses, navigates, inserts, sends, and dismisses passive suggestions", async () => {
+test("shift+up stays inert while no suggestions exist", async () => {
+  const h = createHarness({ generator: async () => undefined });
+  await h.fire("session_start");
+  await h.fire("agent_settled");
+  await flush();
+
+  assert.equal(h.input("\x1b[a"), undefined);
+  assert.equal(h.customCalls.length, 0);
+});
+
+test("opens the overlay on shift+up and sends the selected suggestion", async () => {
   const h = createHarness({ generator: async () => ["one", "two", "three"] });
   await h.fire("session_start");
   await h.fire("agent_settled");
   await flush();
 
   assert.deepEqual(h.input("\x1b[a"), { consume: true });
-  assert.match(latestWidgetText(h), /› one/);
-  assert.match(latestWidgetText(h), /enter send/);
-  h.input("\x1b[B");
-  assert.match(latestWidgetText(h), /› two/);
-  h.input("\x1b[13;2u");
-  assert.deepEqual(h.pasted, ["two"]);
-  assert.match(latestWidgetText(h), /shift\+↑ choose/);
+  assert.equal(h.customCalls.length, 1);
+  assert.deepEqual(h.customCalls[0].options, {
+    overlay: true,
+    overlayOptions: { anchor: "center", width: "90%", minWidth: 60, maxHeight: "85%" },
+  });
+
+  const results = [];
+  const picker = h.customCalls[0].factory(null, pickerTheme(), pickerKeybindings(), (r) => results.push(r));
+  picker.handleInput("\x1b[B");
+  picker.handleInput("\r");
+  assert.deepEqual(results, [{ action: "send", text: "two" }]);
+  h.resolveCustom(results[0]);
+  await flush();
+  await flush();
+
+  assert.deepEqual(h.sent, ["two"]);
+  assert.equal(h.widgets.at(-1).content, undefined);
+});
+
+test("navigates with wrap, inserts with shift+enter, and keeps the widget after escape", async () => {
+  const h = createHarness({ generator: async () => ["one", "two", "three"] });
+  await h.fire("session_start");
+  await h.fire("agent_settled");
+  await flush();
+  h.input("\x1b[a");
+
+  const results = [];
+  const picker = h.customCalls.at(-1).factory(null, pickerTheme(), pickerKeybindings(), (r) => results.push(r));
+  picker.handleInput("\x1b[B");
+  picker.handleInput("\x1b[B");
+  picker.handleInput("\x1b[B");
+  picker.handleInput("\x1b[A");
+  picker.handleInput("\x1b[13;2u");
+  assert.deepEqual(results, [{ action: "insert", text: "three" }]);
+  h.resolveCustom(results[0]);
+  await flush();
+  await flush();
+
+  assert.deepEqual(h.pasted, ["three"]);
+  assert.deepEqual(h.sent, []);
+  assert.match(latestWidgetText(h), /^Follow-up: "one" \+2 more/);
 
   h.input("\x1b[a");
-  h.input("\x1b");
-  assert.match(latestWidgetText(h), /shift\+↑ choose/);
+  const closed = [];
+  const picker2 = h.customCalls.at(-1).factory(null, pickerTheme(), pickerKeybindings(), (r) => closed.push(r));
+  picker2.handleInput("\x1b");
+  assert.deepEqual(closed, [null]);
+  h.resolveCustom(null);
+  await flush();
+  await flush();
+
+  assert.deepEqual(h.sent, []);
+  assert.match(latestWidgetText(h), /^Follow-up: "one" \+2 more/);
+});
+
+test("wraps long suggestions with aligned continuation lines", async () => {
+  const long = "alpha ".repeat(30).trimEnd();
+  const h = createHarness({ generator: async () => [long, "short"] });
+  await h.fire("session_start");
+  await h.fire("agent_settled");
+  await flush();
   h.input("\x1b[a");
-  h.input("\r");
-  assert.deepEqual(h.sent, ["one"]);
-  assert.equal(h.widgets.at(-1).content, undefined);
+
+  const picker = h.customCalls.at(-1).factory(null, pickerTheme(), pickerKeybindings(), () => {});
+  const lines = picker.render(40);
+  assert.equal(lines[0].trim(), "Follow-up");
+  assert.ok(lines[3].startsWith("→ "));
+  assert.ok(lines.slice(4, -2).some((line) => line.startsWith("  alpha")));
+  assert.match(lines.at(-1), /1\/2/);
+});
+
+test("downgrades a stale overlay result instead of sending it", async () => {
+  const h = createHarness({ generator: async () => ["one", "two", "three"] });
+  await h.fire("session_start");
+  await h.fire("agent_settled");
+  await flush();
+  h.input("\x1b[a");
+
+  await h.fire("input");
+  const results = [];
+  const picker = h.customCalls.at(-1).factory(null, pickerTheme(), pickerKeybindings(), (r) => results.push(r));
+  picker.handleInput("\r");
+  assert.deepEqual(results, [null]);
+  h.resolveCustom(null);
+  await flush();
+  await flush();
+
+  assert.deepEqual(h.sent, []);
 });
 
 test("remains silent when optional generation fails or is below threshold", async () => {

@@ -1,7 +1,13 @@
 import type { AssistantMessage, Message, ThinkingLevel, UserMessage } from "@earendil-works/pi-ai";
 import { complete } from "@earendil-works/pi-ai/compat";
-import type { ExtensionAPI, ExtensionContext, SessionEntry } from "@earendil-works/pi-coding-agent";
-import { matchesKey, truncateToWidth } from "@earendil-works/pi-tui";
+import type {
+  ExtensionAPI,
+  ExtensionContext,
+  KeybindingsManager,
+  SessionEntry,
+  Theme,
+} from "@earendil-works/pi-coding-agent";
+import { matchesKey, truncateToWidth, wrapTextWithAnsi, type Component } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import {
   followUpConfigPath,
@@ -11,11 +17,9 @@ import {
 import {
   parseSuggestions,
   recentConversation,
-  selectSuggestion,
   textFromContent,
   visibleUnicodeCharacterCount,
   type ConversationMessage,
-  type SuggestionSelection,
 } from "./core.js";
 
 const WIDGET_KEY = "pi-follow-up";
@@ -87,28 +91,72 @@ export function suggestionToolArguments(response: AssistantMessage): unknown {
   )?.arguments;
 }
 
-function widgetLines(state: SuggestionSelection, focused: boolean): string[] {
-  const hint = focused
-    ? "↑↓ select · enter send · shift+enter insert · esc leave"
-    : "shift+↑ choose";
-  const lines = [`Follow-up: ${hint}`];
-  for (const [index, suggestion] of state.suggestions.entries()) {
-    lines.push(`${focused && state.focusedIndex === index ? "›" : "·"} ${suggestion}`);
+type OverlayResult = { action: "send" | "insert"; text: string } | null;
+
+class FollowUpPicker implements Component {
+  private selectedIndex = 0;
+
+  constructor(
+    private readonly suggestions: readonly string[],
+    private readonly theme: Theme,
+    private readonly keybindings: KeybindingsManager,
+    private readonly finish: (result: OverlayResult) => void,
+  ) {}
+
+  render(width: number): string[] {
+    const lines = [
+      this.theme.bold("  Follow-up"),
+      this.theme.fg("dim", "  ↑↓ move · ⏎ send · ⇧⏎ insert · ⎋ close"),
+      "",
+    ];
+    this.suggestions.forEach((text, i) => {
+      const prefix = i === this.selectedIndex ? "→ " : "  ";
+      const wrapped = wrapTextWithAnsi(text, Math.max(20, width - 4));
+      wrapped.forEach((raw, j) => {
+        const line = j === 0 ? `${prefix}${raw}` : `  ${raw}`;
+        lines.push(
+          i === this.selectedIndex && j === 0
+            ? this.theme.fg("accent", line)
+            : j === 0
+              ? line
+              : this.theme.fg("dim", line),
+        );
+      });
+    });
+    lines.push("", this.theme.fg("dim", `  ${this.selectedIndex + 1}/${this.suggestions.length}`));
+    return lines;
   }
-  return lines;
+
+  handleInput(data: string): void {
+    const n = this.suggestions.length;
+    if (this.keybindings.matches(data, "tui.select.up")) {
+      this.selectedIndex = (this.selectedIndex + n - 1) % n;
+    } else if (this.keybindings.matches(data, "tui.select.down")) {
+      this.selectedIndex = (this.selectedIndex + 1) % n;
+    } else if (matchesKey(data, "shift+enter")) {
+      this.finish({ action: "insert", text: this.suggestions[this.selectedIndex] });
+    } else if (this.keybindings.matches(data, "tui.select.confirm")) {
+      this.finish({ action: "send", text: this.suggestions[this.selectedIndex] });
+    } else if (this.keybindings.matches(data, "tui.select.cancel")) {
+      this.finish(null);
+    }
+  }
+
+  invalidate(): void {}
 }
 
-function renderWidget(ctx: ExtensionContext, state: SuggestionSelection | undefined): void {
-  if (!state || state.suggestions.length === 0) {
+function renderWidget(ctx: ExtensionContext, suggestions: readonly string[] | undefined): void {
+  if (!suggestions?.length) {
     ctx.ui.setWidget(WIDGET_KEY, undefined);
     return;
   }
   ctx.ui.setWidget(WIDGET_KEY, (_tui, theme) => ({
-    render(width: number) {
-      return widgetLines(state, state.focusedIndex !== undefined).map((line) =>
-        truncateToWidth(theme.fg("dim", line), width),
-      );
-    },
+    render: (width: number) => [
+      truncateToWidth(
+        theme.fg("dim", `Follow-up: "${suggestions[0].replace(/\s+/g, " ")}" +${suggestions.length - 1} more · shift+↑ open`),
+        width,
+      ),
+    ],
     invalidate() {},
   }), { placement: "aboveEditor" });
 }
@@ -157,7 +205,7 @@ export function registerFollowUp(
   configPath: string,
   generate: SuggestionGenerator = generateSuggestions,
 ): void {
-  let selection: SuggestionSelection | undefined;
+  let suggestions: readonly string[] | undefined;
   let generation = 0;
   let activeController: AbortController | undefined;
   let unsubscribeInput: (() => void) | undefined;
@@ -166,53 +214,35 @@ export function registerFollowUp(
     generation += 1;
     activeController?.abort();
     activeController = undefined;
-    selection = undefined;
-    renderWidget(ctx, selection);
+    suggestions = undefined;
+    renderWidget(ctx, suggestions);
   }
 
-  function updateSelection(ctx: ExtensionContext, action: "focus" | "up" | "down" | "dismiss"): void {
-    if (!selection) return;
-    selection = selectSuggestion(selection, action);
-    renderWidget(ctx, selection);
-  }
-
-  function handleTerminalInput(ctx: ExtensionContext, data: string): { consume: true } | undefined {
-    if (!selection) return undefined;
-    if (selection.focusedIndex === undefined) {
-      if (!matchesKey(data, "shift+up")) return undefined;
-      updateSelection(ctx, "focus");
-      return { consume: true };
-    }
-    if (matchesKey(data, "up")) {
-      updateSelection(ctx, "up");
-      return { consume: true };
-    }
-    if (matchesKey(data, "down")) {
-      updateSelection(ctx, "down");
-      return { consume: true };
-    }
-    if (matchesKey(data, "escape")) {
-      updateSelection(ctx, "dismiss");
-      return { consume: true };
-    }
-
-    const selected = selection.suggestions[selection.focusedIndex];
-    if (!selected) return undefined;
-    if (matchesKey(data, "shift+enter")) {
-      ctx.ui.pasteToEditor(selected);
-      updateSelection(ctx, "dismiss");
-      return { consume: true };
-    }
-    if (matchesKey(data, "enter")) {
+  async function openOverlay(ctx: ExtensionContext): Promise<void> {
+    const snapshot = suggestions;
+    if (!snapshot?.length) return;
+    const generationAtOpen = generation;
+    const result = await ctx.ui.custom<OverlayResult>(
+      (_tui, theme, keybindings, done) =>
+        new FollowUpPicker(snapshot, theme, keybindings, (r) => done(generation === generationAtOpen ? r : null)),
+      { overlay: true, overlayOptions: { anchor: "center", width: "90%", minWidth: 60, maxHeight: "85%" } },
+    );
+    if (result?.action === "send") {
       clear(ctx);
       try {
-        pi.sendUserMessage(selected);
+        pi.sendUserMessage(result.text);
       } catch {
         // A late lifecycle change must not interrupt the session.
       }
-      return { consume: true };
+    } else if (result?.action === "insert") {
+      ctx.ui.pasteToEditor(result.text);
     }
-    return undefined;
+  }
+
+  function handleTerminalInput(ctx: ExtensionContext, data: string): { consume: true } | undefined {
+    if (!suggestions || !matchesKey(data, "shift+up")) return undefined;
+    void openOverlay(ctx);
+    return { consume: true };
   }
 
   pi.registerCommand("follow-up", {
@@ -248,19 +278,19 @@ export function registerFollowUp(
     const controller = new AbortController();
     activeController = controller;
     void generate(ctx, config, conversation.messages, controller.signal)
-      .then((suggestions) => {
+      .then((generated) => {
         if (
           controller.signal.aborted ||
           generation !== generationAtStart ||
           ctx.sessionManager.getLeafId() !== leafAtStart
         ) return;
-        if (!suggestions) {
+        if (!generated) {
           if (activeController === controller) activeController = undefined;
           return;
         }
-        selection = { suggestions, focusedIndex: undefined };
+        suggestions = generated;
         activeController = undefined;
-        renderWidget(ctx, selection);
+        renderWidget(ctx, suggestions);
       })
       .catch(() => {
         if (generation === generationAtStart && activeController === controller) {
