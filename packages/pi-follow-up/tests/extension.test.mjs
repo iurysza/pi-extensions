@@ -240,10 +240,12 @@ test("opens a bottom picker on shift+up and sends the selected suggestion", asyn
 
   assert.deepEqual(h.input("\x1b[a"), { consume: true });
   assert.deepEqual(h.widgets.at(-1).options, { placement: "aboveEditor" });
-  assert.match(latestWidgetText(h), /^Follow-up\n↑↓ \/ jk move · ⏎ send · ⇧⏎ insert · ⎋ close/m);
+  assert.match(latestWidgetText(h), /^Follow-up\n⏎ send · ⇧⏎ insert · ⎋ close/m);
+  assert.doesNotMatch(latestWidgetText(h), /↑↓ \/ jk move|1\/3/);
   assert.match(latestWidgetText(h), /→ one/);
 
-  assert.deepEqual(h.input("\x1b[B"), { consume: true });
+  assert.deepEqual(h.input("\x1b[1;1B"), { consume: true });
+  assert.equal(h.input("\x1b[1;1:3B"), undefined);
   assert.match(latestWidgetText(h), /→ two/);
   assert.deepEqual(h.input("\r"), { consume: true });
 
@@ -286,8 +288,8 @@ test("wraps long suggestions with aligned continuation lines", async () => {
   const lines = h.widgets.at(-1).content({}, { fg: (_color, text) => text, bold: (text) => text }).render(40);
   assert.equal(lines[0], "Follow-up");
   assert.ok(lines[3].startsWith("→ "));
-  assert.ok(lines.slice(4, -2).some((line) => line.startsWith("  alpha")));
-  assert.match(lines.at(-1), /1\/2/);
+  assert.ok(lines.slice(4).some((line) => line.startsWith("  alpha")));
+  assert.doesNotMatch(lines.join("\n"), /1\/2/);
 });
 
 test("remains silent when optional generation fails or is below threshold", async () => {

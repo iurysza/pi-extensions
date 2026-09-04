@@ -1,7 +1,7 @@
 import type { AssistantMessage, Message, ThinkingLevel, UserMessage } from "@earendil-works/pi-ai";
 import { complete } from "@earendil-works/pi-ai/compat";
 import type { ExtensionAPI, ExtensionContext, SessionEntry } from "@earendil-works/pi-coding-agent";
-import { matchesKey, truncateToWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
+import { isKeyRelease, matchesKey, truncateToWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import {
   followUpConfigPath,
@@ -107,7 +107,7 @@ function renderWidget(
 
       const lines = [
         theme.bold("Follow-up"),
-        theme.fg("dim", "↑↓ / jk move · ⏎ send · ⇧⏎ insert · ⎋ close"),
+        theme.fg("dim", "⏎ send · ⇧⏎ insert · ⎋ close"),
         "",
       ];
       suggestions.forEach((text, i) => {
@@ -124,7 +124,6 @@ function renderWidget(
           );
         });
       });
-      lines.push("", theme.fg("dim", `${selectedIndex + 1}/${suggestions.length}`));
       return lines;
     },
     invalidate() {},
@@ -224,7 +223,7 @@ export function registerFollowUp(
   }
 
   function handleTerminalInput(ctx: ExtensionContext, data: string): { consume: true } | undefined {
-    if (!suggestions) return undefined;
+    if (!suggestions || isKeyRelease(data)) return undefined;
     if (selectedIndex === undefined) {
       if (!matchesKey(data, "shift+up")) return undefined;
       openPicker(ctx);
