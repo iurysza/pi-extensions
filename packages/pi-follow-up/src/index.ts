@@ -1,13 +1,7 @@
 import type { AssistantMessage, Message, ThinkingLevel, UserMessage } from "@earendil-works/pi-ai";
 import { complete } from "@earendil-works/pi-ai/compat";
-import type {
-  ExtensionAPI,
-  ExtensionContext,
-  KeybindingsManager,
-  SessionEntry,
-  Theme,
-} from "@earendil-works/pi-coding-agent";
-import { matchesKey, truncateToWidth, wrapTextWithAnsi, type Component } from "@earendil-works/pi-tui";
+import type { ExtensionAPI, ExtensionContext, SessionEntry } from "@earendil-works/pi-coding-agent";
+import { matchesKey, truncateToWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import {
   followUpConfigPath,
@@ -91,72 +85,48 @@ export function suggestionToolArguments(response: AssistantMessage): unknown {
   )?.arguments;
 }
 
-type OverlayResult = { action: "send" | "insert"; text: string } | null;
-
-class FollowUpPicker implements Component {
-  private selectedIndex = 0;
-
-  constructor(
-    private readonly suggestions: readonly string[],
-    private readonly theme: Theme,
-    private readonly keybindings: KeybindingsManager,
-    private readonly finish: (result: OverlayResult) => void,
-  ) {}
-
-  render(width: number): string[] {
-    const lines = [
-      this.theme.bold("  Follow-up"),
-      this.theme.fg("dim", "  ↑↓ move · ⏎ send · ⇧⏎ insert · ⎋ close"),
-      "",
-    ];
-    this.suggestions.forEach((text, i) => {
-      const prefix = i === this.selectedIndex ? "→ " : "  ";
-      const wrapped = wrapTextWithAnsi(text, Math.max(20, width - 4));
-      wrapped.forEach((raw, j) => {
-        const line = j === 0 ? `${prefix}${raw}` : `  ${raw}`;
-        lines.push(
-          i === this.selectedIndex && j === 0
-            ? this.theme.fg("accent", line)
-            : j === 0
-              ? line
-              : this.theme.fg("dim", line),
-        );
-      });
-    });
-    lines.push("", this.theme.fg("dim", `  ${this.selectedIndex + 1}/${this.suggestions.length}`));
-    return lines;
-  }
-
-  handleInput(data: string): void {
-    const n = this.suggestions.length;
-    if (this.keybindings.matches(data, "tui.select.up")) {
-      this.selectedIndex = (this.selectedIndex + n - 1) % n;
-    } else if (this.keybindings.matches(data, "tui.select.down")) {
-      this.selectedIndex = (this.selectedIndex + 1) % n;
-    } else if (matchesKey(data, "shift+enter")) {
-      this.finish({ action: "insert", text: this.suggestions[this.selectedIndex] });
-    } else if (this.keybindings.matches(data, "tui.select.confirm")) {
-      this.finish({ action: "send", text: this.suggestions[this.selectedIndex] });
-    } else if (this.keybindings.matches(data, "tui.select.cancel")) {
-      this.finish(null);
-    }
-  }
-
-  invalidate(): void {}
-}
-
-function renderWidget(ctx: ExtensionContext, suggestions: readonly string[] | undefined): void {
+function renderWidget(
+  ctx: ExtensionContext,
+  suggestions: readonly string[] | undefined,
+  selectedIndex: number | undefined,
+): void {
   if (!suggestions?.length) {
     ctx.ui.setWidget(WIDGET_KEY, undefined);
     return;
   }
   ctx.ui.setWidget(WIDGET_KEY, (_tui, theme) => ({
-    render: (width: number) => [
-      truncateToWidth(
-        theme.fg("dim", `Follow-up: "${suggestions[0].replace(/\s+/g, " ")}" +${suggestions.length - 1} more · shift+↑ open`),
-        width,
-      ),
-    ],
+    render: (width: number) => {
+      if (selectedIndex === undefined) {
+        return [
+          truncateToWidth(
+            theme.fg("dim", `Follow-up: "${suggestions[0].replace(/\s+/g, " ")}" +${suggestions.length - 1} more · shift+↑ open`),
+            width,
+          ),
+        ];
+      }
+
+      const lines = [
+        theme.bold("Follow-up"),
+        theme.fg("dim", "↑↓ / jk move · ⏎ send · ⇧⏎ insert · ⎋ close"),
+        "",
+      ];
+      suggestions.forEach((text, i) => {
+        const prefix = i === selectedIndex ? "→ " : "  ";
+        const wrapped = wrapTextWithAnsi(text, Math.max(1, width - prefix.length));
+        wrapped.forEach((raw, j) => {
+          const line = j === 0 ? `${prefix}${raw}` : `  ${raw}`;
+          lines.push(
+            i === selectedIndex && j === 0
+              ? theme.fg("accent", line)
+              : j === 0
+                ? line
+                : theme.fg("dim", line),
+          );
+        });
+      });
+      lines.push("", theme.fg("dim", `${selectedIndex + 1}/${suggestions.length}`));
+      return lines;
+    },
     invalidate() {},
   }), { placement: "aboveEditor" });
 }
@@ -206,6 +176,7 @@ export function registerFollowUp(
   generate: SuggestionGenerator = generateSuggestions,
 ): void {
   let suggestions: readonly string[] | undefined;
+  let selectedIndex: number | undefined;
   let generation = 0;
   let activeController: AbortController | undefined;
   let unsubscribeInput: (() => void) | undefined;
@@ -215,33 +186,64 @@ export function registerFollowUp(
     activeController?.abort();
     activeController = undefined;
     suggestions = undefined;
-    renderWidget(ctx, suggestions);
+    selectedIndex = undefined;
+    renderWidget(ctx, suggestions, selectedIndex);
   }
 
-  async function openOverlay(ctx: ExtensionContext): Promise<void> {
-    const snapshot = suggestions;
-    if (!snapshot?.length) return;
-    const generationAtOpen = generation;
-    const result = await ctx.ui.custom<OverlayResult>(
-      (_tui, theme, keybindings, done) =>
-        new FollowUpPicker(snapshot, theme, keybindings, (r) => done(generation === generationAtOpen ? r : null)),
-      { overlay: true, overlayOptions: { anchor: "center", width: "90%", minWidth: 60, maxHeight: "85%" } },
-    );
-    if (result?.action === "send") {
+  function openPicker(ctx: ExtensionContext): void {
+    if (!suggestions?.length) return;
+    selectedIndex = 0;
+    renderWidget(ctx, suggestions, selectedIndex);
+  }
+
+  function closePicker(ctx: ExtensionContext): void {
+    selectedIndex = undefined;
+    renderWidget(ctx, suggestions, selectedIndex);
+  }
+
+  function movePicker(ctx: ExtensionContext, offset: number): void {
+    if (!suggestions?.length || selectedIndex === undefined) return;
+    selectedIndex = (selectedIndex + offset + suggestions.length) % suggestions.length;
+    renderWidget(ctx, suggestions, selectedIndex);
+  }
+
+  function useSelectedSuggestion(ctx: ExtensionContext, action: "send" | "insert"): void {
+    if (!suggestions?.length || selectedIndex === undefined) return;
+    const text = suggestions[selectedIndex];
+    if (action === "send") {
       clear(ctx);
       try {
-        pi.sendUserMessage(result.text);
+        pi.sendUserMessage(text);
       } catch {
         // A late lifecycle change must not interrupt the session.
       }
-    } else if (result?.action === "insert") {
-      ctx.ui.pasteToEditor(result.text);
+    } else {
+      closePicker(ctx);
+      ctx.ui.pasteToEditor(text);
     }
   }
 
   function handleTerminalInput(ctx: ExtensionContext, data: string): { consume: true } | undefined {
-    if (!suggestions || !matchesKey(data, "shift+up")) return undefined;
-    void openOverlay(ctx);
+    if (!suggestions) return undefined;
+    if (selectedIndex === undefined) {
+      if (!matchesKey(data, "shift+up")) return undefined;
+      openPicker(ctx);
+      return { consume: true };
+    }
+
+    if (matchesKey(data, "up") || matchesKey(data, "k")) {
+      movePicker(ctx, -1);
+    } else if (matchesKey(data, "down") || matchesKey(data, "j")) {
+      movePicker(ctx, 1);
+    } else if (matchesKey(data, "shift+enter")) {
+      useSelectedSuggestion(ctx, "insert");
+    } else if (matchesKey(data, "enter")) {
+      useSelectedSuggestion(ctx, "send");
+    } else if (matchesKey(data, "escape")) {
+      closePicker(ctx);
+    } else {
+      return undefined;
+    }
     return { consume: true };
   }
 
@@ -290,7 +292,7 @@ export function registerFollowUp(
         }
         suggestions = generated;
         activeController = undefined;
-        renderWidget(ctx, suggestions);
+        renderWidget(ctx, suggestions, selectedIndex);
       })
       .catch(() => {
         if (generation === generationAtStart && activeController === controller) {
