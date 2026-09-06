@@ -12,6 +12,7 @@ import codexUsage from "./fixtures/codex-usage.json" with { type: "json" };
 import copilotUsage from "./fixtures/copilot-usage.json" with { type: "json" };
 import cursorUsage from "./fixtures/cursor-usage.json" with { type: "json" };
 import kimiUsage from "./fixtures/kimi-usage.json" with { type: "json" };
+import xaiUsage from "./fixtures/xai-usage.json" with { type: "json" };
 
 function fakeCredentials(): CredentialSourceLike {
   return {
@@ -122,8 +123,34 @@ describe("createTokenTank", () => {
     assert.equal(providerForModel({ provider: "openai-codex", id: "gpt" } as ExtensionContext["model"]), "codex");
     assert.equal(providerForModel({ provider: "kimi-coding", id: "kimi" } as ExtensionContext["model"]), "kimi");
     assert.equal(providerForModel({ provider: "github-copilot", id: "gpt" } as ExtensionContext["model"]), "copilot");
+    assert.equal(providerForModel({ provider: "xai", id: "grok-4.5" } as ExtensionContext["model"]), "xai");
+    assert.equal(providerForModel({ provider: "xai", id: "grok-4.6" } as ExtensionContext["model"]), "xai");
+    assert.equal(providerForModel({ provider: "xai", id: "grok-4.3" } as ExtensionContext["model"]), "xai");
+    assert.equal(providerForModel({ provider: "xai", id: "grok-build-0.1" } as ExtensionContext["model"]), "xai");
+    assert.equal(providerForModel({ provider: "github-copilot", id: "grok-4.5" } as ExtensionContext["model"]), "copilot");
     assert.equal(providerForModel({ provider: "cursor", id: "composer" } as ExtensionContext["model"]), "cursor");
     assert.equal(providerForModel({ provider: "anthropic", id: "claude" } as ExtensionContext["model"]), undefined);
+  });
+
+  it("renders xAI SuperGrok quota in the footer", async () => {
+    const original = globalThis.fetch;
+    globalThis.fetch = (async (url) => {
+      assert.ok(String(url).includes("cli-chat-proxy.grok.com"));
+      return new Response(JSON.stringify(xaiUsage), { status: 200 });
+    }) as typeof fetch;
+    try {
+      const f = fakeAPI("xai");
+      f.ctx.model = { provider: "xai", id: "grok-4.5" } as ExtensionContext["model"];
+      const credentials = {
+        ...fakeCredentials(),
+        readCredential: () => ({ type: "oauth", access: "token", refresh: "refresh-token" }),
+      } as CredentialSourceLike;
+      createTokenTank(f.api, credentials);
+      await f.fire("session_start", {});
+      assert.ok(f.status["pi-token-tank"]?.includes("42.5%"));
+    } finally {
+      globalThis.fetch = original;
+    }
   });
 
   it(
@@ -421,7 +448,9 @@ describe("createTokenTank", () => {
         ? codexUsage
         : value.includes("api.github.com")
           ? copilotUsage
-          : kimiUsage;
+          : value.includes("cli-chat-proxy.grok.com")
+            ? xaiUsage
+            : kimiUsage;
       return new Response(JSON.stringify(body), { status: 200 });
     }) as typeof fetch;
     try {
@@ -432,16 +461,20 @@ describe("createTokenTank", () => {
           ? { type: "oauth", access: "token", accountId: "acc-1" }
           : provider === "github-copilot"
             ? { type: "oauth", access: "copilot-session-token", refresh: "github-oauth-token" }
-            : { type: "api_key", key: "token" },
+            : provider === "xai"
+              ? { type: "oauth", access: "token", refresh: "refresh-token" }
+              : { type: "api_key", key: "token" },
       } as CredentialSourceLike;
       createTokenTank(f.api, credentials);
       await f.commands["token-tank"]!.handler("", f.ctx);
       const widget = f.widgets["pi-token-tank"]?.join("\n") ?? "";
       assert.ok(widget.includes("GitHub Copilot"));
+      assert.ok(widget.includes("xAI"));
       assert.ok(widget.includes("Monthly"));
       assert.ok(widget.includes("25% used"));
+      assert.ok(widget.includes("43% used") || widget.includes("42% used"));
       assert.equal(f.widgetKinds["pi-token-tank"], "component");
-      assert.ok((f.widgets["pi-token-tank"]?.length ?? Infinity) <= 5);
+      assert.ok((f.widgets["pi-token-tank"]?.length ?? Infinity) <= 6);
       assert.ok(f.widgets["pi-token-tank"]?.some((line) => line.includes("/token-tank hides")));
       assert.ok(f.widgetRenderers["pi-token-tank"]?.(32).every((line) => visibleWidth(line) <= 32));
       await f.commands["token-tank"]!.handler("", f.ctx);

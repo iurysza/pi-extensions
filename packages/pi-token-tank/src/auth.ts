@@ -200,3 +200,21 @@ export async function getKimiAuth(
   const cred = credentials.readCredential("kimi-coding");
   return { token, type: toOAuthLike(cred)?.type === "oauth" ? "oauth" : "api_key" };
 }
+
+export type XaiAuthResult =
+  | { token: string }
+  | { error: string };
+
+export async function getXaiAuth(
+  credentials: CredentialSourceLike,
+): Promise<XaiAuthResult> {
+  const credential = toOAuthLike(credentials.readCredential("xai"));
+  if (credential?.type !== "oauth") {
+    return { error: "xAI credentials missing. Run /login xai." };
+  }
+  const token = (await credentials.getApiKey("xai"))?.trim();
+  if (!token) {
+    return { error: "xAI credentials missing. Run /login xai." };
+  }
+  return { token };
+}

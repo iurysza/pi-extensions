@@ -14,7 +14,9 @@
     "codex",
     "kimi",
     "copilot",
-    "cursor"
+    "cursor",
+    "xai",
+    "grok"
   ],
   "repository": {
     "type": "git",

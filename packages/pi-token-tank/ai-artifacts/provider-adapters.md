@@ -56,7 +56,10 @@ Current provider-controlled data sources:
 - Codex: `https://chatgpt.com/backend-api/wham/usage`
 - Kimi: `https://api.kimi.com/coding/v1/usages`
 - GitHub Copilot: `https://api.github.com/copilot_internal/user`
+- xAI: `https://cli-chat-proxy.grok.com/v1/billing?format=credits`
 - Cursor: `https://cursor.com/api/usage-summary`
+
+xAI matches Pi provider id `xai` only. Copilot-hosted Grok models stay on the Copilot adapter. The adapter reads the SuperGrok OAuth access token through `getApiKey("xai")` and does not use API keys or `XAI_API_KEY`. Prefer `creditUsagePercent` and `currentPeriod`; fall back to legacy `used`/`monthlyLimit` cents. Do not invent a percentage when those fields are absent. The endpoint is undocumented and may change without notice.
 
 Copilot is the only approved exception to metadata-only stored-credential access. Pi's public model registry exposes the short-lived Copilot session token, but GitHub's quota endpoint requires the stored GitHub OAuth token. The adapter may read the OAuth `refresh` field in memory solely for that direct GET. It must never log, return, refresh, mutate, cache, or persist the token or raw response. The fixed endpoint supports GitHub.com, including Enterprise Cloud seats hosted there; stored custom GitHub Enterprise Server domains are rejected before any request. The endpoint is undocumented and may change without notice.
 

@@ -19,6 +19,7 @@ Authenticate the providers you use, then restart Pi or run `/reload`:
 /login openai-codex
 /login kimi-coding
 /login github-copilot
+/login xai
 ```
 
 ## Supported providers
@@ -28,6 +29,7 @@ Authenticate the providers you use, then restart Pi or run `/reload`:
 | OpenAI Codex | Pi `/login openai-codex` | 5-hour and weekly windows |
 | Kimi Coding | Pi `/login kimi-coding` or `KIMI_API_KEY` | 5-hour and weekly windows |
 | GitHub Copilot | Pi `/login github-copilot` | Monthly premium requests |
+| xAI | Pi `/login xai` | Weekly SuperGrok pool |
 | Cursor | Registered Pi Cursor provider plus `CURSOR_SESSION_TOKEN` | Billing-cycle total, Auto, and API |
 
 Unsupported providers produce no footer status. Token Tank always publishes through Pi's native `setStatus()` API, so it works alone. When `@iurysza/pi-ext` is installed, it also advertises priority 100 metadata for pi-ext's bounded auxiliary footer line.
@@ -87,9 +89,9 @@ process memory, and never logs or persists it.
 - Preserves last-good data when a later request fails.
 - Keeps normalized quota only in the process-memory cache.
 
-GitHub Copilot and Cursor quota depend on read-only undocumented endpoints.
-Those endpoints can change without notice. Raw responses, tokens, and quota
-snapshots are never logged or persisted.
+GitHub Copilot, Cursor, and xAI quota depend on read-only undocumented
+endpoints. Those endpoints can change without notice. Raw responses, tokens,
+and quota snapshots are never logged or persisted.
 
 ## Requirements
 

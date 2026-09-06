@@ -2,6 +2,7 @@ import { fetchCodexQuota } from "./codex.js";
 import { fetchCopilotQuota } from "./copilot.js";
 import { fetchCursorQuota } from "./cursor.js";
 import { fetchKimiQuota } from "./kimi.js";
+import { fetchXaiQuota } from "./xai.js";
 import type { QuotaProvider } from "./types.js";
 
 export const providers: readonly QuotaProvider[] = [
@@ -31,6 +32,14 @@ export const providers: readonly QuotaProvider[] = [
     fetch: fetchCopilotQuota,
     credentialsHint: "Run /login github-copilot.",
     footerWindows: { minimal: ["monthly"], full: ["monthly"] },
+  },
+  {
+    id: "xai",
+    label: "xAI",
+    matchesModel: (model) => model?.provider.toLowerCase() === "xai",
+    fetch: fetchXaiQuota,
+    credentialsHint: "Run /login xai.",
+    footerWindows: { minimal: ["weekly"], full: ["weekly", "monthly"] },
   },
 ];
 

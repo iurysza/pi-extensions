@@ -94,16 +94,31 @@ describe("formatWidget", () => {
       codex: liveQuota("codex", 24, 61),
       kimi: liveQuota("kimi", 18, 43),
       copilot: { provider: "copilot", state: "missing", windows: [] },
+      xai: {
+        provider: "xai",
+        state: "live",
+        plan: "SuperGrok",
+        windows: [{
+          id: "weekly",
+          shortLabel: "7d",
+          longLabel: "Weekly",
+          resetStyle: "weekday-time",
+          usedPercent: 42.5,
+        }],
+      },
       cursor: { provider: "cursor", state: "missing", windows: [] },
     };
     const lines = formatWidget(snapshot, registry, theme, 1752306000000);
     const text = lines.join("\n");
-    assert.equal(lines.length, 6);
+    assert.equal(lines.length, 7);
     assert.ok(text.includes("Codex"));
     assert.ok(text.includes("Kimi"));
     assert.ok(text.includes("GitHub Copilot"));
+    assert.ok(text.includes("xAI"));
+    assert.ok(text.includes("SuperGrok"));
     assert.ok(text.includes("Cursor"));
     assert.ok(text.includes("24% used"));
+    assert.ok(text.includes("42% used") || text.includes("43% used"));
     assert.ok(text.includes("/token-tank minimal|full"));
     assert.ok(text.includes("/token-tank hides"));
   });
