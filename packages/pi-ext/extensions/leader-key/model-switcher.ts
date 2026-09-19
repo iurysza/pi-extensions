@@ -16,7 +16,7 @@ import { fuzzyFilter, Key, matchesKey } from "@earendil-works/pi-tui";
 import { OverlayFrame } from "../shared/overlay.js";
 import { withHerdrNavigationPassthrough } from "./herdr-navigation.js";
 
-export const ALL_THINKING_LEVELS: ThinkingLevel[] = ["off", "minimal", "low", "medium", "high", "xhigh"];
+export const ALL_THINKING_LEVELS: ThinkingLevel[] = ["off", "minimal", "low", "medium", "high", "xhigh", "max"];
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers — only enabled & available providers & models
@@ -569,6 +569,8 @@ export function getThinkingDescription(level: ThinkingLevel): string {
 		case "high":
 			return "High reasoning effort";
 		case "xhigh":
+			return "Extra-high reasoning effort";
+		case "max":
 			return "Maximum reasoning effort";
 		default:
 			return "";

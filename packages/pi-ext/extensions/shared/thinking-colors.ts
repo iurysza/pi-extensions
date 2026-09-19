@@ -8,4 +8,5 @@ export const THINKING_ROLES: Record<string, ThemeColor> = {
 	medium:  "warning",
 	high:    "bashMode",
 	xhigh:  "error",
+	max:    "error",
 };

@@ -7,8 +7,10 @@ import test from "node:test";
 import { LeaderKeyOverlay } from "../../extensions/leader-key/index.ts";
 import { withHerdrNavigationPassthrough } from "../../extensions/leader-key/herdr-navigation.ts";
 import {
+	ALL_THINKING_LEVELS,
 	filterSearchableItems,
 	getSearchableWindow,
+	getThinkingDescription,
 	searchableSelect,
 } from "../../extensions/leader-key/model-switcher.ts";
 
@@ -295,4 +297,13 @@ test("searchable picker arrows, Backspace, Enter, Tab, and Shift+Enter still wor
 	alternate.component.handleInput(SHIFT_ENTER);
 	assert.equal(await alternate.result, null);
 	assert.equal(alternateValue, "first");
+});
+
+test("scoped-model thinking cycle includes max after xhigh", () => {
+	assert.deepEqual(ALL_THINKING_LEVELS, ["off", "minimal", "low", "medium", "high", "xhigh", "max"]);
+	const xhigh = ALL_THINKING_LEVELS.indexOf("xhigh");
+	assert.equal(ALL_THINKING_LEVELS[(xhigh + 1) % ALL_THINKING_LEVELS.length], "max");
+	assert.equal(ALL_THINKING_LEVELS.indexOf("max") >= 0, true);
+	assert.equal(getThinkingDescription("xhigh"), "Extra-high reasoning effort");
+	assert.equal(getThinkingDescription("max"), "Maximum reasoning effort");
 });
