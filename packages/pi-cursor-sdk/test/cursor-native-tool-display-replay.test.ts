@@ -7,6 +7,7 @@ import {
   formatCursorReplayDiff,
   formatCursorReplayFilePreview,
   renderCursorReplayCall,
+  createCursorReplayOnlyToolDefinition,
   renderCursorReplayResult,
   renderNativeLookingCursorReadReplayResult,
 } from "../src/cursor-native-tool-display-replay.js";
@@ -26,6 +27,23 @@ function renderActivity(details: unknown, width = 120, expanded = false): string
 }
 
 describe("cursor native replay rendering", () => {
+  it("retains the theme receiver when painting replay results", () => {
+    const backgroundTheme = createRenderTheme({
+      bg(this: { marker: string }, style: string, text: string) {
+        return `${this.marker}:${style}:${text}`;
+      },
+    });
+    (backgroundTheme as typeof backgroundTheme & { marker: string }).marker = "theme";
+    const tool = createCursorReplayOnlyToolDefinition(CURSOR_REPLAY_ACTIVITY_TOOL_NAME);
+    const lines = tool.renderResult!(
+      { content: [{ type: "text", text: "done" }], details: { variant: "activity", sourceToolName: "task", title: "Cursor subagent", summary: "done" } },
+      { expanded: false, isPartial: false },
+      backgroundTheme,
+      createRenderContext(),
+    ).render(80);
+    expect(lines[0]).toContain("theme:toolSuccessBg:");
+  });
+
   it("bounds huge single-line diffs in standalone native replay cards", () => {
     const hugeLine = "x".repeat(20_000);
     const rendered = formatCursorReplayDiff(
@@ -113,6 +131,16 @@ describe("cursor native replay rendering", () => {
       expect(visibleWidth(lines[0]!)).toBeLessThanOrEqual(width);
       expect(lines[0]).not.toContain("\n");
     }
+  });
+
+  it("hides the completed activity call row so the result card has no extra top line", () => {
+    const lines = renderCursorReplayCall(
+      CURSOR_REPLAY_ACTIVITY_TOOL_NAME,
+      { activityTitle: "Cursor edit", activitySummary: "src/a.ts" },
+      theme,
+      false,
+    ).render(120);
+    expect(lines).toEqual([]);
   });
 
   it("shows local read preview disclaimer in collapsed standalone read replay", () => {

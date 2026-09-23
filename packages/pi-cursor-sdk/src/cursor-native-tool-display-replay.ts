@@ -1,7 +1,7 @@
 import { readFileSync, statSync } from "node:fs";
 import { basename } from "node:path";
 import { getLanguageFromPath, highlightCode, keyHint, type ToolDefinition } from "@earendil-works/pi-coding-agent";
-import { Image, Text, truncateToWidth, type Component } from "@earendil-works/pi-tui";
+import { Image, Text, truncateToWidth, visibleWidth, type Component } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import { resolveCursorEditDiff } from "./cursor-edit-diff.js";
 import { truncateCursorDisplayLine } from "./cursor-display-text.js";
@@ -45,6 +45,9 @@ export const CURSOR_REPLAY_COLLAPSED_PREVIEW_LINES = 8;
 export const CURSOR_REPLAY_PREVIEW_MAX_CHARS = 4000;
 export const CURSOR_REPLAY_PREVIEW_MAX_LINE_CHARS = 240;
 const CURSOR_REPLAY_HIGHLIGHT_MAX_CHARS = 12000;
+/** Same pencil as pi-tidy's edit/write cards. */
+export const CURSOR_REPLAY_EDIT_ICON = "✏️";
+const CURSOR_REPLAY_EDIT_DETAIL_INDENT = "  ";
 export const cursorReplayToolSchema = Type.Object({}, { additionalProperties: true });
 
 type CursorReplayRenderCall = NonNullable<ToolDefinition<typeof cursorReplayToolSchema, unknown>["renderCall"]>;
@@ -324,13 +327,39 @@ export function formatCursorReplayFilePreview(
 	return renderedLines.join("\n");
 }
 
+function emptyReplayComponent(): Component {
+	return { render: () => [], invalidate() {} };
+}
+
 function boundedOneLine(text: string): Component {
 	return {
 		render(width: number) {
-			if (width <= 0) return [];
+			if (width <= 0 || !text) return [];
 			return [truncateToWidth(text, width, "…")];
 		},
 		invalidate() {},
+	};
+}
+
+function paintReplayShell(
+	component: Component,
+	theme: CursorReplayRenderTheme,
+	isPartial: boolean,
+	isError: boolean,
+): Component {
+	const backgroundTheme = theme as CursorReplayRenderTheme & { bg?: (style: string, text: string) => string };
+	if (typeof backgroundTheme.bg !== "function") return component;
+	const style = isPartial ? "toolPendingBg" : isError ? "toolErrorBg" : "toolSuccessBg";
+	return {
+		render(width: number) {
+			return component.render(width).map((line) => {
+				const padded = line + " ".repeat(Math.max(0, width - visibleWidth(line)));
+				return backgroundTheme.bg!(style, padded);
+			});
+		},
+		invalidate() {
+			component.invalidate();
+		},
 	};
 }
 
@@ -347,7 +376,7 @@ export function renderCursorReplayCall(
 	theme: CursorReplayRenderTheme,
 	isPartial: boolean,
 ): Component {
-	if (!isPartial) return boundedOneLine("");
+	if (!isPartial) return emptyReplayComponent();
 	let text = theme.fg("toolTitle", theme.bold(`${getCursorReplayCardTitle(toolName, args)} `));
 	const summary = getCursorReplayCallSummary(toolName, args);
 	if (summary) text += theme.fg("muted", truncateCursorDisplayLine(summary));
@@ -364,8 +393,8 @@ export function renderNativeLookingCursorFileMutationCall(
 	args: Record<string, unknown> | undefined,
 	theme: CursorReplayRenderTheme,
 	isPartial: boolean,
-): Text {
-	if (!isPartial) return new Text("", 0, 0);
+): Component {
+	if (!isPartial) return emptyReplayComponent();
 	let text = theme.fg("toolTitle", theme.bold(`${toolName} `));
 	const path = typeof args?.path === "string" && args.path.trim() ? args.path : "unknown";
 	text += theme.fg("accent", path);
@@ -396,16 +425,17 @@ function classifyCursorEditOperation(details: CursorReplayNativeEditDetails): "c
 	return "updated";
 }
 
-function formatCursorEditSummary(details: CursorReplayNativeEditDetails): string {
-	const operation = classifyCursorEditOperation(details);
-	if (operation === "unchanged") return "no changes needed";
-	if (operation === "created" && details.linesAdded !== undefined) return `created ${pluralize(details.linesAdded, "line")}`;
-	if (operation === "deleted" && details.linesRemoved !== undefined) return `deleted ${pluralize(details.linesRemoved, "line")}`;
-	const parts = [
-		details.linesAdded ? `added ${pluralize(details.linesAdded, "line")}` : undefined,
-		details.linesRemoved ? `removed ${pluralize(details.linesRemoved, "line")}` : undefined,
-	].filter((part): part is string => Boolean(part));
-	return parts.length > 0 ? parts.join(", ") : "updated file";
+function formatCursorEditAction(details: CursorReplayNativeEditDetails): string {
+	switch (classifyCursorEditOperation(details)) {
+		case "created":
+			return "create";
+		case "deleted":
+			return "delete";
+		case "unchanged":
+			return "review";
+		case "updated":
+			return "update";
+	}
 }
 
 function firstContentText(result: Parameters<CursorReplayRenderResult>[0]): string {
@@ -481,10 +511,13 @@ function renderCursorReplayEditResult(
 	options: Parameters<CursorReplayRenderResult>[1],
 	theme: Parameters<CursorReplayRenderResult>[2],
 ): Component {
-	const summary = formatCursorEditSummary(details);
-	let rendered = `${theme.fg("toolTitle", theme.bold("edit"))} ${theme.fg("accent", getCursorReplayPath(undefined, details))} ${theme.fg("success", summary)}`;
+	const path = getCursorReplayPath(undefined, details);
+	const added = details.linesAdded ?? 0;
+	const removed = details.linesRemoved ?? 0;
+	let rendered = `${theme.fg("toolTitle", theme.bold(`${CURSOR_REPLAY_EDIT_ICON} edit`))} ${formatCursorEditAction(details)}`;
+	rendered += `\n${CURSOR_REPLAY_EDIT_DETAIL_INDENT}${theme.fg("muted", path)} ${theme.fg("muted", "→")} ${theme.fg("toolDiffAdded", `+${added}`)}${theme.fg("muted", "/")}${theme.fg("toolDiffRemoved", `-${removed}`)}`;
 	const diff = getCursorEditDiff(details);
-	if (diff) rendered += `\n${formatCursorReplayDiff(diff, theme, options.expanded ? 40 : CURSOR_REPLAY_COLLAPSED_PREVIEW_LINES)}`;
+	if (diff && options.expanded) rendered += `\n${formatCursorReplayDiff(diff, theme, 40)}`;
 	return new Text(rendered, 0, 0);
 }
 
@@ -584,6 +617,22 @@ export function renderCursorReplayResult(
 	if (options.isPartial) return boundedOneLine(theme.fg("muted", "Cursor activity running"));
 	const details = parseCursorReplayToolDetails(result.details);
 	const text = firstContentText(result);
+	if (details?.variant === "activity" && details.sourceToolName === "edit" && !isError) {
+		return renderCursorReplayEditResult(
+			{
+				variant: "nativeEdit",
+				path: details.path,
+				linesAdded: details.linesAdded,
+				linesRemoved: details.linesRemoved,
+				diffString: details.diffString,
+				diff: details.diff,
+				summary: details.summary,
+				expandedText: details.expandedText,
+			},
+			options,
+			theme,
+		);
+	}
 	if (!details || details.variant === "activity" || details.variant === "generateImage" || details.variant === "genericFallback") {
 		return renderNeutralCursorReplayResult(details, text, theme, isError);
 	}
@@ -621,14 +670,25 @@ export function createCursorReplayOnlyToolDefinition(toolName: CursorReplayToolN
 		label: "Cursor activity",
 		description: "Display recorded Cursor SDK tool activity. This tool only returns recorded Cursor results and never executes work directly.",
 		parameters: cursorReplayToolSchema,
+		renderShell: "self",
 		async execute() {
 			throw new Error("No recorded Cursor activity result was available. This replay-only tool does not execute work directly.");
 		},
 		renderCall(args, theme, context) {
-			return renderCursorReplayCall(toolName, args as Record<string, unknown>, theme, context.isPartial);
+			return paintReplayShell(
+				renderCursorReplayCall(toolName, args as Record<string, unknown>, theme, context.isPartial),
+				theme,
+				context.isPartial,
+				false,
+			);
 		},
 		renderResult(result, options, theme, context) {
-			return renderCursorReplayResult(result, options, theme, context, context.isError);
+			return paintReplayShell(
+				renderCursorReplayResult(result, options, theme, context, context.isError),
+				theme,
+				options.isPartial,
+				context.isError,
+			);
 		},
 	};
 }

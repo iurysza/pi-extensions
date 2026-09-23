@@ -309,9 +309,8 @@ describe("extension native Cursor tool replay", () => {
 
 		const cursorTool = getHarnessRegisteredTool(pi._tools, "cursor");
 
-		// The neutral replay-only tool should use pi's default tool shell so it gets
-		// the same green/red status card background as native tools.
-		expect(cursorTool.renderShell).toBeUndefined();
+		// Skip Pi's default padded tool box so Cursor activity matches tidy native cards.
+		expect(cursorTool.renderShell).toBe("self");
 
 		const rendered = [
 			cursorTool.renderCall?.({ activityTitle: "Cursor MCP", activitySummary: "git" }, theme, createRenderContext({ isPartial: true }))?.render(120).join("\n"),
@@ -360,7 +359,7 @@ describe("extension native Cursor tool replay", () => {
 						diff: "--- a/src/index.ts\n+++ b/src/index.ts\n@@ -1 +1 @@\n-old line\n+new line",
 					},
 				},
-				options,
+				{ ...options, expanded: true },
 				theme,
 				replayContext,
 			)?.render(120).join("\n"),
@@ -379,6 +378,8 @@ describe("extension native Cursor tool replay", () => {
 			.join("\n");
 
 		expect(rendered).toContain("edit src/index.ts");
+		expect(rendered).toContain("✏️ edit update");
+		expect(rendered).toContain("  src/index.ts → <toolDiffAdded>+1</toolDiffAdded>/<toolDiffRemoved>-1</toolDiffRemoved>");
 		expect(rendered).toContain("write new.txt");
 		expect(rendered).toContain("write new.txt (1 line)");
 		expect(rendered).not.toContain("write new.txt (2 lines)");
@@ -457,13 +458,13 @@ describe("extension native Cursor tool replay", () => {
 			theme,
 			context,
 		)?.render(120).join("\n") ?? "";
-		expect(editRendered).toContain("edit src/index.ts added 1 line, removed 1 line");
+		expect(editRendered).toContain("✏️ edit update");
+		expect(editRendered).toContain("  src/index.ts → <toolDiffAdded>+1</toolDiffAdded>/<toolDiffRemoved>-1</toolDiffRemoved>");
 		expect(editRendered).not.toContain("Cursor updated");
-		expect(editRendered).toContain("<toolDiffRemoved>-1 old line</toolDiffRemoved>");
-		expect(editRendered).toContain("<toolDiffAdded>+1 new line</toolDiffAdded>");
+		expect(editRendered).not.toContain("<toolDiffRemoved>-1 old line</toolDiffRemoved>");
+		expect(editRendered).not.toContain("<toolDiffAdded>+1 new line</toolDiffAdded>");
 		expect(editRendered).not.toContain("--- a/src/index.ts");
 		expect(editRendered).not.toContain("@@");
-		expect(editRendered).not.toContain("expand for diff");
 
 		const createRendered = editTool!.renderResult?.(
 			{
@@ -480,10 +481,11 @@ describe("extension native Cursor tool replay", () => {
 			theme,
 			context,
 		)?.render(120).join("\n") ?? "";
-		expect(createRendered).toContain("edit new.txt created 2 lines");
+		expect(createRendered).toContain("✏️ edit create");
+		expect(createRendered).toContain("  new.txt → <toolDiffAdded>+2</toolDiffAdded>/<toolDiffRemoved>-1</toolDiffRemoved>");
 		expect(createRendered).not.toContain("Cursor created");
-		expect(createRendered).toContain("<toolDiffAdded>+1 first line</toolDiffAdded>");
-		expect(createRendered).toContain("<toolDiffAdded>+2 second line</toolDiffAdded>");
+		expect(createRendered).not.toContain("<toolDiffAdded>+1 first line</toolDiffAdded>");
+		expect(createRendered).not.toContain("<toolDiffAdded>+2 second line</toolDiffAdded>");
 		expect(createRendered).not.toContain("/dev/null");
 		expect(createRendered).not.toContain("@@");
 
@@ -496,6 +498,8 @@ describe("extension native Cursor tool replay", () => {
 					title: "Cursor edit",
 					summary: ".tool-demo/ux-demo.ts added 1 line, removed 1 line",
 					path: ".tool-demo/ux-demo.ts",
+					linesAdded: 1,
+					linesRemoved: 1,
 					expandedText: "edit .tool-demo/ux-demo.ts\n\n+1 -1",
 				},
 			},
@@ -503,8 +507,10 @@ describe("extension native Cursor tool replay", () => {
 			theme,
 			context,
 		)?.render(120).join("\n") ?? "";
-		expect(neutralPathOnlyEditRendered).toContain("Cursor edit .tool-demo/ux-demo.ts added 1 line, removed 1 line");
-		expect(neutralPathOnlyEditRendered).not.toContain("<toolDiffRemoved>");
+		expect(neutralPathOnlyEditRendered).toContain("✏️ edit update");
+		expect(neutralPathOnlyEditRendered).toContain("  .tool-demo/ux-demo.ts → <toolDiffAdded>+1</toolDiffAdded>/<toolDiffRemoved>-1</toolDiffRemoved>");
+		expect(neutralPathOnlyEditRendered).not.toContain("Cursor edit");
+		expect(neutralPathOnlyEditRendered).not.toContain("<toolDiffRemoved>-1 old line</toolDiffRemoved>");
 		expect(neutralPathOnlyEditRendered).not.toContain("@@");
 	});
 

@@ -141,9 +141,8 @@ describe("cursor replay tool details contract", () => {
 			diffString: "--- a/src/example.ts\n+++ b/src/example.ts\n@@ -1 +1 @@\n-old\n+new",
 			linesAdded: 1,
 		});
-		expect(rendered).toContain("edit");
-		expect(rendered).toContain("src/example.ts");
-		expect(rendered).toContain("added 1 line");
+		expect(rendered).toContain("✏️ edit update");
+		expect(rendered).toContain("  src/example.ts → +1/-0");
 	});
 
 	it("renders nativeWrite replay through the typed write renderer path", () => {
@@ -207,7 +206,7 @@ describe("cursor replay tool details contract", () => {
 		expect(rendered).not.toMatch(/^edit src\/a\.ts$/m);
 	});
 
-	it("renders path-only edit no-change results with the Cursor edit activity title", () => {
+	it("renders successful path-only edits with native edit styling", () => {
 		const display = buildCursorPiToolDisplayFromSpec({
 			rawName: "edit",
 			name: "edit",
@@ -222,8 +221,9 @@ describe("cursor replay tool details contract", () => {
 			sourceToolName: "edit",
 			title: "Cursor edit",
 		});
-		expect(rendered).toContain("Cursor edit");
-		expect(rendered).not.toMatch(/^edit src\/a\.ts$/m);
+		expect(rendered).toContain("✏️ edit review");
+		expect(rendered).toContain("  src/a.ts → +0/-0");
+		expect(rendered).not.toContain("Cursor edit");
 	});
 
 	it("renders path-only write errors with the activity error body", () => {
