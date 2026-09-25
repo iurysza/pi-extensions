@@ -1,5 +1,5 @@
 import type { AgentMessage } from "@earendil-works/pi-agent-core";
-import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI, ExtensionContext, Theme } from "@earendil-works/pi-coding-agent";
 import { truncateToWidth } from "@earendil-works/pi-tui";
 import { timeDivider, type ToolTimeline } from "./tidy/timeline.js";
 import { formatElapsed } from "./tidy/vendor/pi-tidy-core/index.js";
@@ -28,10 +28,11 @@ export function readTimelineEntry(value: unknown): TimelineEntry | undefined {
   return undefined;
 }
 
-export function renderTimelineEntry(data: TimelineEntry, width: number): string {
-  if (data.kind === "minute") return timeDivider(data.at, width);
+export function renderTimelineEntry(data: TimelineEntry, width: number, theme?: Pick<Theme, "fg">): string {
+  if (data.kind === "minute") return timeDivider(data.at, width, theme);
   const label = data.outcome === "completed" ? "Completed in" : data.outcome === "stopped" ? "Stopped after" : "Failed after";
-  return truncateToWidth(`${label} ${formatElapsed(data.elapsedMs)}`, Math.max(1, width));
+  const line = truncateToWidth(`${label} ${formatElapsed(data.elapsedMs)}`, Math.max(1, width));
+  return theme ? theme.fg("dim", line) : line;
 }
 
 function hasVisibleContent(message: AgentMessage): boolean {
@@ -69,7 +70,7 @@ export function registerConversationTimeline(pi: ExtensionAPI, clock: ToolTimeli
     if (!data) return undefined;
     return {
       invalidate() {},
-      render: (width) => [theme.fg("dim", renderTimelineEntry(data, width))],
+      render: (width) => [renderTimelineEntry(data, width, theme)],
     };
   });
 

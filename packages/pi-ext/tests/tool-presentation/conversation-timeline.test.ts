@@ -206,6 +206,30 @@ test("the working indicator updates only in TUI and releases its timer at settle
   assert.deepEqual(headless.working, []);
 });
 
+test("clock dividers use visible borders while timestamps and completion totals remain dim", async () => {
+  const h = await harness();
+  const calls: { color: string; text: string }[] = [];
+  const palette = {
+    fg(color: string, text: string) {
+      calls.push({ color, text });
+      return `\x1b[${color === "border" ? "90" : "37"}m${text}\x1b[39m`;
+    },
+  };
+  const renderer = h.renderers.get(CONVERSATION_TIMELINE_ENTRY)!;
+  const divider = renderer({ data: { kind: "minute", at: start } }, {}, palette);
+  for (const width of [1, 5, 8, 28, 72]) {
+    calls.length = 0;
+    const [line] = divider.render(width);
+    assert.equal(visibleWidth(line), width);
+    if (width > 1) assert.ok(calls.some(({ color, text }) => color === "border" && text.includes("─")));
+    assert.ok(calls.filter(({ text }) => /─/.test(text)).every(({ color }) => color === "border"));
+    if (width >= 9) assert.ok(calls.some(({ color, text }) => color === "dim" && text.includes("14:32")));
+  }
+  calls.length = 0;
+  renderer({ data: { kind: "run-end", at: start, startedAt: start, elapsedMs: 8_000, outcome: "completed" } }, {}, palette).render(72);
+  assert.deepEqual(calls, [{ color: "dim", text: "Completed in 8s" }]);
+});
+
 test("saved timeline entries render stably at narrow widths and reject malformed data", async () => {
   const h = await harness();
   const renderer = h.renderers.get(CONVERSATION_TIMELINE_ENTRY)!;

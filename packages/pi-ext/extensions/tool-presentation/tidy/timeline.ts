@@ -1,3 +1,4 @@
+import type { Theme } from "@earendil-works/pi-coding-agent";
 import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 
 export interface ToolTiming {
@@ -70,10 +71,12 @@ export class ToolTimeline {
   }
 }
 
-export function timeDivider(timestamp: number, width: number): string {
+export function timeDivider(timestamp: number, width: number, theme?: Pick<Theme, "fg">): string {
   const max = Math.max(1, width);
   const label = `── ${clockLabel(timestamp)} `;
-  return truncateToWidth(label + "─".repeat(Math.max(0, max - visibleWidth(label))), max);
+  const line = truncateToWidth(label + "─".repeat(Math.max(0, max - visibleWidth(label))), max);
+  if (!theme) return line;
+  return line.split(/(─+)/).map((part) => theme.fg(/^─+$/.test(part) ? "border" : "dim", part)).join("");
 }
 
 export function clockLabel(timestamp: number): string {

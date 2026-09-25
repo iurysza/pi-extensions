@@ -8,7 +8,7 @@ const plain = (text: string) => text.replace(/\x1b\[[0-9;]*m/g, "").trimEnd();
 const rows = (component: any, width = 72): string[] => component.render(width).map(plain);
 const start = new Date(2026, 8, 24, 14, 32, 0).getTime();
 const args = { path: "src/file.ts", reasoning: "inspect the source" };
-const theme = { bg: (_name: string, text: string) => text };
+const theme = { bg: (_name: string, text: string) => text, fg: (_name: string, text: string) => text };
 
 async function harness(isReplayCall?: (id: string) => boolean) {
   const events = new Map<string, Function>();
@@ -178,6 +178,7 @@ test("dividers stay outside tool backgrounds and fit narrow widths", async () =>
   const detail = recorded("narrow", start, true).details;
   const component = h.tools.get("read").renderResult({ output: "one\ntwo", details: detail }, {}, {
     bg: (_name: string, text: string) => `\x1b[42m${text}\x1b[49m`,
+    fg: theme.fg,
   }, { toolCallId: "narrow", args });
   for (const width of [1, 2, 8, 12, 28, 72, 140]) {
     const output: string[] = component.render(width);

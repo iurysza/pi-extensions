@@ -41,7 +41,7 @@
  * Usage:  pi -e ./index.ts     (or install as a pi package)
  */
 
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI, Theme } from "@earendil-works/pi-coding-agent";
 import {
 	createBashTool,
 	createEditTool,
@@ -155,13 +155,14 @@ class TimelineTool {
 	constructor(
 		private readonly content: { render(width: number): string[]; invalidate(): void },
 		private readonly timing: () => ToolTiming | undefined,
+		private readonly theme: Pick<Theme, "fg">,
 	) {}
 	invalidate(): void { this.content.invalidate(); }
 	render(width: number): string[] {
 		const lines = this.content.render(width);
 		const timing = this.timing();
 		if (!timing?.showTimestamp || timing.startedAt === undefined) return lines;
-		return [`${DIM}${timeDivider(timing.startedAt, width)}${RESET}`, "", ...lines];
+		return [timeDivider(timing.startedAt, width, this.theme), "", ...lines];
 	}
 }
 
@@ -613,7 +614,7 @@ export function createTidyExtension(dependencies: TidyExtensionDependencies = {}
 						const elapsedMs = timing?.elapsedMs ?? (timing?.startedAt === undefined ? undefined : Math.max(0, Date.now() - timing.startedAt));
 						return buildToolBlock(name, args ?? {}, {}, { isPartial: true, elapsedMs, mode, icons: tidyIcons });
 					}, (text) => theme.bg("toolPendingBg", text));
-					return new TimelineTool(content, () => timeline.get(id));
+					return new TimelineTool(content, () => timeline.get(id), theme);
 				},
 				renderResult: (result: any, options: any, theme: any, context: any) => {
 					if (options?.isPartial) return new Container();
@@ -630,7 +631,7 @@ export function createTidyExtension(dependencies: TidyExtensionDependencies = {}
 						{ isError, expanded: options?.expanded ?? false, elapsedMs: timing?.elapsedMs, mode, icons: tidyIcons },
 						theme,
 						() => context?.invalidate?.(),
-					), () => timing);
+					), () => timing, theme);
 				},
 			} as SourceToolDefinition;
 		};
