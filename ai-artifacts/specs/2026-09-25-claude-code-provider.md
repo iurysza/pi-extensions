@@ -1,6 +1,6 @@
 # Claude Code provider: technical specification
 
-Status: draft. Three decisions are open (D1–D3, listed under [Risks and Open Questions](#risks-and-open-questions)). Where this spec and the [type breakdown](../plans/2026-09-25-claude-code-provider-type-breakdown.md) disagree, this spec wins. Terms follow [the context glossary](../packages/pi-claude-code/CONTEXT.md).
+Status: accepted. D1 (extra body only), D2 (separate `-1m` models), and D3 (this monorepo) are decided; see [Risks and Open Questions](#risks-and-open-questions). Where this spec and the [type breakdown](../plans/2026-09-25-claude-code-provider-type-breakdown.md) disagree, this spec wins. Terms follow [the context glossary](../packages/pi-claude-code/CONTEXT.md).
 
 ## Summary
 
@@ -18,7 +18,7 @@ The design ports Hermes DirectSDK (`hermes-plugin-claude-subscription-directsdk`
 
 - `packages/pi-cursor-sdk` is the pattern for a pi provider package: `src/index.ts` registers the provider and commands, `cursor-provider-lazy.ts` defers the runtime import, and `streamSimple` returns an `AssistantMessageEventStream` that never throws.
 - The provider's domain docs are committed: [context glossary](../packages/pi-claude-code/CONTEXT.md), [ADR 0001](../packages/pi-claude-code/docs/adr/0001-pi-runs-every-host-tool.md) (pi runs every Host Tool), [ADR 0002](../packages/pi-claude-code/docs/adr/0002-admission-relay-with-cache-breakpoint-pin.md) (Admission Relay and Cache Breakpoint pin), and the type breakdown.
-- Uncommitted scaffold in `packages/pi-claude-code`: `package.json`, TypeScript and Vitest configs, `LICENSE`, `THIRD_PARTY_NOTICES.md`, and `src/claude-code-model-catalog.ts`. The root `package.json` already lists `./packages/pi-claude-code/src/index.ts`, which does not exist yet, so `npm run check` fails until `src/index.ts` lands.
+- `packages/pi-claude-code` implements this spec. The fake lane and the contract lane (real CLI 2.1.282) both pass every shared scenario.
 
 ### pi contracts in use (0.80.x)
 
@@ -396,7 +396,10 @@ export function buildTurnRequest(model: CatalogModel, context: Context, options?
   { ok: true; request: TurnRequest } | { ok: false; error: TurnRequestError };
 
 // src/claude-code-turn.ts
-export function runTurn(request: TurnRequest, runtime: ClaudeCodeRuntime, sink: TurnSink, signal?: AbortSignal): Promise<TurnOutcome>;
+export function runTurn(request: TurnRequest, runtime: ClaudeCodeRuntime, sink: TurnSink, signal?: AbortSignal): Promise<TurnReport>;
+// TurnReport = { outcome: TurnOutcome; relay: RelaySnapshot; transcript: CliTranscript }
+
+// src/claude-code-turn-outcome.ts — pure
 export function settleTurn(transcript: CliTranscript, relay: RelaySnapshot, inventory: ToolInventory, aborted: boolean): TurnOutcome;
 
 // src/claude-code-turn-emitter.ts — pure state machine over the Captured Response
@@ -408,7 +411,7 @@ export class TurnEmitter implements TurnSink {
 }
 
 // src/claude-code-model-refresh.ts
-export function refreshClaudeCodeModels(context: RefreshModelsContext, runtime?: ClaudeCodeRuntime, oneShotForce?: () => boolean): Promise<ProviderModelConfig[]>;
+export function refreshClaudeCodeModels(context: RefreshModelsContext, runtime?: ClaudeCodeRuntime, consumeForce?: () => boolean, now?: () => number): Promise<ProviderModelConfig[]>;
 ```
 
 Registration:
@@ -613,7 +616,7 @@ redacted_thinking block -> ThinkingContent { thinking: "", thinkingSignature: da
 
 ## Files to Add, Change, or Delete
 
-Paths are relative to the package root, `packages/pi-claude-code/` in this monorepo; D3 may move them.
+Paths are relative to the package root, `packages/pi-claude-code/` in this monorepo (D3).
 
 | File | Responsibility |
 | --- | --- |
@@ -628,9 +631,12 @@ Paths are relative to the package root, `packages/pi-claude-code/` in this monor
 | **Add** `src/claude-code-turn-emitter.ts` | `TurnEmitter`: SSE to pi events, usage and stop-reason projection, finish |
 | **Add** `src/claude-code-admission.ts` | `AdmissionRelay` |
 | **Add** `src/claude-code-cli.ts` | Resolve, refuse, environment, arguments, spawn, kill |
-| **Add** `src/claude-code-turn.ts` | `runTurn`, replay sequencing, idle timer, `settleTurn` |
-| **Add** `src/claude-code-setup.ts` | `readAuthStatus`, `readPicker` |
+| **Add** `src/claude-code-turn.ts` | `runTurn`, replay sequencing, idle timer, cleanup |
+| **Add** `src/claude-code-turn-outcome.ts` | `TurnOutcome`, `TurnFailure`, `RelaySnapshot`, `CliTranscript`, `settleTurn` |
+| **Add** `src/claude-code-active-turns.ts` | Open Turns for `session_shutdown`; last-Turn diagnostics for status |
+| **Add** `src/claude-code-setup.ts` | `readAuthStatus`, `readCliVersion`, `readPicker` |
 | **Add** `src/claude-code-model-refresh.ts` | `refreshModels` with store and 24 h freshness |
+| **Add** `src/claude-code-status.ts` | `/claude-code-status` text |
 | **Add** `src/claude-code-errors.ts` | `TurnFailure` → user-facing text (Q1) |
 | **Change** `src/claude-code-model-catalog.ts` | `CatalogModel`, capabilities, R2 routes, Picker mapping with billing note |
 | **Add** `test/fixtures/fake-claude.mjs` | Fake CLI implementing the verified protocol, driven by a scenario file |
@@ -646,7 +652,7 @@ Paths are relative to the package root, `packages/pi-claude-code/` in this monor
 | **Change** `ai-artifacts/packages/pi-claude-code/CONTEXT.md` | Drop Inert Inventory Server (D1); add Process Directory rule, Pi Model ID `-1m` form |
 | **Add** `ai-artifacts/packages/pi-claude-code/docs/adr/0003-tool-inventory-in-extra-body.md` | Supersedes ADR 0001's inventory mechanism (D1) |
 | **Change** `ai-artifacts/plans/2026-09-25-claude-code-provider-type-breakdown.md` | Point to this spec |
-| **Change** root `package.json`, `package-lock.json` | Workspace link and catalog entry (already staged) |
+| **Change** root `package.json`, `package-lock.json`, `README.md` | Workspace link, catalog entry, package row |
 
 No files are deleted. `bin/inert-mcp.mjs` from the type breakdown is not created.
 
@@ -674,16 +680,16 @@ Each slice starts with one failing test at the public seam and adds only the cod
 12. **Invalid stdout.** A banner line yields `InvalidCliOutput` with the line truncated.
 13. **Model refresh.** Offline returns cache or pinned; a fresh cache skips spawning; force refreshes. Logged out writes nothing. Picker rows map to R2 models with the billing note and capabilities. The handshake relay sees zero forwarded requests.
 14. **Commands.** Status reports path, version, and login without secrets. The refresh command forces one refresh.
-15. **Contract lane.** Slices 1, 2, 4, 5, 6, and 8 against the real CLI 2.1.282.
+15. **Contract lane.** Slices 1, 2, 4, 5, 6, and 8 against the real CLI 2.1.282, from `test/scenarios.ts`. `test/scenarios.test.ts` runs the same table on the fake CLI. Every scenario also asserts that the Process Directory stays empty (R5).
 16. **Packaging.** `npm run check` passes: catalog, typecheck, tests, and packs.
 
 ## Risks and Open Questions
 
-### Decisions needed
+### Decisions
 
-- **D1. Drop the Inert Inventory Server (A2).** Recommended. This changes the mechanism in ADR 0001, not its decision.
-- **D2. Long-context routes as separate `-1m` models (R2).** Recommended. It prevents Opus Turns from silently drawing usage credits.
-- **D3. Home repository.** Either this public monorepo, or a private `iurysza/pi-claude-code` repository installed with `pi install git:git@github.com:iurysza/pi-claude-code` and later brought back with `git subtree add`. The spec is the same either way. The private option needs its own `package-lock.json`, its own check scripts, and the docs under `ai-artifacts/` moved with it.
+- **D1. Drop the Inert Inventory Server (A2).** Decided: [ADR 0003](../packages/pi-claude-code/docs/adr/0003-tool-inventory-in-extra-body.md). This changes the mechanism in ADR 0001, not its decision.
+- **D2. Long-context routes as separate `-1m` models (R2).** Decided. Opus Turns never draw usage credits unless the user picks a `-1m` model.
+- **D3. Home repository.** Decided: this monorepo, `packages/pi-claude-code`.
 
 ### Risks
 

@@ -4,7 +4,7 @@ status: accepted
 
 # pi runs every Host Tool; each Turn ends at a Tool Boundary
 
-Claude Code could run pi's tools inside its own loop through a live MCP bridge, the way the Cursor SDK provider does. We chose instead to run one Claude Code Process per Turn with `--max-turns 1`, show Host Tools to Claude only through the Inert Inventory Server, and let pi execute them after the Turn ends. This keeps pi's permission checks, tool rendering, session log, and compaction on their normal path, and it is the model Hermes DirectSDK tested.
+Claude Code could run pi's tools inside its own loop through a live MCP bridge, the way the Cursor SDK provider does. We chose instead to run one Claude Code Process per Turn with `--max-turns 1`, show Host Tools to Claude without letting the CLI run them, and let pi execute them after the Turn ends. [ADR 0003](./0003-tool-inventory-in-extra-body.md) replaced the original inert MCP server with the extra body. This keeps pi's permission checks, tool rendering, session log, and compaction on their normal path, and it is the model Hermes DirectSDK tested.
 
 ```mermaid
 sequenceDiagram

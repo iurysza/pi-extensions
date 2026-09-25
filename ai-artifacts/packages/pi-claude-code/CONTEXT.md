@@ -9,7 +9,7 @@ flowchart LR
   AgentLoop[Agent Loop] -->|asks for| Turn
   Turn -->|starts with| Replay[History Replay]
   Turn -->|runs one| Process[Claude Code Process]
-  Inventory[Tool Inventory] -->|advertised to| Process
+  Inventory[Tool Inventory] -->|sent in| Upstream
   Process -->|sends| Upstream[Upstream Request]
   Upstream -->|first one is the| Admission
   Upstream -->|any later one is a| Denied[Denied Request]
@@ -48,7 +48,7 @@ The official Claude Code CLI, started for one Turn and gone when that Turn ends.
 _Avoid_: native, child, SDK, agent
 
 **Process Directory**:
-The empty directory every Claude Code Process in one pi process runs in. It is not the project directory.
+The one fixed, empty directory every Claude Code Process on the machine runs in. It is not the project directory. Its path appears in the prompt, so it never changes.
 _Avoid_: cwd, workspace, sandbox
 
 **Turn Outcome**:
@@ -100,12 +100,8 @@ A tool from pi's active tool list. Only pi executes Host Tools.
 _Avoid_: pi tool, MCP tool, bridged tool
 
 **Tool Inventory**:
-The Host Tools advertised to Claude for one Turn.
+The Host Tools advertised to Claude for one Turn, sent in the request's extra body. No MCP server lists them.
 _Avoid_: tool list, manifest
-
-**Inert Inventory Server**:
-The MCP server that lists the Tool Inventory to the Claude Code Process and refuses every tool call.
-_Avoid_: MCP bridge, tool bridge
 
 **Native Tool Name**:
 The name Claude sees for a Host Tool: `mcp__pi__` followed by the Host Tool's name.
@@ -156,7 +152,7 @@ The model value the Claude Code CLI accepts, such as `claude-sonnet-5[1m]`.
 _Avoid_: native model, alias
 
 **Pi Model ID**:
-The model id pi shows for this provider, such as `claude-sonnet-5`.
+The model id pi shows for this provider, such as `claude-sonnet-5`. A 1M-context route gets its own id with a `-1m` suffix, such as `claude-sonnet-5-1m`.
 _Avoid_: model name, slug
 
 **Pinned Catalog**:
