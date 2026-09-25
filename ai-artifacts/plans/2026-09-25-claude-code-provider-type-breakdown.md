@@ -237,6 +237,7 @@ type TurnOutcome =
 
 type TurnFailure =
   | { type: "CliMissing" }
+  | { type: "ConflictingOverride"; names: string[] }
   | { type: "LoggedOut"; cliText: string }
   | { type: "InvalidRequest"; cause: TurnRequestError }
   | { type: "ReplayRejected" }
@@ -262,6 +263,9 @@ type TurnFailure =
 ```text
 no `claude` on PATH or PI_CLAUDE_CODE_COMMAND
   → CliMissing → errorMessage: install hint                         → pi shows it; no retry
+
+a Conflicting Override is set in pi's environment
+  → ConflictingOverride → errorMessage names every offending variable → no retry
 
 CLI prints assistant error "authentication_failed" and relay.used is false
   → LoggedOut → errorMessage: login hint + CLI text                 → no retry
@@ -374,13 +378,30 @@ export function readPicker(runtime: ClaudeCodeRuntime, signal?: AbortSignal): Pr
 
 - The pi stream is driven by the Captured Response, not stdout `stream_event` lines.
 - `--mcp-config` receives a file path instead of inline JSON, which keeps quoting out of the argument list.
-- Host Tools whose Native Tool Name breaks Anthropic's `^[a-zA-Z0-9_-]{1,64}$` rule are left out of the Tool Inventory instead of failing the Turn. [?]
-- Conflicting Overrides: see question 1. [?]
+- Host Tools whose Native Tool Name breaks Anthropic's `^[a-zA-Z0-9_-]{1,64}$` rule are left out of the Tool Inventory instead of failing the Turn.
+
+## Resolved decisions
+
+- **Conflicting Overrides refuse the Turn**, as in Hermes. The error names every offending variable. Users who keep `ANTHROPIC_API_KEY` for pi's built-in `anthropic` provider must unset it, or scope it to that provider, before using this one.
+- **Invalid Host Tool names are skipped**, not fatal.
+- **pi runs every Host Tool**: [ADR 0001](../packages/pi-claude-code-sdk/docs/adr/0001-pi-runs-every-host-tool.md).
+- **One Upstream Request per Turn, with the Cache Breakpoint pin**: [ADR 0002](../packages/pi-claude-code-sdk/docs/adr/0002-admission-relay-with-cache-breakpoint-pin.md).
 
 ## Unresolved questions
 
-1. **Conflicting Overrides: refuse or strip?** The approved plan said a Turn refuses to start when `ANTHROPIC_API_KEY` and similar are set, as Hermes does. Many pi users set `ANTHROPIC_API_KEY` for pi's built-in `anthropic` provider, so refusing makes them choose one provider or the other. Stripping those variables from the Claude Code Process environment keeps both working and still prevents API-key billing.
-2. **Package name.** `pi-claude-code-sdk` mirrors `pi-cursor-sdk`, but this provider drives the Claude Code CLI directly and does not use the Claude Agent SDK.
-3. **Invalid Host Tool names.** Leave them out of the Tool Inventory (proposed), or fail the Turn as Hermes does.
-4. **Usage caps.** pi retries 429 responses automatically. A five-hour or weekly subscription cap will not clear during pi's backoff, but the exact upstream wording for caps is not known, so the provider cannot tell a cap from a short rate limit yet. Default: leave retries to pi.
-5. **Same model through pi's `anthropic` provider.** An assistant message from `anthropic/claude-sonnet-5` is a Foreign Message here, so its Signed Thinking replays as text. This is safe but loses thinking continuity after a provider switch. Default: keep it Foreign.
+1. **Runtime: drive the Claude Code CLI directly, or go through the Claude Agent SDK?** The package name follows from this. Facts checked against `@anthropic-ai/claude-agent-sdk@0.3.282` and `@anthropic-ai/claude-code@2.1.282`:
+
+   | | Direct CLI (this plan) | Agent SDK `query()` | Direct CLI + pinned `@anthropic-ai/claude-code` |
+   | --- | --- | --- | --- |
+   | Install size added | none | about 240 MB native binary per platform | about 240 MB |
+   | CLI version | user's installed `claude`, which auto-updates | pinned by the SDK | pinned |
+   | History Replay of assistant messages | stdin frames, as Hermes qualified | input type is `SDKUserMessage` only [?] | stdin frames |
+   | Replayed user frames (`shouldQuery: false`) | yes | yes, typed | yes |
+   | Inert Inventory Server | `bin/inert-mcp.mjs` subprocess | in-process `createSdkMcpServer` | subprocess |
+   | Process-group kill, exact flags, relay env | full control | through `spawnClaudeCodeProcess`, `extraArgs`, `env` | full control |
+   | License of the dependency | none | Anthropic Commercial Terms | Anthropic Commercial Terms |
+
+   Anthropic's Agent SDK overview says: "Unless previously approved, Anthropic does not allow third party developers to offer claude.ai login or rate limits for their products, including agents built on the Claude Agent SDK." Its branding guidance also rules out calling an SDK-built product "Claude Code". Every option here routes the user's own subscription through pi, so the README must state that plainly whichever runtime is chosen.
+2. **CLI version policy** (direct CLI only). Hermes qualified 2.1.263; the current CLI is 2.1.282. Options: warn when `claude --version` is outside the tested range, refuse, or skip the check.
+3. **Usage caps.** pi retries 429 responses automatically. A five-hour or weekly subscription cap will not clear during pi's backoff, but the exact upstream wording for caps is not known, so the provider cannot tell a cap from a short rate limit yet. Default: leave retries to pi.
+4. **Same model through pi's `anthropic` provider.** An assistant message from `anthropic/claude-sonnet-5` is a Foreign Message here, so its Signed Thinking replays as text. This is safe but loses thinking continuity after a provider switch. Default: keep it Foreign.
