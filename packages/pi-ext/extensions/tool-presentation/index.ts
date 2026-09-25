@@ -1,5 +1,7 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { createCursorReplayBroker } from "./cursor-replay-broker.js";
+import { registerConversationTimeline } from "./conversation-timeline.js";
+import { ToolTimeline } from "./tidy/timeline.js";
 import {
   createTidyExtension,
   type TidyExtensionDependencies,
@@ -27,8 +29,11 @@ export function wrapSourceForCursorReplay(
 export function createToolPresentation(dependencies: TidyExtensionDependencies = {}) {
   return async (pi: ExtensionAPI): Promise<void> => {
     const replay = createCursorReplayBroker(pi.events);
+    const timeline = dependencies.timeline ?? new ToolTimeline();
+    let enabled = false;
     const tidy = createTidyExtension({
       ...dependencies,
+      timeline,
       isReplayCall(toolCallId) {
         return replay.isReplayCall(toolCallId) || dependencies.isReplayCall?.(toolCallId) === true;
       },
@@ -38,6 +43,7 @@ export function createToolPresentation(dependencies: TidyExtensionDependencies =
           replay.consume(toolCallId, toolName));
       },
       onToolsReady() {
+        enabled = true;
         dependencies.onToolsReady?.();
         replay.activate();
       },
@@ -58,6 +64,7 @@ export function createToolPresentation(dependencies: TidyExtensionDependencies =
     });
     pi.on("session_shutdown", () => replay.dispose());
     await tidy(pi);
+    if (enabled) registerConversationTimeline(pi, timeline);
   };
 }
 

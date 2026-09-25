@@ -38,10 +38,16 @@ pi-tidy-tools:
 
 ### Time dividers
 
-The first built-in tool call gets a dim `── HH:mm ──` divider above its pill.
-The next divider appears when a tool starts in a different minute. Times use the
-local 24-hour clock. Calls within the same minute share one divider, including
-calls across model turns.
+Pi-ext's tool-presentation host shares a dim `── HH:mm ──` divider across user
+messages, assistant messages, and built-in tool pills. A new divider appears
+when the next event starts in a different minute. Times use the local 24-hour
+clock. Events within the same minute share one divider, including events across
+model turns.
+
+Assistant messages get their timestamp when their first text, thinking, or tool
+call becomes visible. Empty streaming placeholders do not add a divider, and a
+long streaming message stays intact. Loading `tidy/index.ts` directly retains
+the tool-only timeline.
 
 Every measured result ends with its execution duration, such as `· <1s` or
 `· 8s`. The timer starts when execution begins, not when the model starts
@@ -51,9 +57,20 @@ Start times, divider placement, and durations persist in tool-result details.
 Reloading or expanding a settled pill does not restart its timer. Session
 switches and tree navigation restore timing from the active branch.
 
+Conversation dividers and response totals are custom session entries, excluded
+from model context. The working indicator shows elapsed response time while Pi
+is active. Once the run fully settles, the transcript shows `Completed in 2m 12s`.
+An aborted or failed run shows `Stopped after` or `Failed after` instead.
+
+The total includes retries, tool execution, and waits during the active run.
+Queued continuations that keep the run active share its total. Idle time between
+runs is excluded. The total is not labelled as model thinking time, and parallel
+tool durations are not added together. Reloading stops the live timer without
+inventing a completion for an interrupted run.
+
 Older results without recorded timing omit it. Provider-native replay does not
 measure playback as execution. MCP and other extension-owned cards keep their
-own rendering.
+own rendering. Display-only extension messages retain their existing layout.
 
 By default, execution delegates to Pi's built-in tools unchanged; only the
 schema and rendering change. The optional

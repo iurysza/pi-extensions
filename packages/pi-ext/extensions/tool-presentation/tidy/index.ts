@@ -88,7 +88,7 @@ import {
 } from "./pi-fff/controller.js";
 import type { PiFffLifecyclePreview } from "./pi-fff/integration.js";
 import { renderRichDiff } from "../rich-diff.js";
-import { clockLabel, readToolTiming, ToolTimeline, type ToolTiming } from "./timeline.js";
+import { timeDivider, readToolTiming, ToolTimeline, type ToolTiming } from "./timeline.js";
 
 export { withReasoning } from "./tool-composition.js";
 
@@ -161,10 +161,7 @@ class TimelineTool {
 		const lines = this.content.render(width);
 		const timing = this.timing();
 		if (!timing?.showTimestamp || timing.startedAt === undefined) return lines;
-		const max = Math.max(1, width);
-		const label = `── ${clockLabel(timing.startedAt)} `;
-		const divider = truncateToWidth(label + "─".repeat(Math.max(0, max - visibleWidth(label))), max);
-		return [`${DIM}${divider}${RESET}`, "", ...lines];
+		return [`${DIM}${timeDivider(timing.startedAt, width)}${RESET}`, "", ...lines];
 	}
 }
 
@@ -495,6 +492,7 @@ const TIDY_COMPLETIONS = [
 
 export interface TidyExtensionDependencies {
 	cwd?: string;
+	timeline?: ToolTimeline;
 	loadState?: typeof loadTidyState;
 	loadMode?: typeof loadTidyMode;
 	loadIcons?: typeof loadTidyIcons;
@@ -594,7 +592,7 @@ export function createTidyExtension(dependencies: TidyExtensionDependencies = {}
 
 		let currentTurn: TurnDiff[] = [], lastTurn: TurnDiff[] = [];
 		const pathByCallId = new Map<string, string>();
-		const timeline = new ToolTimeline();
+		const timeline = dependencies.timeline ?? new ToolTimeline();
 		const elapsedTimerByCallId = new Map<string, ReturnType<typeof setInterval>>();
 		const ownedTools = new Set<string>();
 

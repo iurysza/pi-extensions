@@ -1,3 +1,5 @@
+import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
+
 export interface ToolTiming {
   startedAt?: number;
   elapsedMs?: number;
@@ -19,19 +21,27 @@ export function readToolTiming(details: unknown): ToolTiming | undefined {
   return { startedAt, elapsedMs, showTimestamp: startedAt !== undefined && value.piTidyShowTimestamp === true };
 }
 
-/** Assign dividers at execution start, not during rendering or completion. */
+/** Share one minute clock across visible messages and tool execution starts. */
 export class ToolTimeline {
   private readonly calls = new Map<string, ToolTiming>();
-  private lastStartedAt: number | undefined;
+  private lastActivityAt: number | undefined;
 
   get(id: string): ToolTiming | undefined { return this.calls.get(id); }
 
+  observe(now: number): boolean {
+    const showTimestamp = this.lastActivityAt === undefined
+      || Math.floor(now / 60_000) !== Math.floor(this.lastActivityAt / 60_000);
+    this.lastActivityAt = now;
+    return showTimestamp;
+  }
+
+  restoreClock(timestamp: number): void {
+    this.lastActivityAt = Math.max(this.lastActivityAt ?? timestamp, timestamp);
+  }
+
   start(id: string, now: number): void {
     if (this.calls.has(id)) return;
-    const showTimestamp = this.lastStartedAt === undefined
-      || Math.floor(now / 60_000) !== Math.floor(this.lastStartedAt / 60_000);
-    this.calls.set(id, { startedAt: now, showTimestamp });
-    this.lastStartedAt = now;
+    this.calls.set(id, { startedAt: now, showTimestamp: this.observe(now) });
   }
 
   finish(id: string, now: number): ToolTiming | undefined {
@@ -47,17 +57,23 @@ export class ToolTimeline {
 
   restore(results: Iterable<{ toolCallId: string; details?: unknown }>): void {
     this.calls.clear();
-    this.lastStartedAt = undefined;
+    this.lastActivityAt = undefined;
     for (const result of results) {
       const timing = readToolTiming(result.details);
       if (!timing) continue;
       this.calls.set(result.toolCallId, timing);
       // Parallel tools can finish out of order. Use the latest start, not result order.
       if (timing.startedAt !== undefined) {
-        this.lastStartedAt = Math.max(this.lastStartedAt ?? timing.startedAt, timing.startedAt);
+        this.restoreClock(timing.startedAt);
       }
     }
   }
+}
+
+export function timeDivider(timestamp: number, width: number): string {
+  const max = Math.max(1, width);
+  const label = `── ${clockLabel(timestamp)} `;
+  return truncateToWidth(label + "─".repeat(Math.max(0, max - visibleWidth(label))), max);
 }
 
 export function clockLabel(timestamp: number): string {
