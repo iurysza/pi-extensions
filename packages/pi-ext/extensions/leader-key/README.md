@@ -2,6 +2,12 @@
 
 `Ctrl+X` opens the home menu. `e` keeps the searchable Extensions command picker. `o` opens More when an extension contributes a menu or home entries are placed there. Team and Voice remain at the root with `g` and `v`.
 
+## Select a skill
+
+Skills and Writing style insert `󱚊 name` before the current draft. Selecting another skill replaces only that tag. The glyph is Material Design Nerd Font `md-book_cog` (U+F168A). For example, selecting `pr-review` while editing `Review this diff` yields `󱚊 pr-review Review this diff`.
+
+On interactive submission, Leader Key checks that the skill still exists and translates the tag into Pi's native `/skill:pr-review` command. An unknown tag stays in the editor with a warning. A valid tag can be sent without a request; Pi then loads the skill and starts a model turn. Typed `/skill:name` commands still work. The tag is editable text, not a styled editor component.
+
 ## Register an extension menu
 
 Other extensions contribute without importing Leader Key. Register each slash command with `pi.registerCommand`, then listen for `command-menu:collect:v1`:
