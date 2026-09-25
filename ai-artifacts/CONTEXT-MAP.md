@@ -4,7 +4,7 @@ Each package in this monorepo is its own context. A package gets a glossary here
 
 ## Contexts
 
-- [Claude Code provider](./packages/pi-claude-code-sdk/CONTEXT.md): gets each pi assistant response from a short-lived Claude Code CLI process billed to the user's Claude subscription.
+- [Claude Code provider](./packages/pi-claude-code/CONTEXT.md): gets each pi assistant response from a short-lived Claude Code CLI process billed to the user's Claude subscription.
 
 ## Relationships
 
