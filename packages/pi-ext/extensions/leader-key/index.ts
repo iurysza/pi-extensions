@@ -31,6 +31,7 @@ import { categorizeSkillCommands, skillCommandLabel } from "./skill-categories.j
 import { handleSkillTagInput, selectSkill, SKILL_TAG } from "./skill-tag.js";
 import { OverlayFrame } from "../shared/overlay.js";
 import { copyToClipboard } from "../pi-telescope/clipboard.js";
+import { stashDraft } from "./stash-draft.js";
 import { saveLastResponse } from "../chat-to-md/index.js";
 import { entryKey, type ActionItem, type ActionGroup, type MenuEntry, type TopLevelEntry } from "./types.js";
 import { groupEntries } from "./layout.js";
@@ -842,6 +843,13 @@ export default function leaderKeyExtension(pi: ExtensionAPI) {
 		description: "Open Leader Key",
 		handler: async (ctx) => {
 			await openLeaderKey(ctx);
+		},
+	});
+
+	pi.registerShortcut(Key.ctrl("s"), {
+		description: "Copy and clear current draft",
+		handler: (ctx) => {
+			if (ctx.mode === "tui") stashDraft(ctx.ui);
 		},
 	});
 }

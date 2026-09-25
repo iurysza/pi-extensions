@@ -1,5 +1,7 @@
 # Leader Key menus
 
+In the main Pi editor, Ctrl+S copies the current draft to the system clipboard and clears the editor only after a successful copy. Paste to restore it. This is a single clipboard slot: another copy replaces the draft. Empty input and copy failures leave the editor unchanged. Ctrl+S keeps its existing meaning inside Pi's model, thinking, and session pickers. Only text is copied, not attachments.
+
 `Ctrl+X` opens the home menu. `e` keeps the searchable Extensions command picker. `o` opens More when an extension contributes a menu or home entries are placed there. Team and Voice remain at the root with `g` and `v`.
 
 ## Select a skill
