@@ -195,7 +195,7 @@ test("restored settled tools clear timers started during call hydration", async 
         .render(200)
         .join("\n")
         .replace(/\x1b\[[0-9;]*m/g, ""),
-      /done in 7s/
+      /done · 7s/
     );
     assert.doesNotMatch(
       restored
@@ -240,7 +240,7 @@ test("settled extension rows stay byte-stable across six ordinary editor renders
       const transcript = () => rows.flatMap((row) => row.render(width)).join("\n");
       const baseline = transcript();
       assert.doesNotMatch(withoutAnsi(baseline), /\bago\b/);
-      assert.match(withoutAnsi(baseline), /done in 8s/);
+      assert.match(withoutAnsi(baseline), /done · 8s/);
 
       for (let key = 0; key < 6; key++) {
         now += 61_000;
@@ -285,6 +285,8 @@ test("tool results persist elapsed duration for reload", async () => {
     });
     assert.deepEqual(patch.details, {
       existing: true,
+      piTidyStartedAt: 1_000,
+      piTidyShowTimestamp: true,
       piTidyElapsedMs: 7_000,
     });
   } finally {
@@ -331,7 +333,7 @@ test("failed bash summaries retain the command and report duration", () => {
     { isError: true, elapsedMs: 2_100 }
   );
   const plain = block.map((line) => line.replace(/\x1b\[[0-9;]*m/g, ""));
-  assert.match(plain[1], /npm test → error in 2s$/);
+  assert.match(plain[1], /npm test → error · 2s$/);
 });
 
 test("settled bash summaries report duration instead of output line count", () => {
@@ -345,7 +347,7 @@ test("settled bash summaries report duration instead of output line count", () =
     { elapsedMs: 2_400 }
   );
   const plain = block[1].replace(/\x1b\[[0-9;]*m/g, "");
-  assert.match(plain, /done in 2s$/);
+  assert.match(plain, /done · 2s$/);
   assert.doesNotMatch(plain, /lines/);
 });
 
@@ -360,18 +362,18 @@ test("tool blocks support default reasoning and result layouts without completio
       .map((line) => line.replace(/\x1b\[[0-9;]*m/g, ""));
   const defaultBlock = plain("default");
   assert.deepEqual(defaultBlock, [
-    "✏️ edit update the renderer",
-    "  index.ts → +1/-1",
+    "󱇧 update the renderer",
+    "index.ts → +1/-1",
   ]);
   assert.deepEqual(plain("reasoning"), [
-    "✏️ edit update the renderer → +1/-1",
+    "󱇧 update the renderer → +1/-1",
   ]);
   const resultBlock = plain("result");
-  assert.deepEqual(resultBlock, ["✏️ edit index.ts → +1/-1"]);
+  assert.deepEqual(resultBlock, ["󱇧 index.ts → +1/-1"]);
   assert.doesNotMatch(resultBlock[0], /\bago\b|update the renderer/);
 });
 
-test("icons-off blocks omit only decorative category icons in every layout and state", () => {
+test("icons-off blocks omit only decorative tool icons in every layout and state", () => {
   const result = {
     content: [{ type: "text", text: "done" }],
     details: { diff: "+new\n-old" },
@@ -384,7 +386,7 @@ test("icons-off blocks omit only decorative category icons in every layout and s
     for (const mode of ["default", "reasoning", "result"] as const) {
       for (const state of [{}, { isPartial: true }, { isError: true }]) {
         const lines = buildToolBlock(name, args, result, { ...state, mode, icons: false }).map(withoutAnsi);
-        assert.doesNotMatch(lines.join("\n"), /[📖✏️⚡]/);
+        assert.doesNotMatch(lines.join("\n"), /[󰈙󰱼󰥨󰉋󰆓󱇧󰆍󱁤]/);
         if (state.isPartial) assert.match(lines[0], /^· (read|edit|bash)/);
         else assert.match(lines[0], /^(read|edit|bash)/);
         assert.doesNotMatch(lines[0], / {2,}(read|edit|bash)/);
@@ -394,7 +396,7 @@ test("icons-off blocks omit only decorative category icons in every layout and s
   }
   assert.deepEqual(
     buildToolBlock("edit", { path: "a.ts", reasoning: "apply change" }, result, { icons: false }).map(withoutAnsi),
-    ["edit apply change", "  a.ts → +1/-1"]
+    ["edit apply change", "a.ts → +1/-1"]
   );
   assert.deepEqual(
     buildTurnDiffBlock([{ tool: "edit", path: "a.ts", diff: "+new" }], { icons: false }).map(withoutAnsi),
@@ -672,6 +674,8 @@ test("enabled startup preserves every optional registration", async () => {
   const registrations = await loadWith("on");
   assert.deepEqual([...registrations.commands.keys()], ["tidy", "diff"]);
   assert.deepEqual(registrations.events, [
+    "session_start",
+    "session_tree",
     "tool_execution_start",
     "tool_execution_end",
     "tool_result",
@@ -873,7 +877,7 @@ test("registered renderers summarize native result shapes for every owned tool",
       { path: "a.ts", reasoning: "inspect source" },
       { output: "one\ntwo" }
     ),
-    ["📖 read inspect source", "  a.ts → 2 lines"]
+    ["󰈙 inspect source", "a.ts → 2 lines"]
   );
   assert.deepEqual(
     render(
@@ -881,7 +885,7 @@ test("registered renderers summarize native result shapes for every owned tool",
       { path: "data.bin" },
       { output: "Successfully wrote 42 bytes" }
     ),
-    ["✏️ write data.bin", "  data.bin → 42b"]
+    ["󰆓 data.bin", "data.bin → 42b"]
   );
   assert.deepEqual(
     render(
@@ -889,7 +893,7 @@ test("registered renderers summarize native result shapes for every owned tool",
       { path: "one.txt", content: "one" },
       { message: "written" }
     ),
-    ["✏️ write one.txt", "  one.txt → 1 line"]
+    ["󰆓 one.txt", "one.txt → 1 line"]
   );
   assert.deepEqual(
     render(
@@ -897,7 +901,7 @@ test("registered renderers summarize native result shapes for every owned tool",
       { path: "a.ts", reasoning: "apply update" },
       { message: "ok" }
     ),
-    ["✏️ edit apply update", "  a.ts → applied"]
+    ["󱇧 apply update", "a.ts → applied"]
   );
   assert.deepEqual(
     render(
@@ -905,7 +909,7 @@ test("registered renderers summarize native result shapes for every owned tool",
       { path: "a.ts" },
       { isError: true, details: { error: "replacement missing" } }
     ),
-    ["✏️ edit a.ts", "  a.ts → replacement missing"]
+    ["󱇧 a.ts", "a.ts → replacement missing"]
   );
   assert.deepEqual(
     render(
@@ -916,7 +920,7 @@ test("registered renderers summarize native result shapes for every owned tool",
         details: { piTidyElapsedMs: 1_200 },
       }
     ),
-    ["⚡ bash exit 2", "  exit 2 → exit 2 in 1s"]
+    ["󰆍 exit 2", "exit 2 → exit 2 · 1s"]
   );
   assert.deepEqual(
     render(
@@ -928,7 +932,7 @@ test("registered renderers summarize native result shapes for every owned tool",
         },
       }
     ),
-    ["📖 grep none", "  none → 0 matches in 0 files"]
+    ["󰱼 none", "none → 0 matches in 0 files"]
   );
   assert.deepEqual(
     render(
@@ -938,11 +942,11 @@ test("registered renderers summarize native result shapes for every owned tool",
         content: [{ type: "text", text: "src/a.ts:1:one" }],
       }
     ),
-    ["📖 grep one in src", "  one in src → 1 match in 1 file"]
+    ["󰱼 one in src", "one in src → 1 match in 1 file"]
   );
   assert.deepEqual(
     render("find", { pattern: "*.ts" }, { message: "a.ts\nb.ts" }),
-    ["📖 find *.ts", "  *.ts → 2 files"]
+    ["󰥨 *.ts", "*.ts → 2 files"]
   );
   assert.deepEqual(
     render(
@@ -951,7 +955,7 @@ test("registered renderers summarize native result shapes for every owned tool",
       { error: "not found" },
       { isError: true }
     ),
-    ["📖 ls missing", "  missing → not found"]
+    ["󰉋 missing", "missing → not found"]
   );
   assert.deepEqual(
     new Set(backgrounds),
@@ -985,7 +989,7 @@ test("iconless registered renderers retain state, colors, backgrounds, and compa
       : { path: "a.ts", reasoning: "inspect source" };
     for (const context of [{ isError: false }, { isError: true }]) {
       const lines = renderedLines(tool.renderResult({ output: "one\ntwo" }, {}, theme, { args, ...context }), 28);
-      assert.doesNotMatch(lines.join("\n"), /[📖✏️⚡]/);
+      assert.doesNotMatch(lines.join("\n"), /[󰈙󰱼󰥨󰉋󰆓󱇧󰆍󱁤]/);
       assert.match(lines[0], new RegExp(`^${name}`));
       assert.ok(lines.every((line) => line.length <= 28));
     }
@@ -995,7 +999,7 @@ test("iconless registered renderers retain state, colors, backgrounds, and compa
     { isPartial: true, toolCallId: "live", invalidate() {} },
   );
   assert.match(renderedLines(live, 28)[0], /^· bash/);
-  assert.doesNotMatch(renderedLines(live, 28).join("\n"), /[📖✏️⚡]/);
+  assert.doesNotMatch(renderedLines(live, 28).join("\n"), /[󰈙󰱼󰥨󰉋󰆓󱇧󰆍󱁤]/);
   await events.get("tool_execution_start")!({ toolName: "edit", toolCallId: "diff", args: { path: "a.ts" } });
   await events.get("tool_execution_end")!({ toolName: "edit", toolCallId: "diff", isError: false, result: { details: { diff: "+new" } } });
   await events.get("turn_end")!();
@@ -1019,8 +1023,8 @@ test("registered result renderers tolerate absent optional inputs", async () => 
     .get("read")
     .renderResult(undefined, undefined, theme, undefined);
   assert.deepEqual(renderedLines(component), [
-    "📖 read",
-    "  → 1 lines",
+    "󰈙",
+    "→ 1 lines",
   ]);
   assert.ok(backgrounds.every((name) => name === "toolSuccessBg"));
 });
@@ -1038,8 +1042,8 @@ test("registered renderers expose expanded native details and empty partial slot
     })
   );
   assert.deepEqual(expandedBash, [
-    "⚡ bash run commands",
-    "  printf one printf two → done in <1s",
+    "󰆍 run commands",
+    "printf one printf two → done",
     "  $ printf one",
     "    printf two",
     "  first",
@@ -1058,8 +1062,8 @@ test("registered renderers expose expanded native details and empty partial slot
     )
   );
   assert.deepEqual(expandedEdit, [
-    "✏️ edit change value",
-    "  a.ts → +1/-1",
+    "󱇧 change value",
+    "a.ts → +1/-1",
     "  @@ -1 +1 @@",
     "  -old",
     "  +new",
@@ -1073,8 +1077,8 @@ test("registered renderers expose expanded native details and empty partial slot
       })
   );
   assert.deepEqual(expandedWrite, [
-    "✏️ write write value",
-    "  one.txt → 1 line",
+    "󰆓 write value",
+    "one.txt → 1 line",
     "  1 one",
   ]);
 });
@@ -1108,8 +1112,8 @@ test("registered call and event lifecycle owns timers and turn-local diffs", asy
     );
     assert.equal(timers.length, 1);
     assert.deepEqual(renderedLines(live), [
-      "· ⚡ bash wait briefly",
-      "  sleep 1 → <1s",
+      "· 󰆍 wait briefly",
+      "sleep 1 → preparing",
     ]);
     bash.renderCall(
       { command: "sleep 1", reasoning: "wait briefly" },
@@ -1189,13 +1193,13 @@ test("registered call and event lifecycle owns timers and turn-local diffs", asy
         customType: "minimal-turn-diff",
         display: true,
         content:
-          "◆ last turn diff (2 files)\n✏️ (unknown)\n(new file / full overwrite — no line diff)\n\n✏️ changed.ts\n@@ -1 +1 @@\n-old\n+new",
+          "◆ last turn diff (2 files)\n󰆓 (unknown)\n(new file / full overwrite — no line diff)\n\n󱇧 changed.ts\n@@ -1 +1 @@\n-old\n+new",
         rows: [
           "◆ last turn diff (2 files)",
-          "✏️ (unknown)",
+          "󰆓 (unknown)",
           "(new file / full overwrite — no line diff)",
           "",
-          "✏️ changed.ts",
+          "󱇧 changed.ts",
           "@@ -1 +1 @@",
           "-old",
           "+new",
@@ -1415,7 +1419,7 @@ test("buildToolBlock renders exact collapsed summaries across native shapes", ()
       { path: "  src/\n file.ts ", reasoning: "  inspect\n   source " },
       { output: "a\nb" }
     ),
-    ["📖 read inspect source", "  src/ file.ts → 2 lines"]
+    ["󰈙 inspect source", "src/ file.ts → 2 lines"]
   );
   assert.deepEqual(
     plain(
@@ -1426,8 +1430,8 @@ test("buildToolBlock renders exact collapsed summaries across native shapes", ()
       }
     ),
     [
-      "📖 grep needle in src",
-      "  needle in src → 2 matches in 2 files",
+      "󰱼 needle in src",
+      "needle in src → 2 matches in 2 files",
     ]
   );
   assert.deepEqual(
@@ -1436,7 +1440,7 @@ test("buildToolBlock renders exact collapsed summaries across native shapes", ()
       { pattern: "*.ts", path: "src", reasoning: "find files" },
       { message: "a.ts\n\nb.ts\n" }
     ),
-    ["📖 find find files", "  *.ts in src → 2 files"]
+    ["󰥨 find files", "*.ts in src → 2 files"]
   );
   assert.deepEqual(
     plain(
@@ -1444,7 +1448,7 @@ test("buildToolBlock renders exact collapsed summaries across native shapes", ()
       { path: "src", reasoning: "list source" },
       { output: "a\n\nb" }
     ),
-    ["📖 ls list source", "  src → 2 entries"]
+    ["󰉋 list source", "src → 2 entries"]
   );
   assert.deepEqual(
     plain(
@@ -1454,7 +1458,7 @@ test("buildToolBlock renders exact collapsed summaries across native shapes", ()
         details: { diff: "+++ b/a.ts\n--- a/a.ts\n+one\n-two\ncontext" },
       }
     ),
-    ["✏️ edit change value", "  a.ts → +1/-1"]
+    ["󱇧 change value", "a.ts → +1/-1"]
   );
   assert.deepEqual(
     plain(
@@ -1463,11 +1467,11 @@ test("buildToolBlock renders exact collapsed summaries across native shapes", ()
       { output: "exit code: 12" },
       { elapsedMs: 1_000 }
     ),
-    ["⚡ bash run command", "  echo hi → exit 12 in 1s"]
+    ["󰆍 run command", "echo hi → exit 12 · 1s"]
   );
   assert.deepEqual(
     plain("other", {}, { output: "one\ntwo" }, { isError: true }),
-    ["◆ other ", "  → one"]
+    ["󱁤 other ", "→ one"]
   );
 });
 
@@ -1488,7 +1492,7 @@ test("buildToolBlock renders exact layout and expansion boundaries", () => {
       }
     ).map(withoutAnsi),
     [
-      "✏️ edit change value → +1/-1",
+      "󱇧 change value → +1/-1",
       "  @@ -1 +1 @@",
       "  --- a/a.ts",
       "  +++ b/a.ts",
@@ -1507,7 +1511,7 @@ test("buildToolBlock renders exact layout and expansion boundaries", () => {
         mode: "result",
       }
     ).map(withoutAnsi),
-    ["📖 read → 3 lines", "  first", "  second"]
+    ["󰈙 → 3 lines", "  first", "  second"]
   );
   assert.deepEqual(
     buildToolBlock(
@@ -1519,7 +1523,7 @@ test("buildToolBlock renders exact layout and expansion boundaries", () => {
         isPartial: true,
       }
     ).map(withoutAnsi),
-    ["· ✏️ write clear file", "  empty → <1s"]
+    ["· 󰆓 clear file", "empty → preparing"]
   );
 });
 
@@ -1534,7 +1538,7 @@ test("buildTurnDiffBlock renders exact singular, separators, and diff semantics"
     ]).map(withoutAnsi),
     [
       "◆ last turn diff (1 file)",
-      "✏️ src/a.ts",
+      "󱇧 src/a.ts",
       "@@ -1 +1 @@",
       "--- a/src/a.ts",
       "+++ b/src/a.ts",
@@ -1550,10 +1554,10 @@ test("buildTurnDiffBlock renders exact singular, separators, and diff semantics"
     ]).map(withoutAnsi),
     [
       "◆ last turn diff (2 files)",
-      "✏️ new.txt",
+      "󰆓 new.txt",
       "(new file / full overwrite — no line diff)",
       "",
-      "✏️ b.ts",
+      "󱇧 b.ts",
       "+x",
     ]
   );

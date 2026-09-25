@@ -7,13 +7,16 @@
  * turn-end stamping — pi already renders tool components inline; we just make
  * them tight.
  *
- *     ✏️ edit put reasoning on line 1, detail on line 2
- *       index.ts → +28/-14
- *     ⚡ bash run the typecheck
- *       npx tsc --noEmit → done (1 lines)
+ *     ── 14:32 ────────────────────────────
  *
- * Line 1: {running mark?} {icon} {name} {reasoning headline}
- * Line 2:   {dim arg/command detail} → {colored summary}
+ *     󱇧 put reasoning on line 1, detail on line 2
+ *     index.ts → +28/-14 · <1s
+ *     󰆍 run the typecheck
+ *     npx tsc --noEmit → done · 3s
+ *
+ * Line 1: {running mark?} {icon or name} {reasoning headline}
+ * Line 2: {dim arg/command detail} → {colored summary} · {duration}
+ * A dim clock divider precedes the first execution in each new minute.
  *
  * Why this beats the spacer floor: pi bakes a Spacer(1) inside every tool's
  * ToolExecutionComponent, so N default cards = N blank lines. BUT in
@@ -85,11 +88,13 @@ import {
 } from "./pi-fff/controller.js";
 import type { PiFffLifecyclePreview } from "./pi-fff/integration.js";
 import { renderRichDiff } from "../rich-diff.js";
+import { clockLabel, readToolTiming, ToolTimeline, type ToolTiming } from "./timeline.js";
 
 export { withReasoning } from "./tool-composition.js";
 
-/** Hanging indent for detail and expanded continuation lines. */
+/** Hanging indent for expanded output only. Compact pills stay flush left. */
 const INDENT = "  ";
+const BUILT_INS = new Set(["read", "write", "edit", "bash", "grep", "find", "ls"]);
 
 /** Collapse whitespace/newlines to one line (width-based truncation happens at render). */
 function oneLine(s: string): string {
@@ -105,7 +110,16 @@ export function fitToolLine(line: string, width: number): string {
 
 	const tail = line.slice(arrowIndex);
 	const tailWidth = visibleWidth(tail);
-	if (tailWidth >= max) return truncateToWidth(tail, max, "…");
+	if (tailWidth >= max) {
+		const durationIndex = tail.lastIndexOf("· ");
+		if (durationIndex >= 0) {
+			const duration = `${DIM}${tail.slice(durationIndex)}`;
+			const durationWidth = visibleWidth(duration);
+			if (durationWidth >= max) return truncateToWidth(duration, max, "…");
+			return `${truncateToWidth(tail.slice(0, durationIndex).trimEnd(), max - durationWidth - 1, "…")} ${duration}`;
+		}
+		return truncateToWidth(tail, max, "…");
+	}
 	const head = line.slice(0, arrowIndex).trimEnd();
 	return `${truncateToWidth(head, max - tailWidth - 1, "…")} ${tail}`;
 }
@@ -136,6 +150,24 @@ class WidthAwareLines {
 	}
 }
 
+/** The divider sits outside the pill background and never mutates timeline state. */
+class TimelineTool {
+	constructor(
+		private readonly content: { render(width: number): string[]; invalidate(): void },
+		private readonly timing: () => ToolTiming | undefined,
+	) {}
+	invalidate(): void { this.content.invalidate(); }
+	render(width: number): string[] {
+		const lines = this.content.render(width);
+		const timing = this.timing();
+		if (!timing?.showTimestamp || timing.startedAt === undefined) return lines;
+		const max = Math.max(1, width);
+		const label = `── ${clockLabel(timing.startedAt)} `;
+		const divider = truncateToWidth(label + "─".repeat(Math.max(0, max - visibleWidth(label))), max);
+		return [`${DIM}${divider}${RESET}`, "", ...lines];
+	}
+}
+
 class RichToolResult {
 	private richKey = "";
 	private richLines: string[] | undefined;
@@ -145,7 +177,7 @@ class RichToolResult {
 		private readonly name: string,
 		private readonly args: Record<string, unknown>,
 		private readonly result: any,
-		private readonly options: { isError: boolean; expanded: boolean; elapsedMs: number; mode: TidyMode; icons: boolean },
+		private readonly options: { isError: boolean; expanded: boolean; elapsedMs?: number; mode: TidyMode; icons: boolean },
 		private readonly theme: any,
 		private readonly invalidateResult: () => void,
 	) {}
@@ -219,7 +251,7 @@ function argDetail(name: string, args: Record<string, unknown>): string {
 	return "";
 }
 
-/** Compact elapsed time for an in-progress tool. */
+/** Compact execution duration for running and completed tools. */
 export function formatElapsed(milliseconds: number): string {
 	if (milliseconds < 1000) return "<1s";
 	const seconds = Math.floor(milliseconds / 1000);
@@ -237,11 +269,10 @@ function summarize(
 	result: any,
 	isError: boolean,
 	args: Record<string, unknown> = {},
-	elapsedMs = 0,
 ): string {
 	const text = textFromResult(result);
 	if (isError) {
-		if (name === "bash") return `${RED}error${RESET} ${DIM}in ${formatElapsed(elapsedMs)}${RESET}`;
+		if (name === "bash") return `${RED}error${RESET}`;
 		return `${RED}${text.split("\n")[0] || "error"}${RESET}`;
 	}
 	if (name === "read") return `${GREEN}${text.split("\n").length} lines${RESET}`;
@@ -270,7 +301,7 @@ function summarize(
 		const m = text.match(/exit code: (\d+)/);
 		const exit = m ? Number(m[1]) : null;
 		const status = exit && exit !== 0 ? `${RED}exit ${exit}` : `${GREEN}done`;
-		return `${status}${RESET} ${DIM}in ${formatElapsed(elapsedMs)}${RESET}`;
+		return `${status}${RESET}`;
 	}
 	if (name === "grep") {
 		const { matches: count, files } = grepResultCounts(text);
@@ -418,25 +449,27 @@ export function buildToolBlock(
 	result: any,
 	opts: { isError?: boolean; isPartial?: boolean; expanded?: boolean; elapsedMs?: number; mode?: TidyMode; icons?: boolean } = {},
 ): string[] {
-	const { isError = false, isPartial = false, expanded = false, elapsedMs = 0, mode = "default", icons = true } = opts;
+	const { isError = false, isPartial = false, expanded = false, elapsedMs, mode = "default", icons = true } = opts;
 	const { reasoning, rest } = stripReasoning(args ?? {});
 
 	// Settled success/error is already encoded by Pi's native row background.
 	// Only running calls need an inline state mark.
 	const runningPrefix = isPartial ? `${DIM}·${RESET} ` : "";
+	const duration = elapsedMs === undefined ? undefined : formatElapsed(elapsedMs);
 	const summary = isPartial
-		? `${DIM}${formatElapsed(elapsedMs)}${RESET}`
-		: summarize(name, result, isError, rest, elapsedMs);
+		? `${DIM}${duration ?? "preparing"}${RESET}`
+		: `${summarize(name, result, isError, rest)}${duration === undefined ? "" : ` ${DIM}· ${duration}${RESET}`}`;
 
 	const { icon, color } = style(name);
-	const toolLabel = `${color}${icons ? `${icon} ` : ""}${BOLD}${name}${RESET}`;
+	const label = icons && BUILT_INS.has(name) ? icon : `${icons ? `${icon} ` : ""}${BOLD}${name}`;
+	const toolLabel = `${color}${label}${RESET}`;
 	const headline = oneLine(reasoning || argDetail(name, rest));
 	const detail = argDetail(name, rest);
 	// Keep the target on failures too; width fitting preserves the useful error
 	// tail while the command/path answers what actually failed.
 	const line2 = !detail
-		? `${INDENT}${DIM}→${RESET} ${summary}`
-		: `${INDENT}${DIM}${detail}${RESET} ${DIM}→${RESET} ${summary}`;
+		? `${DIM}→${RESET} ${summary}`
+		: `${DIM}${detail}${RESET} ${DIM}→${RESET} ${summary}`;
 	let lines: string[];
 	if (mode === "reasoning") {
 		lines = [`${runningPrefix}${toolLabel} ${headline} ${DIM}→${RESET} ${summary}`];
@@ -561,7 +594,7 @@ export function createTidyExtension(dependencies: TidyExtensionDependencies = {}
 
 		let currentTurn: TurnDiff[] = [], lastTurn: TurnDiff[] = [];
 		const pathByCallId = new Map<string, string>();
-		const startedAtByCallId = new Map<string, number>();
+		const timeline = new ToolTimeline();
 		const elapsedTimerByCallId = new Map<string, ReturnType<typeof setInterval>>();
 		const ownedTools = new Set<string>();
 
@@ -576,36 +609,52 @@ export function createTidyExtension(dependencies: TidyExtensionDependencies = {}
 					if (!context?.isPartial) return new Container();
 					const id = context.toolCallId as string;
 					if (!elapsedTimerByCallId.has(id)) { const timer = setInterval(() => context.invalidate(), 1000); timer.unref?.(); elapsedTimerByCallId.set(id, timer); }
-					let started = startedAtByCallId.get(id); if (started === undefined) { started = Date.now(); startedAtByCallId.set(id, started); }
 					const mode = dependencies.isReplayCall?.(id) ? "result" : tidyMode;
-					return new WidthAwareLines(() => buildToolBlock(name, args ?? {}, {}, { isPartial: true, elapsedMs: Date.now() - started!, mode, icons: tidyIcons }), (text) => theme.bg("toolPendingBg", text));
+					const content = new WidthAwareLines(() => {
+						const timing = timeline.get(id);
+						const elapsedMs = timing?.elapsedMs ?? (timing?.startedAt === undefined ? undefined : Math.max(0, Date.now() - timing.startedAt));
+						return buildToolBlock(name, args ?? {}, {}, { isPartial: true, elapsedMs, mode, icons: tidyIcons });
+					}, (text) => theme.bg("toolPendingBg", text));
+					return new TimelineTool(content, () => timeline.get(id));
 				},
 				renderResult: (result: any, options: any, theme: any, context: any) => {
 					if (options?.isPartial) return new Container();
 					const isError = context?.isError ?? result?.isError ?? false;
 					const id = context?.toolCallId as string | undefined;
-					const started = startedAtByCallId.get(id ?? ""), timer = elapsedTimerByCallId.get(id ?? "");
-					if (timer) clearInterval(timer); elapsedTimerByCallId.delete(id ?? ""); startedAtByCallId.delete(id ?? "");
-					const persisted = Number(result?.details?.piTidyElapsedMs);
-					const elapsedMs = Number.isFinite(persisted) ? persisted : started === undefined ? 0 : Date.now() - started;
+					const timer = elapsedTimerByCallId.get(id ?? "");
+					if (timer) clearInterval(timer); elapsedTimerByCallId.delete(id ?? "");
+					const timing = readToolTiming(result?.details) ?? timeline.get(id ?? "");
 					const mode = id && dependencies.isReplayCall?.(id) ? "result" : tidyMode;
-					return new RichToolResult(
+					return new TimelineTool(new RichToolResult(
 						name,
 						context?.args ?? {},
 						result,
-						{ isError, expanded: options?.expanded ?? false, elapsedMs, mode, icons: tidyIcons },
+						{ isError, expanded: options?.expanded ?? false, elapsedMs: timing?.elapsedMs, mode, icons: tidyIcons },
 						theme,
 						() => context?.invalidate?.(),
-					);
+					), () => timing);
 				},
 			} as SourceToolDefinition;
 		};
 
+		const restoreTimeline = (_event: unknown, ctx: any) => {
+			for (const timer of elapsedTimerByCallId.values()) clearInterval(timer);
+			elapsedTimerByCallId.clear();
+			const results = ctx.sessionManager.getBranch()
+				.filter((entry: any) => entry.type === "message" && entry.message?.role === "toolResult" && ownedTools.has(entry.message.toolName))
+				.map((entry: any) => entry.message);
+			timeline.restore(results);
+		};
+		pi.on("session_start", restoreTimeline);
+		pi.on("session_tree", restoreTimeline);
+
 		pi.on("tool_execution_start", async (e: any) => {
-			if (!startedAtByCallId.has(e.toolCallId)) startedAtByCallId.set(e.toolCallId, Date.now());
+			// Replayed provider results already ran elsewhere; playback time is not execution time.
+			if (ownedTools.has(e.toolName) && !dependencies.isReplayCall?.(e.toolCallId)) timeline.start(e.toolCallId, Date.now());
 			if ((e.toolName === "edit" || e.toolName === "write") && typeof e?.args?.path === "string") pathByCallId.set(e.toolCallId, e.args.path);
 		});
 		pi.on("tool_execution_end", async (e: any) => {
+			timeline.finish(e.toolCallId, Date.now());
 			const timer = elapsedTimerByCallId.get(e.toolCallId); if (timer) clearInterval(timer); elapsedTimerByCallId.delete(e.toolCallId);
 			if (e.toolName !== "edit" && e.toolName !== "write") return;
 			const path = pathByCallId.get(e.toolCallId); pathByCallId.delete(e.toolCallId);
@@ -613,14 +662,16 @@ export function createTidyExtension(dependencies: TidyExtensionDependencies = {}
 		});
 		pi.on("tool_result", async (e: any) => {
 			if (!ownedTools.has(e.toolName)) return;
-			const started = startedAtByCallId.get(e.toolCallId); if (started === undefined) return;
+			const timing = timeline.finish(e.toolCallId, Date.now()); if (!timing) return;
 			return { details: {
 				...(e.details ?? {}),
-				piTidyElapsedMs: Math.max(0, Date.now() - started),
+				piTidyStartedAt: timing.startedAt,
+				piTidyShowTimestamp: timing.showTimestamp,
+				piTidyElapsedMs: timing.elapsedMs,
 			} };
 		});
 		pi.on("turn_end", async () => {
-			lastTurn = currentTurn; currentTurn = []; pathByCallId.clear(); startedAtByCallId.clear();
+			lastTurn = currentTurn; currentTurn = []; pathByCallId.clear();
 			for (const timer of elapsedTimerByCallId.values()) clearInterval(timer); elapsedTimerByCallId.clear();
 		});
 		pi.on("session_shutdown", async () => {

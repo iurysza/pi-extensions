@@ -11,10 +11,14 @@ export const BOLD = "\x1b[1m";
 export const RESET = "\x1b[0m";
 
 export function style(name: string): { icon: string; color: string } {
-  if (["read", "grep", "find", "ls"].includes(name)) return { icon: "📖", color: CYAN };
-  if (["write", "edit"].includes(name)) return { icon: "✏️", color: YELLOW };
-  if (name === "bash") return { icon: "⚡", color: MAGENTA };
-  return { icon: "◆", color: MAGENTA };
+  if (name === "read") return { icon: "󰈙", color: CYAN };
+  if (name === "grep") return { icon: "󰱼", color: CYAN };
+  if (name === "find") return { icon: "󰥨", color: CYAN };
+  if (name === "ls") return { icon: "󰉋", color: CYAN };
+  if (name === "write") return { icon: "󰆓", color: YELLOW };
+  if (name === "edit") return { icon: "󱇧", color: YELLOW };
+  if (name === "bash") return { icon: "󰆍", color: MAGENTA };
+  return { icon: "󱁤", color: MAGENTA };
 }
 export function nonEmptyLineCount(value: string): number { return value.trim().split("\n").filter(Boolean).length; }
 const HOME = homedir();

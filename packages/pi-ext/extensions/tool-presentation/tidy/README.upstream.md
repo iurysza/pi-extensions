@@ -33,8 +33,27 @@ pi-tidy-tools:
 
 ![Native Pi tool cards compared with compact pi-tidy-tools output](docs/comparison.png)
 
-- **Line 1** — tool icon/name and the model's **goal/reasoning**; running calls add a live dot.
-- **Line 2** — the concrete target (path/command/pattern) and a colored result summary.
+- **Line 1** shows the tool icon and the model's goal. Running calls add a live dot. With icons off, the tool name replaces the icon.
+- **Line 2** shows the target, a colored result summary, and the execution duration. Both lines start at the left edge.
+
+### Time dividers
+
+The first built-in tool call gets a dim `── HH:mm ──` divider above its pill.
+The next divider appears when a tool starts in a different minute. Times use the
+local 24-hour clock. Calls within the same minute share one divider, including
+calls across model turns.
+
+Every measured result ends with its execution duration, such as `· <1s` or
+`· 8s`. The timer starts when execution begins, not when the model starts
+streaming arguments. Before execution, the pill says `preparing`.
+
+Start times, divider placement, and durations persist in tool-result details.
+Reloading or expanding a settled pill does not restart its timer. Session
+switches and tree navigation restore timing from the active branch.
+
+Older results without recorded timing omit it. Provider-native replay does not
+measure playback as execution. MCP and other extension-owned cards keep their
+own rendering.
 
 By default, execution delegates to Pi's built-in tools unchanged; only the
 schema and rendering change. The optional
@@ -114,11 +133,11 @@ malformed, unreadable, or not a boolean:
 }
 ```
 
-`/tidy icons off` persistently removes only the decorative category icons `📖`,
-`✏️`, and `⚡` from tidy tool blocks, plus the decorative `◆` heading and file
-category icons from `/diff`. It does not reserve an empty icon column. The
-semantic running dot, hanging detail indent, and result arrow stay visible, as
-do colors, names, summaries, expansion, and compact layouts. Settled success
+`/tidy icons off` persistently removes only the decorative Material Design icons
+from tidy tool blocks, plus the decorative `◆` heading and file icons from
+`/diff`. Built-in tool names replace their icons, without an empty icon column.
+The running dot, result arrow, timestamps, durations, colors, summaries, expansion,
+and compact layouts stay visible. Settled success
 and failure use Pi's native state backgrounds without redundant inline marks.
 `/tidy icons on|off` reloads after a change; `status` is read-only and repeated
 values do not write or reload.
@@ -176,14 +195,20 @@ restoration, and editor caveats — lives in [docs/pi-fff.md](docs/pi-fff.md).
 
 Mirrors a clean, theme-agnostic palette + icon mapping:
 
-| Tools                     | Icon | Color   |
-| ------------------------- | ---- | ------- |
-| `read` `grep` `find` `ls` | 📖   | cyan    |
-| `write` `edit`            | ✏️   | yellow  |
-| `bash`                    | ⚡   | magenta |
+| Tool     | Icon | Color   |
+| -------- | ---- | ------- |
+| `read`   | 󰈙    | cyan    |
+| `grep`   | 󰱼    | cyan    |
+| `find`   | 󰥨    | cyan    |
+| `ls`     | 󰉋    | cyan    |
+| `write`  | 󰆓    | yellow  |
+| `edit`   | 󱇧    | yellow  |
+| `bash`   | 󰆍    | magenta |
+| Fallback | 󱁤    | magenta |
 
 - Paths collapse `$HOME` → `~`
-- `edit` shows `+adds/-dels`; text `write` shows line count; `bash` shows status + elapsed time
+- `edit` shows `+adds/-dels`; text `write` shows line count; `bash` shows status
+- All measured tool results include execution duration
 - `grep` shows `N matches in M files`; `find`/`ls` show file or entry counts
 - Tool blocks start at the left edge without a decorative border or outer indent
 - Every line is truncated to the live terminal width (ANSI-aware) so nothing wraps
