@@ -51,7 +51,7 @@ describe("official Pi extension loader", () => {
         ((event: unknown, context: ExtensionContext) => Promise<void>) | undefined;
       assert.ok(sessionStart);
       await sessionStart({ type: "session_start", reason: "startup" }, ctx);
-      assert.ok(statuses["pi-token-tank"]?.includes("19.4%"));
+      assert.ok(statuses["pi-token-tank"]?.includes("▰▱▱▱"));
     } finally {
       globalThis.fetch = originalFetch;
       if (originalToken === undefined) delete process.env.CURSOR_SESSION_TOKEN;

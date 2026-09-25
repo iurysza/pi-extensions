@@ -147,7 +147,7 @@ describe("createTokenTank", () => {
       } as CredentialSourceLike;
       createTokenTank(f.api, credentials);
       await f.fire("session_start", {});
-      assert.ok(f.status["pi-token-tank"]?.includes("42.5%"));
+      assert.ok(f.status["pi-token-tank"]?.includes("▰▰▱▱"));
     } finally {
       globalThis.fetch = original;
     }
@@ -210,7 +210,7 @@ describe("createTokenTank", () => {
       assert.equal((process as NodeJS.Process & Record<symbol, unknown>)[sessionSymbol], "user%3A%3Aheader.payload.signature");
       assert.equal(({ ...process } as Record<symbol, unknown>)[sessionSymbol], undefined);
       await f.fire("session_start", {});
-      assert.ok(f.status["pi-token-tank"]?.includes("19.4%"));
+      assert.ok(f.status["pi-token-tank"]?.includes("▰▱▱▱"));
       await f.commands["token-tank"]!.handler("", f.ctx);
       const widget = f.widgets["pi-token-tank"]?.join("\n") ?? "";
       assert.ok(widget.includes("Cursor"));
@@ -264,7 +264,7 @@ describe("createTokenTank", () => {
       const reloaded = fakeAPI("cursor", ["cursor"]);
       createTokenTank(reloaded.api, fakeCredentials());
       await reloaded.fire("session_start", {});
-      assert.ok(reloaded.status["pi-token-tank"]?.includes("19.4%"));
+      assert.ok(reloaded.status["pi-token-tank"]?.includes("▰▱▱▱"));
     } finally {
       globalThis.fetch = originalFetch;
       if (originalToken === undefined) delete process.env.CURSOR_SESSION_TOKEN;
@@ -289,7 +289,7 @@ describe("createTokenTank", () => {
       registeredProviderIds.push("cursor");
       f.ctx.model = { provider: "cursor", id: "composer" } as ExtensionContext["model"];
       await f.fire("model_select", { model: f.ctx.model });
-      assert.ok(String(f.status["pi-token-tank"] ?? "").includes("19.4%"));
+      assert.ok(String(f.status["pi-token-tank"] ?? "").includes("▰▱▱▱"));
     } finally {
       globalThis.fetch = originalFetch;
       if (originalToken === undefined) delete process.env.CURSOR_SESSION_TOKEN;
@@ -328,7 +328,7 @@ describe("createTokenTank", () => {
       const f = fakeAPI("existing", registeredProviderIds);
       createTokenTank(f.api, fakeCredentials(), undefined, [existing]);
       await f.fire("session_start", {});
-      assert.ok(f.status["pi-token-tank"]?.includes("42%"));
+      assert.ok(f.status["pi-token-tank"]?.includes("▰▰▱▱"));
 
       registeredProviderIds.push("cursor");
       f.ctx.model = { provider: "cursor", id: "composer" } as ExtensionContext["model"];
@@ -385,7 +385,7 @@ describe("createTokenTank", () => {
     const f = fakeAPI("future");
     createTokenTank(f.api, fakeCredentials(), undefined, [future]);
     await f.fire("session_start", {});
-    assert.ok(f.status["pi-token-tank"]?.includes("42%"));
+    assert.ok(f.status["pi-token-tank"]?.includes("▰▰▱▱"));
   });
 
   it("registers without eagerly creating credential storage", () => {
@@ -486,7 +486,9 @@ describe("createTokenTank", () => {
 
   it("switches provider footer immediately", async () => {
     const original = globalThis.fetch;
-    globalThis.fetch = (async (url) => new Response(JSON.stringify(String(url).includes("chatgpt.com") ? codexUsage : kimiUsage))) as typeof fetch;
+    const changedKimiUsage = structuredClone(kimiUsage);
+    changedKimiUsage.limits[0]!.detail.remaining = 25;
+    globalThis.fetch = (async (url) => new Response(JSON.stringify(String(url).includes("chatgpt.com") ? codexUsage : changedKimiUsage))) as typeof fetch;
     try {
       const f = fakeAPI("openai-codex");
       const credentials = {
@@ -501,7 +503,7 @@ describe("createTokenTank", () => {
       f.ctx.model = { provider: "kimi-coding", id: "kimi" } as ExtensionContext["model"];
       await f.fire("model_select", { model: f.ctx.model });
       assert.notEqual(f.status["pi-token-tank"], codexFooter);
-      assert.ok(f.status["pi-token-tank"]?.includes("18"));
+      assert.ok(f.status["pi-token-tank"]?.includes("▰▰▱▱"));
     } finally { globalThis.fetch = original; }
   });
 

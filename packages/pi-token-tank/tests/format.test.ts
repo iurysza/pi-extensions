@@ -31,13 +31,13 @@ describe("footer gauges", () => {
 
   it("renders exact minimal and full shapes", () => {
     const quota = liveQuota("codex", 24, 15);
-    assert.equal(formatFooter(quota, "minimal", plainTheme, undefined, NOW_MS), "▰▱▱▱  24%  ↻ 3h 25m");
-    assert.equal(formatFooter(quota, "full", plainTheme, undefined, NOW_MS), "5h  ▰▱▱▱  24%  ↻ 3h 25m   ·   7d  ▰▱▱▱  15%  ↻ 4d 11h");
+    assert.equal(formatFooter(quota, "minimal", plainTheme, undefined, NOW_MS), "▰▱▱▱  󰔛 3h 25m");
+    assert.equal(formatFooter(quota, "full", plainTheme, undefined, NOW_MS), "5h  ▰▱▱▱  󰔛 3h 25m   ·   7d  ▰▱▱▱  󰔛 4d 11h");
   });
 
-  it("removes floating-point artifacts from percentages", () => {
-    const quota = liveQuota("codex", 7.000000000000001, 15);
-    assert.equal(formatFooter(quota, "minimal", plainTheme, undefined, NOW_MS), "▰▱▱▱  7%  ↻ 3h 25m");
+  it("changes gauge colour at 90%, not before", () => {
+    assert.ok(formatFooter(liveQuota("codex", 89.96, 15), "minimal", theme).includes("[success:▰▰▰▰]"));
+    assert.ok(formatFooter(liveQuota("codex", 90, 15), "minimal", theme).includes("[error:▰▰▰▰]"));
   });
 
   it("falls back to and labels a remaining weekly window", () => {
@@ -45,7 +45,7 @@ describe("footer gauges", () => {
     quota.windows = quota.windows.filter((window) => window.id === "weekly");
     assert.equal(
       formatFooter(quota, "minimal", plainTheme, ["five-hour"], NOW_MS),
-      "7d  ▰▰▱▱  34%  ↻ 4d 11h",
+      "▰▰▱▱  󰔛 4d 11h",
     );
   });
 
@@ -61,24 +61,21 @@ describe("footer gauges", () => {
     };
     assert.equal(
       formatFooter(quota, "full", plainTheme, ["billing-cycle", "auto", "api"]),
-      "cycle  ▰▱▱▱  19.4%   ·   auto  ▰▱▱▱  12.5%   ·   api  ▰▰▱▱  26.3%",
+      "cycle  ▰▱▱▱   ·   auto  ▰▱▱▱   ·   api  ▰▰▱▱",
     );
   });
 
   it("marks cached quota percentages as stale", () => {
     const quota = liveQuota("kimi", 48, 35);
     quota.state = "stale";
-    assert.equal(formatFooter(quota, "minimal", plainTheme, undefined, NOW_MS), "▰▰▱▱  48%~  ↻ 3h 25m");
+    assert.equal(formatFooter(quota, "minimal", plainTheme, undefined, NOW_MS), "▰▰▱▱~  󰔛 3h 25m");
   });
 
-  it("colors only rounded percentages at thresholds", () => {
-    const warning = formatFooter(liveQuota("codex", 70, 89), "full", theme);
-    assert.ok(warning.includes("[warning:70%]"));
-    assert.ok(warning.includes("[warning:89%]"));
-    assert.ok(warning.includes("[dim:5h  ▰▰▰▱  ]"));
-    assert.ok(!warning.includes("[warning:5h"));
-    assert.ok(formatFooter(liveQuota("codex", 69, 90), "full", theme).includes("[error:90%]"));
-    assert.ok(formatFooter(liveQuota("codex", 69.96, 15), "minimal", theme).includes("[warning:70%]"));
+  it("keeps labels dim and only colours gauges at the 90% threshold", () => {
+    const normal = formatFooter(liveQuota("codex", 70, 89), "full", theme);
+    assert.ok(normal.includes("[dim:5h  ][success:▰▰▰▱]"));
+    assert.ok(normal.includes("[dim:7d  ][success:▰▰▰▰]"));
+    assert.ok(formatFooter(liveQuota("codex", 69, 90), "full", theme).includes("[error:▰▰▰▰]"));
   });
 
   it("formats reset timestamps in local wall-clock time", () => {

@@ -118,10 +118,23 @@ activity uses these same cards. Recorded results are consumed once through a
 versioned callback protocol; missing or duplicate replay state fails before any
 built-in executor runs.
 
-The footer keeps core session state on line one and packs native `setStatus()`
-values onto one auxiliary line. Optional metadata sorts known slots by priority;
-unregistered statuses remain compatible at priority zero. The highest-priority
-slot is the only slot that may truncate.
+The footer shows `󱂵` and the home-relative path to the nearest loaded
+`AGENTS.md` folder and Git branch, then `󱜙` for the model and thinking level,
+followed by a four-cell context gauge and maximum window size. On narrow
+terminals, the instruction path shortens from the left while its icon stays.
+The folder, branch, and folder icon use the theme's `text` colour. The context
+gauge turns amber at 200k estimated tokens as an early caution, not a billing
+claim. In the final 10% before automatic compaction, its maximum-window label
+switches to estimated tokens remaining, such as `16k left`. The threshold is
+window size minus Pi's configured response reserve, including per-model
+overrides on Pi versions that support them. Saved settings refresh before each
+prompt. The countdown stays hidden when compaction is disabled or usage is
+unknown. Until Pi builds the first prompt, the folder shows `…`.
+Line two shows token quota, voice and MCP status, then temporary statuses
+and response age. Empty statuses disappear. Optional metadata sorts slots by
+priority; `placement: "core"` keeps a slot on line one after context usage.
+Unregistered statuses remain at priority zero. Only the highest-priority slot
+may truncate.
 
 ### Review
 

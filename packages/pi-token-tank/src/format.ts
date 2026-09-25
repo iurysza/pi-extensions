@@ -5,14 +5,8 @@ interface ThemeLike {
   fg(color: "success" | "warning" | "error" | "dim" | "text" | "accent", text: string): string;
 }
 
-function roundPercent(percent: number): number {
-  return Number(percent.toFixed(1));
-}
-
-function thresholdColor(percent: number): "success" | "warning" | "error" {
-  if (percent >= 90) return "error";
-  if (percent >= 70) return "warning";
-  return "success";
+function thresholdColor(percent: number): "success" | "error" {
+  return percent >= 90 ? "error" : "success";
 }
 
 function formatResetDuration(deltaMs: number): string {
@@ -56,11 +50,10 @@ function formatFooterWindow(
   theme: ThemeLike,
   nowMs: number,
 ): string {
-  const roundedPercent = roundPercent(window.usedPercent);
-  const percent = `${roundedPercent}%${stale ? "~" : ""}`;
-  const reset = window.resetsAt ? `  ↻ ${formatResetDuration(window.resetsAt - nowMs)}` : "";
+  const reset = window.resetsAt ? `  󰔛 ${formatResetDuration(window.resetsAt - nowMs)}` : "";
   const prefix = label ? `${window.shortLabel}  ` : "";
-  return `${theme.fg("dim", `${prefix}${formatGauge(window.usedPercent)}  `)}${theme.fg(thresholdColor(roundedPercent), percent)}${theme.fg("dim", reset)}`;
+  const gauge = theme.fg(thresholdColor(window.usedPercent), formatGauge(window.usedPercent));
+  return `${theme.fg("dim", prefix)}${gauge}${theme.fg("dim", `${stale ? "~" : ""}${reset}`)}`;
 }
 
 export function formatFooter(
@@ -79,7 +72,7 @@ export function formatFooter(
   const windows = selected.length > 0 ? selected : quota.windows.slice(0, 1);
   if (windows.length === 0) return theme.fg("dim", "—");
   const stale = quota.state === "stale";
-  const showLabels = mode === "full" || selected.length === 0;
+  const showLabels = mode === "full";
   return windows
     .map((window) => formatFooterWindow(window, showLabels, stale, theme, nowMs))
     .join(theme.fg("dim", "   ·   "));

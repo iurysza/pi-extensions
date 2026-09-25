@@ -5,6 +5,7 @@
  * All colors are resolved via theme roles (no hardcoded ANSI).
  */
 
+import { basename, dirname, isAbsolute, relative, sep } from "node:path";
 import { visibleWidth } from "@earendil-works/pi-tui";
 import { THINKING_ROLES } from "../shared/thinking-colors.js";
 
@@ -27,8 +28,8 @@ export function renderPath(
 	theme: ThemeFg,
 ): string {
 	if (budget < 10) return "";
-	if (visibleWidth(pathRaw) <= budget) return theme.fg("warning", pathRaw);
-	return theme.fg("warning", "…" + pathRaw.slice(-(budget - 1)));
+	if (visibleWidth(pathRaw) <= budget) return theme.fg("text", pathRaw);
+	return theme.fg("text", "…" + pathRaw.slice(-(budget - 1)));
 }
 
 export function buildPathString(cwd: string, branch: string | null): string {
@@ -38,17 +39,36 @@ export function buildPathString(cwd: string, branch: string | null): string {
 	return pwd + (branch ? ` (${branch})` : "");
 }
 
+export function nearestAgentsFolder(files: readonly { path: string }[], cwd: string): string | undefined {
+	let nearest: string | undefined;
+	for (const file of files) {
+		if (!/^AGENTS(?:\.override)?\.(?:md|MD)$/.test(basename(file.path))) continue;
+		const folder = dirname(file.path);
+		const below = relative(folder, cwd);
+		if (below === ".." || below.startsWith(`..${sep}`) || isAbsolute(below)) continue;
+		if (!nearest || folder.length > nearest.length) nearest = folder;
+	}
+	return nearest;
+}
+
 // ── Context Usage ──────────────────────────────────────────────────────
 
 export function renderContextUsage(
 	pct: number,
 	win: number,
+	used: number | null,
 	theme: { fg: (role: any, text: string) => string },
+	compaction?: { enabled: boolean; reserveTokens: number },
 ): string {
-	const raw = `${pct.toFixed(0)}%/${fmtTokens(win)}`;
-	if (pct > 90) return theme.fg("error", raw);
-	if (pct > 70) return theme.fg("warning", raw);
-	return theme.fg("success", raw);
+	const filled = Math.min(4, Math.ceil(Math.max(0, pct) / 25));
+	const role = used !== null && used >= 200_000 ? "warning" : "success";
+	const threshold = Math.max(0, win - (compaction?.reserveTokens ?? 0));
+	const remaining = used === null ? null : Math.max(0, threshold - used);
+	const nearCompaction = compaction?.enabled && win > 0 && remaining !== null
+		&& remaining <= threshold * 0.1;
+	const label = nearCompaction ? `${fmtTokens(Math.floor(remaining))} left` : fmtTokens(win);
+	return theme.fg(role, "▰".repeat(filled))
+		+ theme.fg("dim", "▱".repeat(4 - filled) + ` ${label}`);
 }
 
 // ── Model + Thinking ───────────────────────────────────────────────────
@@ -60,9 +80,9 @@ export function renderModelInfo(
 	theme: ThemeFg,
 ): { text: string; rawWidth: number } {
 	const thinkSuffix = thinking !== "off" ? ` • ${thinking}` : "";
-	const rawWidth = visibleWidth(`⚡ ${modelName} (${provider})${thinkSuffix}`);
+	const rawWidth = visibleWidth(`󱜙 ${modelName} (${provider})${thinkSuffix}`);
 
-	let text = theme.fg("accent", `⚡ ${modelName}`) + theme.fg("muted", ` (${provider})`);
+	let text = theme.fg("accent", `󱜙 ${modelName}`) + theme.fg("muted", ` (${provider})`);
 	if (thinking !== "off") {
 		const role = THINKING_ROLES[thinking] ?? THINKING_ROLES.off;
 		text += theme.fg("dim", " • ") + theme.fg(role, thinking);
