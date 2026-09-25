@@ -15,5 +15,5 @@ export function stashDraft(ui: EditorUI, copy: (text: string) => boolean = copyT
 		return;
 	}
 	ui.setEditorText("");
-	ui.notify("Draft copied to clipboard. Paste to restore it.", "info");
+	ui.notify("Draft copied to clipboard.", "info");
 }

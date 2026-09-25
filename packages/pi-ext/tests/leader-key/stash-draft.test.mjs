@@ -20,7 +20,7 @@ test("stash copies exact multiline text, then clears the editor", () => {
 	stashDraft(draft.ui, (text) => { copied.push(text); return true; });
 	assert.deepEqual(copied, ["first line\nsecond line  "]);
 	assert.equal(draft.text(), "");
-	assert.match(draft.notices[0].message, /Paste to restore/);
+	assert.equal(draft.notices[0].message, "Draft copied to clipboard.");
 });
 
 test("failed copy or empty input never destroys the draft", () => {
