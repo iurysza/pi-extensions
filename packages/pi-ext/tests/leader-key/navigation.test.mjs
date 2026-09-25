@@ -5,6 +5,7 @@ import { join } from "node:path";
 import test from "node:test";
 
 import { LeaderKeyOverlay } from "../../extensions/leader-key/index.ts";
+import { groupEntries } from "../../extensions/leader-key/layout.ts";
 import { withHerdrNavigationPassthrough } from "../../extensions/leader-key/herdr-navigation.ts";
 import {
 	ALL_THINKING_LEVELS,
@@ -186,6 +187,60 @@ test("arrow, Tab, Enter, and Escape palette controls still work", () => {
 	const cancelled = createOverlay([{ type: "action", ...action("p", "Plain") }]);
 	cancelled.overlay.handleInput("\x1b");
 	assert.equal(cancelled.selected(), null);
+});
+
+test("home entries can be grouped twice without moving their actions", () => {
+	const review = { type: "action", ...action("r", "Review") };
+	const spec = { type: "group", group: { key: "c", label: "Spec", items: [action("s", "Spec action")] } };
+	const home = [{ type: "action", ...action("e", "Extensions") }, review, spec];
+	const build = groupEntries(home, { key: "b", label: "Build", children: ["c", "r"] });
+	const nested = groupEntries(build, { key: "o", label: "More", children: ["b"] });
+	assert.deepEqual(nested.map((entry) => entry.type === "group" ? entry.group.key : entry.key), ["e", "o"]);
+	assert.deepEqual(nested[1].group.items[0].group.items, [spec, review]);
+	assert.equal(home.length, 3);
+	assert.throws(() => groupEntries(home, { key: "e", label: "Conflict", children: ["r"] }), /duplicate menu key e/);
+	assert.throws(() => groupEntries(home, { key: "b", label: "Bad", children: ["r", "r"] }), /duplicate menu key b/);
+
+	const { overlay, selected } = createOverlay(nested);
+	overlay.handleInput("o");
+	overlay.handleInput("b");
+	overlay.handleInput("c");
+	overlay.handleInput(CTRL_H); // Build
+	overlay.handleInput("r");
+	assert.equal(selected()?.action, noop);
+	assert.equal(selected()?.label, "Review");
+});
+
+test("nested Back restores the prior selection and nested expandable actions still work", () => {
+	const first = action("f", "First");
+	const second = action("s", "Second");
+	const nested = [{ type: "group", group: { key: "o", label: "More", items: [
+		{ type: "group", group: { key: "z", label: "Tools", items: [
+			{ type: "action", key: "e", label: "Expandable", action: noop, expandableItems: [first, second] },
+		] } },
+	] } }];
+	const { overlay, selected } = createOverlay(nested);
+	overlay.handleInput("o");
+	overlay.handleInput("z");
+	overlay.handleInput(CTRL_H); // More
+	overlay.handleInput(CTRL_H); // Root
+	overlay.handleInput("o");
+	overlay.handleInput("z");
+	const theme = { fg: (_role, text) => text, bold: (text) => text };
+	const rendered = new LeaderKeyOverlay(nested, theme, () => {});
+	rendered.handleInput("o");
+	rendered.handleInput("z");
+	assert.match(rendered.render(80).join("\n"), /More › Tools/);
+	overlay.handleInput("e");
+	assert.equal(selected()?.label, "Expandable");
+
+	const expanded = createOverlay(nested);
+	expanded.overlay.handleInput("o");
+	expanded.overlay.handleInput("z");
+	expanded.overlay.handleInput("\t");
+	expanded.overlay.handleInput(CTRL_J);
+	expanded.overlay.handleInput(ENTER);
+	assert.equal(expanded.selected(), second);
 });
 
 test("search ranks by relevance while empty search preserves grouped order", () => {

@@ -31,14 +31,21 @@ import { categorizeSkillCommands, skillCommandLabel } from "./skill-categories.j
 import { OverlayFrame } from "../shared/overlay.js";
 import { copyToClipboard } from "../pi-telescope/clipboard.js";
 import { saveLastResponse } from "../chat-to-md/index.js";
-import type { ActionItem, ActionGroup, TopLevelEntry } from "./types.js";
+import { entryKey, type ActionItem, type ActionGroup, type MenuEntry, type TopLevelEntry } from "./types.js";
+import { groupEntries } from "./layout.js";
 import { buildSessionEntries } from "./session-actions.js";
 import { buildLabelEntries } from "./label-actions.js";
+import { collectCommandMenus } from "./contributions.js";
 import { registerBridgeCommands } from "./context-helpers.js";
 import {
 	clearHerdrNavigationPassthrough,
 	withHerdrNavigationPassthrough,
 } from "./herdr-navigation.js";
+
+const ROOT_EXTENSION_MENU_IDS = ["themed-agents", "pi-voice"];
+const CONTRIBUTED_EXTENSION_COMMAND_NAMES = new Set(["team", "voice"]);
+// Move home entries by listing their existing keys; no action implementation needs to move.
+const HOME_GROUPS: { key: string; label: string; children: string[] }[] = [];
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Build top-level entries
@@ -48,7 +55,7 @@ function buildEntries(
 	pi: ExtensionAPI,
 	ctx: ExtensionContext,
 	openFavouriteModels: (ctx: ExtensionContext) => Promise<void>,
-): TopLevelEntry[] {
+): MenuEntry[] {
 	const entries: TopLevelEntry[] = [];
 
 	// ── Session ─────────────────────────────────────────────────────────
@@ -56,6 +63,8 @@ function buildEntries(
 
 	// ── Labels ──────────────────────────────────────────────────────────
 	entries.push(buildLabelEntries(pi));
+
+	const commands = pi.getCommands();
 
 	// ── Scoped models ───────────────────────────────────────────────────
 	entries.push({
@@ -100,7 +109,6 @@ function buildEntries(
 	});
 
 	// ── Extension commands (auto-discovered, searchable picker) ─────────
-	const commands = pi.getCommands();
 	const extCommands = commands.filter((c) => c.source === "extension");
 
 	const builtinCommandNames = new Set([
@@ -111,7 +119,7 @@ function buildEntries(
 		"lk-navigate", "lk-switch", // internal bridge commands
 	]);
 
-	const customCommands = extCommands.filter((c) => !builtinCommandNames.has(c.name));
+	const customCommands = extCommands.filter((c) => !builtinCommandNames.has(c.name) && !CONTRIBUTED_EXTENSION_COMMAND_NAMES.has(c.name));
 
 	if (customCommands.length > 0) {
 		const extItems = customCommands.map((cmd) => ({
@@ -395,14 +403,12 @@ function buildEntries(
 		},
 	});
 
-	return entries;
+	return HOME_GROUPS.reduce<MenuEntry[]>((menu, group) => groupEntries(menu, group), entries);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Overlay component
 // ─────────────────────────────────────────────────────────────────────────────
-
-type View = { type: "root" } | { type: "group"; group: ActionGroup };
 
 const MAX_EXPANDED_VISIBLE = 12;
 
@@ -431,17 +437,17 @@ function parsePaletteKey(data: string): { key: string; shifted: boolean } | null
 }
 
 export class LeaderKeyOverlay {
-	private view: View = { type: "root" };
-	private entries: TopLevelEntry[];
+	private entries: MenuEntry[];
+	private groups: ActionGroup[] = [];
+	private highlights = [0];
 	private theme: Theme;
 	private done: (result: ActionItem | null) => void;
-	private highlightedIndex = 0;
 	private expandedEntryIndex: number | null = null;
 	private expandedHighlightIndex = 0;
 	private scrollOffset = 0;
 
 	constructor(
-		entries: TopLevelEntry[],
+		entries: MenuEntry[],
 		theme: Theme,
 		done: (result: ActionItem | null) => void,
 	) {
@@ -450,30 +456,26 @@ export class LeaderKeyOverlay {
 		this.done = done;
 	}
 
+	private get currentEntries(): MenuEntry[] {
+		return this.groups.at(-1)?.items ?? this.entries;
+	}
+
+	private get highlightedIndex(): number {
+		return this.highlights[this.highlights.length - 1];
+	}
+
+	private set highlightedIndex(value: number) {
+		this.highlights[this.highlights.length - 1] = value;
+	}
+
 	private get currentItems(): Array<{ key: string; label: string; description?: string }> {
 		if (this.expandedEntryIndex !== null) {
-			const entry = this.entries[this.expandedEntryIndex];
-			if (entry?.type === "action" && entry.expandableItems) {
-				return entry.expandableItems;
-			}
+			const entry = this.currentEntries[this.expandedEntryIndex];
+			if (entry && "expandableItems" in entry && entry.expandableItems) return entry.expandableItems;
 		}
-		if (this.view.type === "root") {
-			return this.entries.map((e) => {
-				if (e.type === "group") {
-					return {
-						key: e.group.key,
-						label: e.group.label,
-						description: `${e.group.items.length} action${e.group.items.length !== 1 ? "s" : ""}`,
-					};
-				}
-				return {
-					key: e.key,
-					label: e.label,
-					description: e.description,
-				};
-			});
-		}
-		return this.view.group.items;
+		return this.currentEntries.map((entry) => "type" in entry && entry.type === "group"
+			? { key: entry.group.key, label: entry.group.label, description: `${entry.group.items.length} item${entry.group.items.length !== 1 ? "s" : ""}` }
+			: { key: entryKey(entry), label: entry.label, description: entry.description });
 	}
 
 	private get isExpanded(): boolean {
@@ -481,9 +483,8 @@ export class LeaderKeyOverlay {
 	}
 
 	private expandCurrent(): void {
-		if (this.view.type !== "root") return;
-		const entry = this.entries[this.highlightedIndex];
-		if (entry?.type === "action" && entry.expandableItems && entry.expandableItems.length > 0) {
+		const entry = this.currentEntries[this.highlightedIndex];
+		if (entry && "expandableItems" in entry && entry.expandableItems && entry.expandableItems.length > 0) {
 			this.expandedEntryIndex = this.highlightedIndex;
 			this.expandedHighlightIndex = 0;
 			this.scrollOffset = 0;
@@ -508,9 +509,9 @@ export class LeaderKeyOverlay {
 			this.collapseExpanded();
 			return;
 		}
-		if (this.view.type === "group") {
-			this.view = { type: "root" };
-			this.highlightedIndex = 0;
+		if (this.groups.length > 0) {
+			this.groups.pop();
+			this.highlights.pop();
 		} else {
 			this.done(null);
 		}
@@ -518,35 +519,21 @@ export class LeaderKeyOverlay {
 
 	private selectHighlighted(): void {
 		if (this.isExpanded) {
-			const entry = this.entries[this.expandedEntryIndex!];
-			if (entry?.type === "action" && entry.expandableItems) {
+			const entry = this.currentEntries[this.expandedEntryIndex!];
+			if (entry && "expandableItems" in entry && entry.expandableItems) {
 				const action = entry.expandableItems[this.expandedHighlightIndex];
-				if (action) {
-					this.done(action);
-				}
+				if (action) this.done(action);
 			}
 			return;
 		}
-
-		const items = this.currentItems;
-		if (this.highlightedIndex < 0 || this.highlightedIndex >= items.length) return;
-
-		const item = items[this.highlightedIndex];
-		if (this.view.type === "root") {
-			this.handleRootSelection(item.key);
-			return;
-		}
-
-		const action = this.view.group.items.find((candidate) => candidate.key === item.key);
-		if (action) {
-			this.done(action);
-		}
+		const entry = this.currentEntries[this.highlightedIndex];
+		if (entry) this.selectEntry(entry);
 	}
 
 	private enterOrExpand(): void {
-		if (!this.isExpanded && this.view.type === "root") {
-			const entry = this.entries[this.highlightedIndex];
-			if (entry?.type === "action" && entry.expandableItems && entry.expandableItems.length > 0) {
+		if (!this.isExpanded) {
+			const entry = this.currentEntries[this.highlightedIndex];
+			if (entry && "expandableItems" in entry && entry.expandableItems?.length) {
 				this.expandCurrent();
 				return;
 			}
@@ -567,11 +554,8 @@ export class LeaderKeyOverlay {
 
 		// Tab: toggle expand/collapse for expandable items
 		if (matchesKey(data, "tab")) {
-			if (this.isExpanded) {
-				this.collapseExpanded();
-			} else if (this.view.type === "root") {
-				this.expandCurrent();
-			}
+			if (this.isExpanded) this.collapseExpanded();
+			else this.expandCurrent();
 			return;
 		}
 
@@ -615,8 +599,8 @@ export class LeaderKeyOverlay {
 
 			if (this.isExpanded) {
 				// In expanded mode, direct key jumps to item starting with that letter
-				const entry = this.entries[this.expandedEntryIndex!];
-				if (entry?.type === "action" && entry.expandableItems) {
+				const entry = this.currentEntries[this.expandedEntryIndex!];
+				if (entry && "expandableItems" in entry && entry.expandableItems) {
 					const idx = entry.expandableItems.findIndex((a) => a.key === key || a.label.toLowerCase().startsWith(key));
 					if (idx >= 0) {
 						this.expandedHighlightIndex = idx;
@@ -626,14 +610,8 @@ export class LeaderKeyOverlay {
 				return;
 			}
 
-			if (this.view.type === "root") {
-				this.handleRootSelection(key, shifted);
-			} else {
-				const action = this.view.group.items.find((a) => a.key === key);
-				if (action) {
-					this.done(this.resolveAction(action, shifted));
-				}
-			}
+			const entry = this.currentEntries.find((candidate) => entryKey(candidate) === key);
+			if (entry) this.selectEntry(entry, shifted);
 		}
 	}
 
@@ -645,26 +623,23 @@ export class LeaderKeyOverlay {
 		}
 	}
 
-	private handleRootSelection(key: string, shifted = false): void {
-		const entry = this.entries.find((e) => {
-			if (e.type === "group") return e.group.key === key;
-			return e.key === key;
-		});
-		if (!entry) return;
-
-		if (entry.type === "group") {
-			this.view = { type: "group", group: entry.group };
-			this.highlightedIndex = 0;
-		} else {
-			// Direct action — wrap it as an ActionItem and fire
-			this.done(this.resolveAction({
-				key: entry.key,
-				label: entry.label,
-				description: entry.description,
-				action: entry.action,
-				shiftAction: entry.shiftAction,
-			}, shifted));
+	private selectEntry(entry: MenuEntry, shifted = false): void {
+		if ("type" in entry && entry.type === "group") {
+			this.groups.push(entry.group);
+			this.highlights.push(0);
+			return;
 		}
+		if (!("type" in entry)) {
+			this.done(this.resolveAction(entry, shifted));
+			return;
+		}
+		this.done(this.resolveAction({
+			key: entry.key,
+			label: entry.label,
+			description: entry.description,
+			action: entry.action,
+			shiftAction: entry.shiftAction,
+		}, shifted));
 	}
 
 	render(width: number): string[] {
@@ -676,16 +651,15 @@ export class LeaderKeyOverlay {
 		lines.push(f.top());
 
 		if (this.isExpanded) {
-			const entry = this.entries[this.expandedEntryIndex!];
-			const label = entry?.type === "action" ? entry.label : "";
-			const breadcrumb = th.fg("dim", "< ") + th.fg("accent", th.bold(label)) + th.fg("dim", " (expanded)");
-			lines.push(f.row(breadcrumb));
-		} else if (this.view.type === "root") {
+			const entry = this.currentEntries[this.expandedEntryIndex!];
+			const label = entry && !("type" in entry && entry.type === "group") ? entry.label : "";
+			const breadcrumb = th.fg("dim", "< ") + th.fg("accent", th.bold([...this.groups.map((group) => group.label), label].join(" › "))) + th.fg("dim", " (expanded)");
+			lines.push(f.rowTruncated(breadcrumb));
+		} else if (this.groups.length === 0) {
 			lines.push(f.row(th.fg("accent", th.bold("Leader Key"))));
 		} else {
-			const g = this.view.group;
-			const breadcrumb = th.fg("dim", "< ") + th.fg("accent", th.bold(g.label));
-			lines.push(f.row(breadcrumb));
+			const breadcrumb = th.fg("dim", "< ") + th.fg("accent", th.bold(this.groups.map((group) => group.label).join(" › ")));
+			lines.push(f.rowTruncated(breadcrumb));
 		}
 
 		lines.push(f.separator());
@@ -733,18 +707,13 @@ export class LeaderKeyOverlay {
 					? th.fg("accent", th.bold(item.label))
 					: th.fg("text", item.label);
 
-				// Show a chevron for groups in root view, or tab hint for highlighted expandable items
+				// Show a chevron for groups at any depth, or tab hint for expandable items.
 				let suffix = "";
-				if (this.view.type === "root") {
-					const entry = this.entries.find((e) => {
-						if (e.type === "group") return e.group.key === item.key;
-						return e.key === item.key;
-					});
-					if (entry?.type === "group") {
-						suffix = " " + th.fg("dim", ">");
-					} else if (isHighlighted && entry?.type === "action" && entry.expandableItems) {
-						suffix = " " + th.fg("dim", "[tab expand]");
-					}
+				const entry = this.currentEntries[i];
+				if (entry && "type" in entry && entry.type === "group") {
+					suffix = " " + th.fg("dim", ">");
+				} else if (isHighlighted && entry && "expandableItems" in entry && entry.expandableItems) {
+					suffix = " " + th.fg("dim", "[tab expand]");
 				}
 
 				let line = `${isHighlighted ? "> " : "  "}${keyBadge} ${label}${suffix}`;
@@ -762,7 +731,7 @@ export class LeaderKeyOverlay {
 
 		if (this.isExpanded) {
 			lines.push(f.row(th.fg("dim", "↑↓ or C-j/k scroll | C-l/enter run | C-h/tab collapse | esc back")));
-		} else if (this.view.type === "root") {
+		} else if (this.groups.length === 0) {
 			lines.push(f.row(th.fg("dim", "C-j/k nav | C-l enter/expand | key select | tab expand | esc close")));
 		} else {
 			lines.push(f.row(th.fg("dim", "C-j/k nav | C-h back | C-l/enter run | key run | esc close")));
@@ -801,7 +770,7 @@ export default function leaderKeyExtension(pi: ExtensionAPI) {
 	async function openLeaderKey(ctx: ExtensionContext) {
 		if (!ctx.hasUI) return;
 
-		const entries = buildEntries(pi, ctx, openFavouriteModels);
+		const entries = collectCommandMenus(pi, buildEntries(pi, ctx, openFavouriteModels), (message) => ctx.ui.notify(message, "warning"), ROOT_EXTENSION_MENU_IDS);
 
 		const selected = await withHerdrNavigationPassthrough(() => ctx.ui.custom<ActionItem | null>(
 			(tui, theme, _kb, done) => {

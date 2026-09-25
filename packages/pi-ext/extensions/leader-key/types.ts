@@ -15,10 +15,16 @@ export interface ActionItem {
 export interface ActionGroup {
 	key: string; // chord key to open this group
 	label: string;
-	items: ActionItem[];
+	items: MenuEntry[];
 }
 
-/** Top-level entry: either a group (chord → submenu) or a direct action */
 export type TopLevelEntry =
 	| { type: "group"; group: ActionGroup }
 	| { type: "action"; key: string; label: string; description?: string; action: (ctx: ExtensionContext) => void | Promise<void>; shiftAction?: (ctx: ExtensionContext) => void | Promise<void>; expandableItems?: ActionItem[] };
+
+/** Existing group children are ActionItems; nested groups and moved home entries use TopLevelEntry. */
+export type MenuEntry = TopLevelEntry | ActionItem;
+
+export function entryKey(entry: MenuEntry): string {
+	return "type" in entry && entry.type === "group" ? entry.group.key : entry.key;
+}
