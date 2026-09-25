@@ -5,6 +5,7 @@ import { timeDivider, type ToolTimeline } from "./tidy/timeline.js";
 import { formatElapsed } from "./tidy/vendor/pi-tidy-core/index.js";
 
 export const CONVERSATION_TIMELINE_ENTRY = "pi-conversation-timeline";
+const RUN_TOTAL_DISPLAY_THRESHOLD_MS = 5 * 60_000;
 
 type Outcome = "completed" | "stopped" | "failed";
 export type TimelineEntry =
@@ -68,6 +69,8 @@ export function registerConversationTimeline(pi: ExtensionAPI, clock: ToolTimeli
   pi.registerEntryRenderer(CONVERSATION_TIMELINE_ENTRY, (entry, _options, theme) => {
     const data = readTimelineEntry(entry.data);
     if (!data) return undefined;
+    // Filter at render time so restored short turns also stay hidden, without a spacer.
+    if (data.kind === "run-end" && data.elapsedMs < RUN_TOTAL_DISPLAY_THRESHOLD_MS) return undefined;
     return {
       invalidate() {},
       render: (width) => [renderTimelineEntry(data, width, theme)],

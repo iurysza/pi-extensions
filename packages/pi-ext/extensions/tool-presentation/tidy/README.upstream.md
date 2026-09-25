@@ -59,8 +59,10 @@ switches and tree navigation restore timing from the active branch.
 
 Conversation dividers and response totals are custom session entries, excluded
 from model context. The working indicator shows elapsed response time while Pi
-is active. Once the run fully settles, the transcript shows `Completed in 2m 12s`.
-An aborted or failed run shows `Stopped after` or `Failed after` instead.
+is active. Once a run lasting at least five minutes fully settles, the transcript
+shows its total, such as `Completed in 5m 12s`. An aborted or failed run shows
+`Stopped after` or `Failed after` under the same threshold rule. Shorter totals
+remain stored but hidden, including when loading older sessions.
 
 The total includes retries, tool execution, and waits during the active run.
 Queued continuations that keep the run active share its total. Idle time between

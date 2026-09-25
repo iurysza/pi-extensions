@@ -206,6 +206,33 @@ test("the working indicator updates only in TUI and releases its timer at settle
   assert.deepEqual(headless.working, []);
 });
 
+test("turn totals appear only from five minutes, including after reload", async (t) => {
+  let now = start;
+  t.mock.method(Date, "now", () => now);
+  for (const [stopReason, label] of [["stop", "Completed in"], ["aborted", "Stopped after"], ["error", "Failed after"]]) {
+    for (const elapsedMs of [0, 9_000, 299_999, 300_000, 300_001, 360_000]) {
+      now = start;
+      const h = await harness();
+      await h.fire("agent_start");
+      now += elapsedMs;
+      await h.fire("agent_end", { messages: [assistant("Done", stopReason)] });
+      await h.fire("agent_settled");
+      const data = h.appended.at(-1);
+      assert.equal(data.elapsedMs, elapsedMs, "short turns still retain their timing");
+      const restored = await harness({ manager: h.manager });
+      const saved = h.manager.getBranch().find((entry) => entry.type === "custom");
+      for (const [host, entry] of [[h, { data }], [restored, saved]] as const) {
+        const component = host.renderers.get(CONVERSATION_TIMELINE_ENTRY)!(entry, {}, theme);
+        if (elapsedMs < 300_000) {
+          assert.equal(component, undefined, "hidden totals must not create a transcript spacer");
+        } else {
+          assert.equal(component.render(72)[0], `${label} ${elapsedMs < 360_000 ? "5m 00s" : "6m 00s"}`);
+        }
+      }
+    }
+  }
+});
+
 test("clock dividers use visible borders while timestamps and completion totals remain dim", async () => {
   const h = await harness();
   const calls: { color: string; text: string }[] = [];
@@ -226,8 +253,8 @@ test("clock dividers use visible borders while timestamps and completion totals 
     if (width >= 9) assert.ok(calls.some(({ color, text }) => color === "dim" && text.includes("14:32")));
   }
   calls.length = 0;
-  renderer({ data: { kind: "run-end", at: start, startedAt: start, elapsedMs: 8_000, outcome: "completed" } }, {}, palette).render(72);
-  assert.deepEqual(calls, [{ color: "dim", text: "Completed in 8s" }]);
+  renderer({ data: { kind: "run-end", at: start, startedAt: start, elapsedMs: 300_000, outcome: "completed" } }, {}, palette).render(72);
+  assert.deepEqual(calls, [{ color: "dim", text: "Completed in 5m 00s" }]);
 });
 
 test("saved timeline entries render stably at narrow widths and reject malformed data", async () => {
@@ -239,7 +266,7 @@ test("saved timeline entries render stably at narrow widths and reject malformed
   }
   for (const data of [
     { kind: "minute", at: start } as const,
-    { kind: "run-end", at: start + 122_000, startedAt: start, elapsedMs: 122_000, outcome: "completed" } as const,
+    { kind: "run-end", at: start + 302_000, startedAt: start, elapsedMs: 302_000, outcome: "completed" } as const,
   ]) {
     const component = renderer({ data }, {}, theme);
     for (const width of [1, 8, 28, 72]) {
