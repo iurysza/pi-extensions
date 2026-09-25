@@ -1,0 +1,108 @@
+{
+  "model": "claude-opus-5-5",
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "read a.txt"
+        }
+      ]
+    },
+    {
+      "role": "system",
+      "content": "# Environment\nYou have been invoked in the following environment: \n - Primary working directory: /home/user/.cache/pi-claude-code/cwd\n - Is a git repository: false\n - Platform: linux\n - Shell: unknown\n - OS Version: Linux\n\nYou are powered by the model named Opus 5.5. The exact model ID is claude-opus-5-5. Assistant knowledge cutoff is June 2026.",
+      "output_config": {
+        "effort": "medium"
+      }
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "thinking",
+          "thinking": "secret chain",
+          "signature": "SIG_abc123=="
+        },
+        {
+          "type": "redacted_thinking",
+          "data": "REDACTED_blob"
+        },
+        {
+          "type": "tool_use",
+          "id": "toolu_01",
+          "name": "mcp__pi__read",
+          "input": {
+            "path": "a.txt"
+          }
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "tool_result",
+          "tool_use_id": "toolu_01",
+          "content": "file body"
+        }
+      ]
+    },
+    {
+      "role": "system",
+      "content": [
+        {
+          "type": "text",
+          "text": "Today's date is 2026-09-25.",
+          "cache_control": {
+            "type": "ephemeral",
+            "ttl": "1h"
+          }
+        }
+      ]
+    }
+  ],
+  "system": [
+    {
+      "type": "text",
+      "text": "x-anthropic-billing-header: cc_version=2.1.282.f6e; cc_entrypoint=sdk-cli;"
+    },
+    {
+      "type": "text",
+      "text": "You are a Claude agent, built on Anthropic's Claude Agent SDK.",
+      "cache_control": {
+        "type": "ephemeral",
+        "ttl": "1h"
+      }
+    },
+    {
+      "type": "text",
+      "text": "You are a test.\n",
+      "cache_control": {
+        "type": "ephemeral",
+        "ttl": "1h"
+      }
+    }
+  ],
+  "tools": [],
+  "metadata": {
+    "user_id": "<scrubbed>"
+  },
+  "max_tokens": 128000,
+  "thinking": {
+    "type": "adaptive"
+  },
+  "context_management": {
+    "edits": [
+      {
+        "type": "clear_thinking_20251015",
+        "keep": "all"
+      }
+    ]
+  },
+  "output_config": {
+    "effort": "medium"
+  },
+  "stream": true
+}
