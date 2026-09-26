@@ -32,13 +32,27 @@ Related docs:
 - [`Operations`](./OPERATIONS.md)
 - [`Watcher performance`](./WATCHER_PERFORMANCE.md)
 
-## 3. Replace polling when Herdr exposes an event
+## 3. Make face placement work outside the verified ultrawide viewport
+
+**Reported after a restart, 2026-08-08.** The current placement only stays inside Herdr's sidebar at the verified `3440 × 1440` ultrawide viewport. At other terminal-window sizes or display modes on the same computer, the face extends beyond the sidebar boundary.
+
+The replacement must derive placement from the actual available sidebar/viewport geometry or otherwise fail safely within it. It must not treat one display resolution as a general layout contract. Verify the native ultrawide mode and at least one non-native window size.
+
+## 4. Make focus transitions reliably hide or restore Ghost
+
+**Reported after a restart, 2026-08-08.** Moving focus between Herdr panes is unreliable: Ghost may remain visible in a pane without Ghost/Pi support, update late, or retain the wrong lifecycle state.
+
+The global Ghostty shader must turn off promptly when the focused pane is ineligible, then restore only the focused eligible pane's remembered state. Verify rapid transitions between an eligible Pi pane and an ineligible pane after a clean restart.
+
+This work belongs with the explicit global control ownership in section 1; do not add another independent focus heuristic.
+
+## 5. Replace polling when Herdr exposes an event
 
 The Node watcher removes client-side process churn, but still polls `pane.layout`. If Herdr adds a trustworthy sidebar visibility event, replace polling rather than layering a second heuristic on top of it.
 
 Do not guess hidden-sidebar behavior from geometry before that API exists.
 
-## 4. Keep the docs honest
+## 6. Keep the docs honest
 
 As behavior changes, keep these maps aligned:
 
