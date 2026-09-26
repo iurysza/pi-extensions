@@ -1,3 +1,4 @@
+import { fetchClaudeCodeQuota } from "./claude-code.js";
 import { fetchCodexQuota } from "./codex.js";
 import { fetchCopilotQuota } from "./copilot.js";
 import { fetchCursorQuota } from "./cursor.js";
@@ -6,6 +7,14 @@ import { fetchXaiQuota } from "./xai.js";
 import type { QuotaProvider } from "./types.js";
 
 export const providers: readonly QuotaProvider[] = [
+  {
+    id: "claude-code",
+    label: "Claude Code",
+    matchesModel: (model) => model?.provider === "claude-code",
+    fetch: fetchClaudeCodeQuota,
+    credentialsHint: "Run claude auth login in a terminal.",
+    footerWindows: { minimal: ["five-hour"], full: ["five-hour", "weekly"] },
+  },
   {
     id: "codex",
     label: "Codex",

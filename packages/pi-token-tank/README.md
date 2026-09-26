@@ -26,6 +26,7 @@ Authenticate the providers you use, then restart Pi or run `/reload`:
 
 | Provider | Subscription | Quota |
 | --- | --- | --- |
+| Claude Code | `claude auth login` | 5-hour and weekly windows |
 | OpenAI Codex | Pi `/login openai-codex` | 5-hour and weekly windows |
 | Kimi Coding | Pi `/login kimi-coding` or `KIMI_API_KEY` | 5-hour and weekly windows |
 | GitHub Copilot | Pi `/login github-copilot` | Monthly premium requests |
@@ -63,6 +64,14 @@ request failed without cached data.
 The selected mode is stored in `pi-token-tank.json` under Pi's agent directory.
 The file contains only the footer mode—never credentials or quota data.
 
+## Claude Code login
+
+Token Tank reads the Claude Code CLI's existing OAuth login from macOS Keychain
+or, with `CLAUDE_CONFIG_DIR` set, from that directory's `.credentials.json`.
+On other systems it reads `~/.claude/.credentials.json`. It uses the access token
+only for a read-only quota request and does not refresh or store credentials.
+If the token expires, use `claude auth login`.
+
 ## Cursor setup
 
 Token Tank detects Cursor through Pi's public model registry. Install a Pi
@@ -91,7 +100,7 @@ process memory, and never logs or persists it.
 - Preserves last-good data when a later request fails.
 - Keeps normalized quota only in the process-memory cache.
 
-GitHub Copilot, Cursor, and xAI quota depend on read-only undocumented
+Claude Code, GitHub Copilot, Cursor, and xAI quota depend on read-only undocumented
 endpoints. Those endpoints can change without notice. Raw responses, tokens,
 and quota snapshots are never logged or persisted.
 

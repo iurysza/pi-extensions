@@ -119,6 +119,7 @@ function fakeAPI(provider = "openai-codex", registeredProviderIds: string[] = []
 
 describe("createTokenTank", () => {
   it("routes supported model families and rejects unsupported providers", () => {
+    assert.equal(providerForModel({ provider: "claude-code", id: "claude-opus-5-5" } as ExtensionContext["model"]), "claude-code");
     assert.equal(providerForModel({ provider: "openai", id: "gpt" } as ExtensionContext["model"]), "codex");
     assert.equal(providerForModel({ provider: "openai-codex", id: "gpt" } as ExtensionContext["model"]), "codex");
     assert.equal(providerForModel({ provider: "kimi-coding", id: "kimi" } as ExtensionContext["model"]), "kimi");
@@ -130,6 +131,36 @@ describe("createTokenTank", () => {
     assert.equal(providerForModel({ provider: "github-copilot", id: "grok-4.5" } as ExtensionContext["model"]), "copilot");
     assert.equal(providerForModel({ provider: "cursor", id: "composer" } as ExtensionContext["model"]), "cursor");
     assert.equal(providerForModel({ provider: "anthropic", id: "claude" } as ExtensionContext["model"]), undefined);
+  });
+
+  it("renders Claude Code subscription usage for the active model", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "claude-footer-"));
+    const previous = process.env.CLAUDE_CONFIG_DIR;
+    const originalFetch = globalThis.fetch;
+    process.env.CLAUDE_CONFIG_DIR = dir;
+    await (await import("node:fs/promises")).writeFile(join(dir, ".credentials.json"), JSON.stringify({
+      claudeAiOauth: { accessToken: "test-token", expiresAt: Date.now() + 60_000 },
+    }));
+    globalThis.fetch = (async (url) => {
+      assert.equal(String(url), "https://api.anthropic.com/api/oauth/usage");
+      return new Response(JSON.stringify({
+        five_hour: { utilization: 25, resets_at: "2026-09-26T15:00:00Z" },
+        seven_day: { utilization: 60, resets_at: "2026-09-30T15:00:00Z" },
+      }));
+    }) as typeof fetch;
+    try {
+      const f = fakeAPI("claude-code");
+      createTokenTank(f.api, fakeCredentials());
+      await f.fire("session_start", {});
+      assert.ok(f.status["pi-token-tank"]?.includes("▰▱▱▱"));
+      await f.commands["token-tank"]!.handler("full", f.ctx);
+      assert.ok(f.status["pi-token-tank"]?.includes("7d"));
+    } finally {
+      globalThis.fetch = originalFetch;
+      if (previous === undefined) delete process.env.CLAUDE_CONFIG_DIR;
+      else process.env.CLAUDE_CONFIG_DIR = previous;
+      await rm(dir, { recursive: true, force: true });
+    }
   });
 
   it("renders xAI SuperGrok quota in the footer", async () => {
@@ -474,7 +505,7 @@ describe("createTokenTank", () => {
       assert.ok(widget.includes("25% used"));
       assert.ok(widget.includes("43% used") || widget.includes("42% used"));
       assert.equal(f.widgetKinds["pi-token-tank"], "component");
-      assert.ok((f.widgets["pi-token-tank"]?.length ?? Infinity) <= 6);
+      assert.ok((f.widgets["pi-token-tank"]?.length ?? Infinity) <= 7);
       assert.ok(f.widgets["pi-token-tank"]?.some((line) => line.includes("/token-tank hides")));
       assert.ok(f.widgetRenderers["pi-token-tank"]?.(32).every((line) => visibleWidth(line) <= 32));
       await f.commands["token-tank"]!.handler("", f.ctx);

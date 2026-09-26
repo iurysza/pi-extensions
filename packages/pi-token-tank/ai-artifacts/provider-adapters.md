@@ -46,13 +46,14 @@ const provider: QuotaProvider = {
 ## Security boundary
 
 - Use direct, read-only quota endpoints.
-- Resolve keys through `ctx.modelRegistry`; use exported `readStoredCredential` only for read-only credential metadata, except for the explicitly approved Copilot case below.
+- Resolve Pi credentials through `ctx.modelRegistry`; use exported `readStoredCredential` only for read-only credential metadata, except for the approved Copilot case below. Claude Code has a separate CLI-owned login exception.
 - Let the registered provider own OAuth refresh. A forced 401 refresh may be cached in process, but Token Tank never writes Pi credentials.
 - Do not add a separate login flow, automatically read browser cookies, scrape dashboard pages, probe models, or spawn subprocess fallbacks.
 - Never persist tokens, account IDs, raw provider responses, or normalized quota. Raw responses are never cached; normalized quota intentionally uses the coordinator's in-memory five-minute/stale cache. The Cursor session token is retained only in the process-only slot documented below, never in the coordinator cache.
 
 Current provider-controlled data sources:
 
+- Claude Code: `https://api.anthropic.com/api/oauth/usage`
 - Codex: `https://chatgpt.com/backend-api/wham/usage`
 - Kimi: `https://api.kimi.com/coding/v1/usages`
 - GitHub Copilot: `https://api.github.com/copilot_internal/user`
@@ -61,7 +62,9 @@ Current provider-controlled data sources:
 
 xAI matches Pi provider id `xai` only. Copilot-hosted Grok models stay on the Copilot adapter. The adapter reads the SuperGrok OAuth access token through `getApiKey("xai")` and does not use API keys or `XAI_API_KEY`. Prefer `creditUsagePercent` and `currentPeriod`; fall back to legacy `used`/`monthlyLimit` cents. Do not invent a percentage when those fields are absent. The endpoint is undocumented and may change without notice.
 
-Copilot is the only approved exception to metadata-only stored-credential access. Pi's public model registry exposes the short-lived Copilot session token, but GitHub's quota endpoint requires the stored GitHub OAuth token. The adapter may read the OAuth `refresh` field in memory solely for that direct GET. It must never log, return, refresh, mutate, cache, or persist the token or raw response. The fixed endpoint supports GitHub.com, including Enterprise Cloud seats hosted there; stored custom GitHub Enterprise Server domains are rejected before any request. The endpoint is undocumented and may change without notice.
+Claude Code is a separate approved exception: its login is owned by the CLI, not Pi's ModelRegistry. On macOS, the adapter calls `security find-generic-password` to read only the `Claude Code-credentials` Keychain item; this is credential access, not a model or quota subprocess fallback. With `CLAUDE_CONFIG_DIR` set, or on other systems, it reads `.credentials.json` from the CLI config directory. It uses only an unexpired OAuth access token for a direct read-only GET. It does not refresh credentials or keep the token in the coordinator cache. A failed or missing login cannot claim quota. The endpoint is undocumented and may change without notice.
+
+Copilot is the only approved exception to metadata-only Pi stored-credential access. Pi's public model registry exposes the short-lived Copilot session token, but GitHub's quota endpoint requires the stored GitHub OAuth token. The adapter may read the OAuth `refresh` field in memory solely for that direct GET. It must never log, return, refresh, mutate, cache, or persist the token or raw response. The fixed endpoint supports GitHub.com, including Enterprise Cloud seats hosted there; stored custom GitHub Enterprise Server domains are rejected before any request. The endpoint is undocumented and may change without notice.
 
 Cursor is an explicitly approved private-endpoint exception. Runtime detection uses only `ctx.modelRegistry.getRegisteredProviderIds()` and the active model provider; Token Tank never scans packages or filesystems. At extension registration, Token Tank captures the value supplied in `CURSOR_SESSION_TOKEN`, stores it in a process-only non-environment slot that survives extension reloads, and deletes it from `process.env` so Pi tools cannot inherit it. The adapter validates the captured value against header injection and sends it as `WorkosCursorSessionToken` to the read-only dashboard usage summary. It never discovers browser cookies, reads Cursor Desktop/Agent auth databases, imports `pi-cursor-sdk` or `@cursor/sdk`, probes a model, refreshes the session, or treats the SDK placeholder as auth. Cursor's own total percentage wins; finite plan, Enterprise personal, and Enterprise pooled ratios are ordered fallbacks. The endpoint is undocumented and may change without notice.
 
