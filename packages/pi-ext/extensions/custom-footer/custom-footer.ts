@@ -6,9 +6,10 @@
  * Ordinary setStatus() values remain visible as legacy priority-zero slots.
  */
 
-import { SettingsManager, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { SettingsManager, type ExtensionAPI, type SessionEntry } from "@earendil-works/pi-coding-agent";
 import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 import {
+  agentsFolderFromPrompt,
   buildPathString,
   nearestAgentsFolder,
   renderContextUsage,
@@ -32,21 +33,26 @@ type FooterTheme = {
   fg(role: any, text: string): string;
 };
 
-export function formatResponseTime(endedAt: number): string {
-  const time = new Date(endedAt).toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  }).toLowerCase();
-  const elapsedSeconds = Math.max(0, Math.floor((Date.now() - endedAt) / 1000));
-  if (elapsedSeconds < 60) return `◷ ended ${time} · ${elapsedSeconds}s ago`;
+export function formatResponseTime(endedAt: number, now = Date.now()): string {
+  const seconds = Math.max(0, Math.floor((now - endedAt) / 1000));
+  if (seconds < 60) return `◷ ${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `◷ ${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `◷ ${hours}h ago`;
+  return `◷ ${Math.floor(hours / 24)}d ago`;
+}
 
-  const elapsedMinutes = Math.floor(elapsedSeconds / 60);
-  if (elapsedMinutes < 60) return `◷ ended ${time} · ${elapsedMinutes}m ${elapsedSeconds % 60}s ago`;
-
-  const elapsedHours = Math.floor(elapsedMinutes / 60);
-  if (elapsedHours < 24) return `◷ ended ${time} · ${elapsedHours}h ${elapsedMinutes % 60}m ago`;
-  return `◷ ended ${time} · ${Math.floor(elapsedHours / 24)}d ${elapsedHours % 24}h ago`;
+function lastResponseEndedAt(entries: readonly SessionEntry[]): number | null {
+  for (let index = entries.length - 1; index >= 0; index--) {
+    const entry = entries[index];
+    if (entry.type !== "message" || entry.message.role !== "assistant"
+      || entry.message.stopReason === "toolUse") continue;
+    // Entry timestamps record when the completed message was appended.
+    const endedAt = Date.parse(entry.timestamp);
+    if (Number.isFinite(endedAt)) return endedAt;
+  }
+  return null;
 }
 
 type FooterSettings = {
@@ -74,7 +80,8 @@ export default function customFooter(
 
   pi.on("session_start", async (_event, ctx) => {
     settings = loadSettings(ctx.cwd, ctx.isProjectTrusted());
-    instructionFolder = undefined;
+    instructionFolder = agentsFolderFromPrompt(ctx.getSystemPrompt(), ctx.cwd);
+    responseEndedAt = lastResponseEndedAt(ctx.sessionManager.getBranch());
     clearTimer();
     responseAgeTimer = setInterval(() => {
       if (responseEndedAt !== null) tuiRef?.requestRender();
@@ -106,8 +113,10 @@ export default function customFooter(
         return {
           render(width: number): string[] {
             const statuses = footerDataRef?.getExtensionStatuses() ?? new Map<string, string>();
-            const { core, aux } = partitionFooterStatuses(statuses, slots.placements);
-            const lines = [renderLine1(width, theme, ctx, orderedStatusValues(core, slots.priorities))];
+            const { core, aux, context } = partitionFooterStatuses(statuses, slots.placements);
+            const lines = [renderLine1(width, theme, ctx,
+              orderedStatusValues(core, slots.priorities),
+              orderedStatusValues(context, slots.priorities))];
             const separator = theme.fg("dim", "  ·  ");
             const priorities = new Map(slots.priorities);
             if (!priorities.has("mcp")) priorities.set("mcp", 80);
@@ -133,8 +142,8 @@ export default function customFooter(
     tuiRef?.requestRender();
   });
 
-  pi.on("agent_start", () => {
-    responseEndedAt = null;
+  pi.on("session_tree", (_event, ctx) => {
+    responseEndedAt = lastResponseEndedAt(ctx.sessionManager.getBranch());
     tuiRef?.requestRender();
   });
 
@@ -164,12 +173,15 @@ export default function customFooter(
       model: { provider?: string; id?: string; contextWindow?: number } | null | undefined;
     },
     coreValues: readonly string[],
+    contextValues: readonly string[],
   ): string {
     const separator = theme.fg("dim", " │ ");
     const separatorWidth = 3;
     const branch = footerDataRef?.getGitBranch();
-    const icon = "󱂵 ";
-    const pathRaw = buildPathString(instructionFolder ?? "…", branch ?? null);
+    const featureBranch = branch && branch !== "main" ? branch : undefined;
+    const icon = featureBranch ? "󰘬 " : "󱂵 ";
+    const mainMarker = branch === "main" ? " 󰘬" : "";
+    const pathRaw = buildPathString(instructionFolder ?? "no AGENTS.md", null);
 
     const usage = ctx.getContextUsage();
     const percent = usage?.percent ?? 0;
@@ -177,8 +189,8 @@ export default function customFooter(
     const activeModel = ctx.model?.provider && ctx.model.id
       ? { provider: ctx.model.provider, id: ctx.model.id }
       : undefined;
-    const context = renderContextUsage(percent, contextWindow, usage?.tokens ?? null, theme,
-      settings?.getCompactionSettings(activeModel));
+    const context = [renderContextUsage(percent, contextWindow, usage?.tokens ?? null, theme,
+      settings?.getCompactionSettings(activeModel)), ...contextValues].join("  ");
 
     const provider = ctx.model?.provider || "unknown";
     const modelName = ctx.model?.id || "no-model";
@@ -186,10 +198,13 @@ export default function customFooter(
     const coreWidth = coreValues.reduce((sum, value) => sum + separatorWidth + visibleWidth(value), 0);
     const rightBlockWidth = model.rawWidth + separatorWidth + visibleWidth(context) + coreWidth;
     const pathBudget = width - 1 - rightBlockWidth - separatorWidth;
-    const pathDisplay = renderPath(pathRaw, pathBudget - visibleWidth(icon), theme);
+    const labelBudget = pathBudget - visibleWidth(icon) - visibleWidth(mainMarker);
+    const pathDisplay = labelBudget <= 0 ? "" : featureBranch
+      ? theme.fg("text", truncateToWidth(featureBranch, labelBudget, "…"))
+      : renderPath(pathRaw, labelBudget, theme);
 
     const segments: string[] = [];
-    if (pathDisplay) segments.push(theme.fg("text", icon) + pathDisplay);
+    if (pathDisplay) segments.push(theme.fg("text", icon) + pathDisplay + theme.fg("text", mainMarker));
     segments.push(model.text, context, ...coreValues);
     return truncateToWidth(` ${segments.join(separator)}`, width);
   }

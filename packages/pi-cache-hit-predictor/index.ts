@@ -4,16 +4,18 @@ import type {
 } from "@earendil-works/pi-coding-agent";
 import {
   type CacheLane,
-  type CachePrediction,
-  CACHE_ICON,
-  formatTokens,
+  cacheLaneKey,
   lastUsedLane,
-  predictCacheHit,
   predictCacheSwitchImpact,
   recordAssistantUsage,
-  renderSwitchImpact,
   scanCacheHistory,
 } from "./src/predictor.js";
+import {
+  CACHE_WARNING_ICON,
+  cacheMayBeStale,
+  cacheWarmTimestamp,
+  idleThresholdMs,
+} from "./src/freshness.js";
 import { createFooterSlotRegistration } from "./src/footer-slot.js";
 
 const STATUS_KEY = "pi-cache-hit-predictor";
@@ -22,15 +24,6 @@ interface ModelIdentity {
   provider: string;
   api: string;
   id: string;
-}
-
-function predictionText(prediction: CachePrediction): string {
-  if (!prediction.hasLaneHistory) return `${CACHE_ICON} cold`;
-
-  if (prediction.currentPromptTokens === null || prediction.percent === null) {
-    return `${CACHE_ICON} ~${formatTokens(prediction.estimatedCacheTokens)}`;
-  }
-  return `${CACHE_ICON} ~${formatTokens(prediction.estimatedCacheTokens)}/~${formatTokens(prediction.currentPromptTokens)} ${Math.round(prediction.percent)}%`;
 }
 
 function laneFor(model: ModelIdentity, thinkingLevel: string): CacheLane {
@@ -43,86 +36,83 @@ function laneFor(model: ModelIdentity, thinkingLevel: string): CacheLane {
 }
 
 function sameLane(left: CacheLane, right: CacheLane): boolean {
-  return left.provider === right.provider
-    && left.api === right.api
-    && left.model === right.model
-    && left.thinkingLevel === right.thinkingLevel;
+  return cacheLaneKey(left) === cacheLaneKey(right);
 }
 
 export default function cacheHitPredictor(pi: ExtensionAPI) {
   const footerSlot = createFooterSlotRegistration(pi.events, STATUS_KEY, 200);
   let history = scanCacheHistory([]);
   let pendingPredictionTimer: ReturnType<typeof setTimeout> | undefined;
+  let idleTimer: ReturnType<typeof setInterval> | undefined;
   let displayedLane: CacheLane | undefined;
+  let selectedLane: CacheLane | undefined;
+  // Keep the source anchored to a real response, not intermediate selections.
   let activeLane: CacheLane | undefined;
+  let thresholdMs = idleThresholdMs(process.env.PI_CACHE_IDLE_MINUTES);
+  let lastStatus: string | undefined;
 
-  const rebuild = (ctx: ExtensionContext) => {
-    history = scanCacheHistory(
-      ctx.sessionManager.getBranch(),
-      pi.getThinkingLevel(),
-    );
+  const renderStatus = (ctx: ExtensionContext) => {
+    const snapshot = selectedLane && history.lanes.get(cacheLaneKey(selectedLane));
+    const stale = cacheMayBeStale(snapshot?.refreshedAt, Date.now(), thresholdMs);
+    const text = ctx.mode === "tui" && (displayedLane || stale)
+      ? ctx.ui.theme.fg("warning", CACHE_WARNING_ICON)
+      : undefined;
+    if (text !== lastStatus) {
+      ctx.ui.setStatus(STATUS_KEY, text);
+      lastStatus = text;
+    }
   };
 
-  const setCurrentLane = (model: ModelIdentity) => {
-    activeLane = laneFor(model, pi.getThinkingLevel());
+  const clearTimers = () => {
+    if (pendingPredictionTimer) clearTimeout(pendingPredictionTimer);
+    if (idleTimer) clearInterval(idleTimer);
+    pendingPredictionTimer = undefined;
+    idleTimer = undefined;
   };
 
-  const setActiveLaneFromHistory = (ctx: ExtensionContext) => {
-    activeLane = lastUsedLane(ctx.sessionManager.getBranch());
-  };
-
-  const clearPrediction = (ctx: ExtensionContext) => {
+  const reset = (ctx: ExtensionContext) => {
+    clearTimers();
     displayedLane = undefined;
+    lastStatus = undefined;
     ctx.ui.setStatus(STATUS_KEY, undefined);
-  };
-
-  const legacyPredictionText = (
-    ctx: ExtensionContext,
-    lane: CacheLane,
-  ): string => {
-    const contextTokens = ctx.getContextUsage()?.tokens ?? null;
-    const prediction = predictCacheHit(history, lane, contextTokens);
-    return predictionText(prediction);
-  };
-
-  const renderImpact = (ctx: ExtensionContext, dest: CacheLane): string | undefined => {
-    if (ctx.mode !== "tui") return undefined;
-    if (!activeLane || sameLane(activeLane, dest)) return undefined;
-
-    const contextUsage = ctx.getContextUsage();
-    const currentPromptTokens = contextUsage?.tokens ?? null;
-    const contextWindow = contextUsage?.contextWindow
-      ?? ctx.model?.contextWindow
-      ?? null;
-
-    const impact = predictCacheSwitchImpact(
-      history,
-      activeLane,
-      dest,
-      currentPromptTokens,
-      contextWindow,
-    );
-
-    if (impact.sourceTokens === 0 && impact.destTokens === 0) {
-      return undefined;
-    }
-
-    if (currentPromptTokens === null || contextWindow === null) {
-      return legacyPredictionText(ctx, dest);
-    }
-
-    return renderSwitchImpact(impact);
+    history = scanCacheHistory(ctx.sessionManager.getBranch(), pi.getThinkingLevel());
+    activeLane = lastUsedLane(ctx.sessionManager.getBranch(), pi.getThinkingLevel());
+    selectedLane = ctx.model ? laneFor(ctx.model, pi.getThinkingLevel()) : undefined;
+    thresholdMs = idleThresholdMs(process.env.PI_CACHE_IDLE_MINUTES);
+    renderStatus(ctx);
+    if (ctx.mode !== "tui" || thresholdMs === 0) return;
+    idleTimer = setInterval(() => {
+      // Pi's warmer persists successful refreshes without emitting message_end.
+      const entries = ctx.sessionManager.getBranch();
+      const snapshot = activeLane && history.lanes.get(cacheLaneKey(activeLane));
+      if (snapshot) {
+        for (let index = entries.length - 1; index >= 0; index--) {
+          const entry = entries[index];
+          if (Date.parse(entry.timestamp) <= (snapshot.refreshedAt ?? 0)) break;
+          const warmedAt = cacheWarmTimestamp(entry, activeLane);
+          if (warmedAt !== undefined) {
+            snapshot.refreshedAt = warmedAt;
+            break;
+          }
+        }
+      }
+      renderStatus(ctx);
+    }, 1000);
+    idleTimer.unref?.();
   };
 
   const showImpact = (ctx: ExtensionContext, dest: CacheLane) => {
-    const text = renderImpact(ctx, dest);
-    if (text) {
-      displayedLane = dest;
-      ctx.ui.setStatus(STATUS_KEY, text);
-    } else {
-      clearPrediction(ctx);
+    selectedLane = dest;
+    displayedLane = undefined;
+    if (activeLane && !sameLane(activeLane, dest)) {
+      const usage = ctx.getContextUsage();
+      const impact = predictCacheSwitchImpact(
+        history, activeLane, dest, usage?.tokens ?? null,
+        usage?.contextWindow ?? ctx.model?.contextWindow ?? null,
+      );
+      if (impact.lostTokens > 0) displayedLane = dest;
     }
-    activeLane = dest;
+    renderStatus(ctx);
   };
 
   const schedulePrediction = (
@@ -140,24 +130,15 @@ export default function cacheHitPredictor(pi: ExtensionAPI) {
 
   pi.on("session_start", async (_event, ctx) => {
     footerSlot.register();
-    clearPrediction(ctx);
-    rebuild(ctx);
-    setActiveLaneFromHistory(ctx);
+    reset(ctx);
   });
-  pi.on("session_tree", async (_event, ctx) => {
-    clearPrediction(ctx);
-    rebuild(ctx);
-    setActiveLaneFromHistory(ctx);
-  });
-  pi.on("session_compact", async (_event, ctx) => {
-    clearPrediction(ctx);
-    rebuild(ctx);
-    setActiveLaneFromHistory(ctx);
-  });
-
+  pi.on("session_tree", async (_event, ctx) => reset(ctx));
+  pi.on("session_compact", async (_event, ctx) => reset(ctx));
 
   pi.on("message_end", async (event, ctx) => {
-    if (event.message.role !== "assistant") return;
+    if (event.message.role !== "assistant"
+      || event.message.stopReason === "aborted"
+      || event.message.stopReason === "error") return;
     const responseLane = laneFor({
       provider: event.message.provider,
       api: event.message.api,
@@ -165,12 +146,9 @@ export default function cacheHitPredictor(pi: ExtensionAPI) {
     }, pi.getThinkingLevel());
     recordAssistantUsage(history, event.message, responseLane);
     activeLane = responseLane;
-    if (
-      displayedLane
-      && event.message.stopReason !== "aborted"
-      && event.message.stopReason !== "error"
-      && sameLane(displayedLane, responseLane)
-    ) clearPrediction(ctx);
+    if (!selectedLane) selectedLane = responseLane;
+    if (displayedLane && sameLane(displayedLane, responseLane)) displayedLane = undefined;
+    renderStatus(ctx);
   });
 
   pi.on("thinking_level_select", async (event, ctx) => {
@@ -179,21 +157,23 @@ export default function cacheHitPredictor(pi: ExtensionAPI) {
   });
 
   pi.on("model_select", async (event, ctx) => {
-    if (!ctx.model) return;
     if (event.source === "restore" || !event.previousModel) {
       if (pendingPredictionTimer) clearTimeout(pendingPredictionTimer);
       pendingPredictionTimer = undefined;
-      clearPrediction(ctx);
-      setCurrentLane(event.model);
+      displayedLane = undefined;
+      selectedLane = laneFor(event.model, pi.getThinkingLevel());
+      renderStatus(ctx);
       return;
     }
     schedulePrediction(ctx, event.model, pi.getThinkingLevel());
   });
 
   pi.on("session_shutdown", async (_event, ctx) => {
-    if (pendingPredictionTimer) clearTimeout(pendingPredictionTimer);
-    pendingPredictionTimer = undefined;
-    clearPrediction(ctx);
+    clearTimers();
+    displayedLane = undefined;
+    selectedLane = undefined;
+    lastStatus = undefined;
+    ctx.ui.setStatus(STATUS_KEY, undefined);
     footerSlot.dispose();
   });
 }

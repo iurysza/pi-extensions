@@ -10,7 +10,7 @@ export function createFooterSlotRegistration(
   id: string,
   priority: number,
 ) {
-  const payload = { protocolVersion: PROTOCOL_VERSION, id, priority };
+  const payload = { protocolVersion: PROTOCOL_VERSION, id, priority, placement: "context" };
   const register = () => events.emit(REGISTER, payload);
   const disposeReady = events.on(HOST_READY, (data) => {
     if ((data as { protocolVersion?: unknown } | undefined)?.protocolVersion === PROTOCOL_VERSION) register();

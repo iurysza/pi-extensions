@@ -6,7 +6,7 @@ export const FOOTER_SLOT_HOST_READY = "@iurysza/pi-ext/footer-slot/ready/v1";
 export const FOOTER_SLOT_REGISTER = "@iurysza/pi-ext/footer-slot/register/v1";
 export const FOOTER_SLOT_UNREGISTER = "@iurysza/pi-ext/footer-slot/unregister/v1";
 
-export type FooterSlotPlacement = "core" | "aux";
+export type FooterSlotPlacement = "core" | "aux" | "context";
 
 export interface FooterSlotRegistration {
   protocolVersion: typeof FOOTER_SLOT_PROTOCOL_VERSION;
@@ -30,7 +30,8 @@ function registrationFrom(data: unknown): FooterSlotRegistration | undefined {
     || candidate.id.length === 0
     || typeof candidate.priority !== "number"
     || !Number.isFinite(candidate.priority)
-    || (candidate.placement !== undefined && candidate.placement !== "core" && candidate.placement !== "aux")
+    || (candidate.placement !== undefined && candidate.placement !== "core"
+      && candidate.placement !== "aux" && candidate.placement !== "context")
   ) return undefined;
   return {
     protocolVersion: FOOTER_SLOT_PROTOCOL_VERSION,
@@ -93,14 +94,16 @@ function sanitizeStatus(value: string): string {
 export function partitionFooterStatuses(
   statuses: ReadonlyMap<string, string>,
   placements: ReadonlyMap<string, FooterSlotPlacement>,
-): { core: Map<string, string>; aux: Map<string, string> } {
+): { core: Map<string, string>; aux: Map<string, string>; context: Map<string, string> } {
   const core = new Map<string, string>();
   const aux = new Map<string, string>();
+  const context = new Map<string, string>();
   for (const [id, value] of statuses) {
-    if (placements.get(id) === "core") core.set(id, value);
+    if (placements.get(id) === "context") context.set(id, value);
+    else if (placements.get(id) === "core") core.set(id, value);
     else aux.set(id, value);
   }
-  return { core, aux };
+  return { core, aux, context };
 }
 
 export function orderedStatusValues(

@@ -1,4 +1,5 @@
 import type { SessionEntry } from "@earendil-works/pi-coding-agent";
+import { cacheWarmTimestamp } from "./freshness.js";
 
 export const UNKNOWN_THINKING_LEVEL = "unknown";
 
@@ -11,6 +12,7 @@ export interface CacheLane {
 
 export interface CacheLaneSnapshot extends CacheLane {
 	promptTokens: number;
+	refreshedAt?: number;
 }
 
 export interface CacheHistory {
@@ -60,8 +62,15 @@ export function scanCacheHistory(
 ): CacheHistory {
 	const history: CacheHistory = { lanes: new Map() };
 	let thinkingLevel = initialThinkingLevel;
+	let precedingLane: CacheLane | undefined;
 
 	for (const entry of entries) {
+		const warmedAt = cacheWarmTimestamp(entry, precedingLane);
+		if (warmedAt !== undefined && precedingLane) {
+			const snapshot = history.lanes.get(cacheLaneKey(precedingLane));
+			if (snapshot) snapshot.refreshedAt = warmedAt;
+			continue;
+		}
 		if (entry.type === "thinking_level_change") {
 			thinkingLevel = entry.thinkingLevel;
 			continue;
@@ -69,6 +78,7 @@ export function scanCacheHistory(
 
 		if (entry.type === "compaction" || entry.type === "branch_summary") {
 			history.lanes.clear();
+			precedingLane = undefined;
 			continue;
 		}
 
@@ -94,7 +104,9 @@ export function scanCacheHistory(
 		history.lanes.set(cacheLaneKey(lane), {
 			...lane,
 			promptTokens: tokens,
+			refreshedAt: message.timestamp,
 		});
+		precedingLane = lane;
 	}
 
 	return history;
@@ -119,6 +131,7 @@ export function recordAssistantUsage(
 	history.lanes.set(cacheLaneKey(lane), {
 		...lane,
 		promptTokens: tokens,
+		refreshedAt: message.timestamp,
 	});
 }
 
@@ -148,8 +161,11 @@ export function predictCacheHit(
 	};
 }
 
-export function lastUsedLane(entries: readonly SessionEntry[]): CacheLane | undefined {
-	let thinkingLevel = UNKNOWN_THINKING_LEVEL;
+export function lastUsedLane(
+	entries: readonly SessionEntry[],
+	initialThinkingLevel = UNKNOWN_THINKING_LEVEL,
+): CacheLane | undefined {
+	let thinkingLevel = initialThinkingLevel;
 	let lastLane: CacheLane | undefined;
 
 	for (const entry of entries) {

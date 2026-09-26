@@ -27,9 +27,15 @@ export function renderPath(
 	budget: number,
 	theme: ThemeFg,
 ): string {
-	if (budget < 10) return "";
 	if (visibleWidth(pathRaw) <= budget) return theme.fg("text", pathRaw);
-	return theme.fg("text", "…" + pathRaw.slice(-(budget - 1)));
+	const folders = pathRaw.split(sep).filter(Boolean);
+	for (let start = 1; start < folders.length; start++) {
+		const shortened = `…${sep}${folders.slice(start).join(sep)}`;
+		if (visibleWidth(shortened) <= budget) return theme.fg("text", shortened);
+	}
+	const leaf = folders.at(-1) ?? pathRaw;
+	if (visibleWidth(leaf) <= budget) return theme.fg("text", leaf);
+	return "";
 }
 
 export function buildPathString(cwd: string, branch: string | null): string {
@@ -49,6 +55,14 @@ export function nearestAgentsFolder(files: readonly { path: string }[], cwd: str
 		if (!nearest || folder.length > nearest.length) nearest = folder;
 	}
 	return nearest;
+}
+
+export function agentsFolderFromPrompt(prompt: string, cwd: string): string | undefined {
+	// Pi exposes structured contextFiles before a turn, but only the rendered
+	// system prompt during session_start. Read its loaded-file tags, not disk.
+	const files = Array.from(prompt.matchAll(/^<project_instructions path="([^"\r\n]+)">\r?$/gm),
+		match => ({ path: match[1] }));
+	return nearestAgentsFolder(files, cwd);
 }
 
 // ── Context Usage ──────────────────────────────────────────────────────

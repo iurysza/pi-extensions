@@ -118,10 +118,14 @@ activity uses these same cards. Recorded results are consumed once through a
 versioned callback protocol; missing or duplicate replay state fails before any
 built-in executor runs.
 
-The footer shows `󱂵` and the home-relative path to the nearest loaded
-`AGENTS.md` folder and Git branch, then `󱜙` for the model and thinking level,
-followed by a four-cell context gauge and maximum window size. On narrow
-terminals, the instruction path shortens from the left while its icon stays.
+On `main`, the footer shows `󱂵`, the home-relative path to the nearest loaded
+`AGENTS.md` folder, and `󰘬` instead of the branch name. On other branches,
+`󰘬 branch-name` replaces the folder. Without a branch, it shows the folder only.
+Next comes `󱜙` for the model and thinking level, followed by a four-cell
+context gauge and maximum window size. On narrow terminals, the instruction
+path drops whole parent folders, such as `…/agents`, while its icon stays.
+The final folder name is never cut; the folder segment hides if even the name
+cannot fit. Long branch names truncate with an ellipsis.
 The folder, branch, and folder icon use the theme's `text` colour. The context
 gauge turns amber at 200k estimated tokens as an early caution, not a billing
 claim. In the final 10% before automatic compaction, its maximum-window label
@@ -129,10 +133,18 @@ switches to estimated tokens remaining, such as `16k left`. The threshold is
 window size minus Pi's configured response reserve, including per-model
 overrides on Pi versions that support them. Saved settings refresh before each
 prompt. The countdown stays hidden when compaction is disabled or usage is
-unknown. Until Pi builds the first prompt, the folder shows `…`.
+unknown. The folder resolves from Pi's loaded system prompt on startup and
+reload, then refreshes from structured context files before each turn. If no
+ancestor `AGENTS.md` is loaded, it shows `no AGENTS.md`.
 Line two shows token quota, voice and MCP status, then temporary statuses
-and response age. Empty statuses disappear. Optional metadata sorts slots by
+and compact response age, such as `◷ 7m ago`. The age restores from the active
+session branch after reload or navigation, stays visible during the next turn,
+and resets when that turn ends. New sessions have no age until a response ends.
+Empty statuses disappear. Optional metadata sorts slots by
 priority; `placement: "core"` keeps a slot on line one after context usage.
+`placement: "context"` attaches a slot directly to the context label with two
+spaces, before any core slots. The cache predictor uses this for its amber
+`󱘿` warning, without extra text or another separator.
 Unregistered statuses remain at priority zero. Only the highest-priority slot
 may truncate.
 
