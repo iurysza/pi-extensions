@@ -33,7 +33,7 @@ test("failed copy or empty input never destroys the draft", () => {
 	assert.equal(blank.notices[0].message, "Nothing to stash");
 });
 
-test("Leader Key registers Ctrl+S only for the interactive editor", () => {
+test("Leader Key registers Ctrl+Shift+S only for the interactive editor", () => {
 	const shortcuts = new Map();
 	leaderKeyExtension({
 		registerCommand() {},
@@ -41,7 +41,8 @@ test("Leader Key registers Ctrl+S only for the interactive editor", () => {
 		on() {},
 	});
 	assert.ok(shortcuts.has("ctrl+x"));
-	const handler = shortcuts.get("ctrl+s")?.handler;
+	assert.equal(shortcuts.has("ctrl+s"), false);
+	const handler = shortcuts.get("ctrl+shift+s")?.handler;
 	assert.equal(typeof handler, "function");
 	const draft = editor("");
 	handler({ mode: "json", ui: draft.ui });

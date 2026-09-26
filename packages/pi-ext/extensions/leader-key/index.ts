@@ -846,7 +846,7 @@ export default function leaderKeyExtension(pi: ExtensionAPI) {
 		},
 	});
 
-	pi.registerShortcut(Key.ctrl("s"), {
+	pi.registerShortcut("ctrl+shift+s", {
 		description: "Copy and clear current draft",
 		handler: (ctx) => {
 			if (ctx.mode === "tui") stashDraft(ctx.ui);
