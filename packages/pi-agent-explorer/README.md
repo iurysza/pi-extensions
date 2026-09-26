@@ -27,12 +27,20 @@ The snapshot opens with `nvim -R` from Pi's cache directory. If your Neovim
 configuration enables Neo-tree for directories, it appears there; otherwise
 Neovim's built-in directory browser does.
 
-The snapshot keeps extension and tool views separate:
+The snapshot keeps tools and extensions separate. It also maps event hooks:
 
 - `Extensions/<extension>/README.md` describes the extension.
 - `Extensions/<extension>/TOOLS.md` links to the tools that extension provides.
+- `Extensions/<extension>/EVENTS.md` links to the Pi events that extension
+  handles.
 - `Tools/<tool>.md` contains one flat Markdown entry per loaded tool and links
   back to its extension.
+- `Events/<event>.md` lists each subscribing extension and the handler's source
+  location.
+
+Agent Explorer finds event hooks from literal `pi.on(...)` registrations in an
+extension's entry point and local imports. Dynamic event names and aliased API
+variables may not appear.
 
 ## Requirements
 

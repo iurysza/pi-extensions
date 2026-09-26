@@ -1,16 +1,22 @@
 import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
 
-import { chmod, mkdir, readFile, symlink, writeFile } from "node:fs/promises";
+import { chmod, mkdir, readFile, stat, symlink, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { basename, dirname, join, resolve } from "node:path";
 
-type ResourceSource = { source: string; scope: string; path: string };
+import {
+	discoverExtensionSources,
+	scanExtensionEventHooks,
+	type EventHook,
+	type ResourceSource,
+} from "./extension-events.ts";
 
 type ExplorerExtension = {
 	sourceInfo: ResourceSource;
 	tools: string[];
 	commands: string[];
+	events: EventHook[];
 };
 
 type NamedExplorerExtension = ExplorerExtension & {
@@ -31,9 +37,9 @@ function pathLink(path: string, alias = basename(path) || path): string {
 }
 
 function sourceKey(sourceInfo: ResourceSource): string {
-	return sourceInfo.source === "builtin" || sourceInfo.source === "sdk"
-		? sourceInfo.source
-		: sourceInfo.path;
+	if (sourceInfo.source === "builtin" || sourceInfo.source === "sdk") return sourceInfo.source;
+	if (sourceInfo.path.startsWith("<")) return `${sourceInfo.source}:${sourceInfo.path}`;
+	return resolve(sourceInfo.path);
 }
 
 function extensionName(sourceInfo: ResourceSource): string {
@@ -51,7 +57,8 @@ function extensionName(sourceInfo: ResourceSource): string {
 }
 
 async function projectReadme(sourcePath: string): Promise<{ path: string; content: string } | undefined> {
-	let directory = dirname(sourcePath);
+	const sourceIsDirectory = await stat(sourcePath).then((entry) => entry.isDirectory()).catch(() => false);
+	let directory = sourceIsDirectory ? sourcePath : dirname(sourcePath);
 	for (let depth = 0; depth < 12; depth += 1) {
 		for (const fileName of ["README.md", "README.MD", "readme.md"]) {
 			const path = join(directory, fileName);
@@ -122,7 +129,7 @@ function inferExtensions(pi: ExtensionAPI): ExplorerExtension[] {
 		const key = sourceKey(sourceInfo);
 		let extension = extensions.get(key);
 		if (!extension) {
-			extension = { sourceInfo, tools: [], commands: [] };
+			extension = { sourceInfo, tools: [], commands: [], events: [] };
 			extensions.set(key, extension);
 		}
 		return extension;
@@ -136,6 +143,35 @@ function inferExtensions(pi: ExtensionAPI): ExplorerExtension[] {
 		ensure(command.sourceInfo).commands.push(command.name);
 	}
 
+	return Array.from(extensions.values());
+}
+
+async function collectExtensions(
+	pi: ExtensionAPI,
+	ctx: ExtensionCommandContext,
+	explicitSources?: readonly ResourceSource[],
+): Promise<ExplorerExtension[]> {
+	const inferred = inferExtensions(pi);
+	const extensions = new Map(inferred.map((extension) => [sourceKey(extension.sourceInfo), extension]));
+	const sources = explicitSources ?? await discoverExtensionSources(
+		inferred.map((extension) => extension.sourceInfo),
+		{
+			agentDir: getAgentDir(),
+			cwd: ctx.cwd,
+			projectTrusted: ctx.isProjectTrusted(),
+		},
+	);
+
+	for (const sourceInfo of sources) {
+		const key = sourceKey(sourceInfo);
+		if (!extensions.has(key)) {
+			extensions.set(key, { sourceInfo, tools: [], commands: [], events: [] });
+		}
+	}
+
+	await Promise.all(Array.from(extensions.values()).map(async (extension) => {
+		extension.events = await scanExtensionEventHooks(extension.sourceInfo.path);
+	}));
 	return Array.from(extensions.values());
 }
 
@@ -153,6 +189,56 @@ function nameExtensions(extensions: ExplorerExtension[]): NamedExplorerExtension
 	});
 }
 
+type EventSubscription = {
+	extension: NamedExplorerExtension;
+	hook: EventHook;
+};
+
+function groupHooksByEvent(hooks: readonly EventHook[]): Map<string, EventHook[]> {
+	const grouped = new Map<string, EventHook[]>();
+	for (const hook of hooks) {
+		const eventHooks = grouped.get(hook.event) ?? [];
+		eventHooks.push(hook);
+		grouped.set(hook.event, eventHooks);
+	}
+	return new Map(Array.from(grouped.entries()).sort(([left], [right]) => left.localeCompare(right)));
+}
+
+function groupSubscriptionsByEvent(
+	extensions: readonly NamedExplorerExtension[],
+): Map<string, EventSubscription[]> {
+	const grouped = new Map<string, EventSubscription[]>();
+	for (const extension of extensions) {
+		for (const hook of extension.events) {
+			const subscriptions = grouped.get(hook.event) ?? [];
+			subscriptions.push({ extension, hook });
+			grouped.set(hook.event, subscriptions);
+		}
+	}
+	for (const subscriptions of grouped.values()) {
+		subscriptions.sort((left, right) =>
+			left.extension.name.localeCompare(right.extension.name)
+			|| left.hook.path.localeCompare(right.hook.path)
+			|| left.hook.line - right.hook.line,
+		);
+	}
+	return new Map(Array.from(grouped.entries()).sort(([left], [right]) => left.localeCompare(right)));
+}
+
+function sourceLocation(hook: EventHook): string {
+	return `${pathLink(hook.path, basename(hook.path))}:${hook.line}`;
+}
+
+function renderExtensionEvents(extension: NamedExplorerExtension): string {
+	const grouped = groupHooksByEvent(extension.events);
+	if (grouped.size === 0) return `# ${extension.name} events\n\n(none)\n`;
+
+	const sections = Array.from(grouped.entries()).map(([event, hooks]) =>
+		`## [${event}](../../Events/${safeName(event)}.md)\n\n${hooks.map((hook) => `- ${sourceLocation(hook)}`).join("\n")}`,
+	);
+	return `# ${extension.name} events\n\n${sections.join("\n\n")}\n`;
+}
+
 async function writeSnapshot(path: string, content: string): Promise<void> {
 	await writeFile(path, content, "utf8");
 	await chmod(path, 0o444);
@@ -166,31 +252,41 @@ async function linkSnapshot(path: string, target: string): Promise<void> {
 	}
 }
 
+type ExplorerSnapshotOptions = {
+	extensionSources?: readonly ResourceSource[];
+};
+
 export async function createExplorerSnapshot(
 	pi: ExtensionAPI,
 	ctx: ExtensionCommandContext,
 	root = join(getAgentDir(), "cache", "agent-explorer", stamp()),
+	snapshotOptions: ExplorerSnapshotOptions = {},
 ): Promise<string> {
 	const options = ctx.getSystemPromptOptions();
 	const skillsDir = join(root, "Skills");
 	const extensionsDir = join(root, "Extensions");
+	const eventsDir = join(root, "Events");
 	const toolsDir = join(root, "Tools");
 	const commandsDir = join(root, "Commands");
 	const contextDir = join(root, "Context");
-	await Promise.all([root, skillsDir, extensionsDir, toolsDir, commandsDir, contextDir].map((path) => mkdir(path, { recursive: true })));
+	await Promise.all([root, skillsDir, extensionsDir, eventsDir, toolsDir, commandsDir, contextDir]
+		.map((path) => mkdir(path, { recursive: true })));
 
 	const tools = pi.getAllTools();
 	const activeTools = new Set(pi.getActiveTools());
 	const commands = pi.getCommands().filter((command) => command.source === "extension");
-	const extensions = nameExtensions(inferExtensions(pi));
+	const extensions = nameExtensions(await collectExtensions(pi, ctx, snapshotOptions.extensionSources));
 	const extensionsBySource = new Map(extensions.map((extension) => [sourceKey(extension.sourceInfo), extension]));
+	const eventSubscriptions = groupSubscriptionsByEvent(extensions);
+	const eventSubscriptionCount = Array.from(eventSubscriptions.values())
+		.reduce((total, subscriptions) => total + subscriptions.length, 0);
 	const sessionDirectory = ctx.sessionManager.getSessionDir();
 	const sessionFile = ctx.sessionManager.getSessionFile();
 	const contextUsage = renderContextUsage(pi, ctx);
 
 	await writeSnapshot(
 		join(root, "README.md"),
-		`# Pi Agent Explorer\n\nSnapshot: ${new Date().toISOString()}\n\n- Model: ${ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : "unknown"}\n- CWD: ${pathLink(ctx.cwd, "project directory")}\n- Active tools: ${activeTools.size}/${tools.length}\n- Skills: ${(options.skills ?? []).length}\n- Extensions: ${extensions.length}\n- Extension commands: ${commands.length}\n- Context files: ${(options.contextFiles ?? []).length}\n\n## Session\n\n- **Sessions folder:** ${pathLink(sessionDirectory, "sessions folder")}\n- **Current session file:** ${sessionFile ? pathLink(sessionFile, "current session") : "ephemeral (not saved)"}\n\n## Context Usage\n\n\`\`\`text\n${contextUsage}\n\`\`\`\n\nThis is a runtime snapshot. Tool metadata lives in the top-level Tools folder, and each extension links to the tools it provides. Extension and command files are generated metadata; skill and context files link to their loaded source. Neovim launches in read-only mode.\n`,
+		`# Pi Agent Explorer\n\nSnapshot: ${new Date().toISOString()}\n\n- Model: ${ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : "unknown"}\n- CWD: ${pathLink(ctx.cwd, "project directory")}\n- Active tools: ${activeTools.size}/${tools.length}\n- Skills: ${(options.skills ?? []).length}\n- Extensions: ${extensions.length}\n- Event subscriptions: ${eventSubscriptionCount}\n- Events observed: ${eventSubscriptions.size}\n- Extension commands: ${commands.length}\n- Context files: ${(options.contextFiles ?? []).length}\n\n## Session\n\n- **Sessions folder:** ${pathLink(sessionDirectory, "sessions folder")}\n- **Current session file:** ${sessionFile ? pathLink(sessionFile, "current session") : "ephemeral (not saved)"}\n\n## Context Usage\n\n\`\`\`text\n${contextUsage}\n\`\`\`\n\nThis is a runtime snapshot. Tool metadata lives in the top-level Tools folder, and each extension links to the tools and events it provides. Event metadata is source-derived from literal \`pi.on(...)\` registrations reachable from discovered extension entry points. Dynamic event names or aliased API variables may not appear. Extension and command files are generated metadata; skill and context files link to their loaded source. Neovim launches in read-only mode.\n`,
 	);
 
 	for (const skill of options.skills ?? []) {
@@ -213,7 +309,7 @@ export async function createExplorerSnapshot(
 				: await projectReadme(extension.sourceInfo.path);
 		await writeSnapshot(
 			join(extensionDir, "README.md"),
-			`# ${extension.name}\n\n- Source: ${pathLink(extension.sourceInfo.path)}\n- Scope: ${extension.sourceInfo.scope}\n- Tools: ${pathLink("TOOLS.md", extension.tools.length.toString())}\n- Commands: ${extension.commands.length ? extension.commands.map((name) => `/${name}`).join(", ") : "(none)"}\n\n## Project README\n\n${readme ? `Source: ${pathLink(readme.path)}\n\n${readme.content}` : "(No project README available for this provider.)"}\n`,
+			`# ${extension.name}\n\n- Source: ${pathLink(extension.sourceInfo.path)}\n- Scope: ${extension.sourceInfo.scope}\n- Tools: ${pathLink("TOOLS.md", extension.tools.length.toString())}\n- Events: ${pathLink("EVENTS.md", extension.events.length.toString())}\n- Commands: ${extension.commands.length ? extension.commands.map((name) => `/${name}`).join(", ") : "(none)"}\n\n## Project README\n\n${readme ? `Source: ${pathLink(readme.path)}\n\n${readme.content}` : "(No project README available for this provider.)"}\n`,
 		);
 		await writeSnapshot(
 			join(extensionDir, "TOOLS.md"),
@@ -222,6 +318,39 @@ export async function createExplorerSnapshot(
 					? extension.tools.map((toolName) => `- [${toolName}](../../Tools/${safeName(toolName)}.md)`).join("\n")
 					: "(none)"
 			}\n`,
+		);
+		await writeSnapshot(join(extensionDir, "EVENTS.md"), renderExtensionEvents(extension));
+	}
+
+	await writeSnapshot(
+		join(eventsDir, "README.md"),
+		`# Events\n\nThis index is source-derived from literal \`pi.on(...)\` registrations.\n\n${
+			eventSubscriptions.size
+				? Array.from(eventSubscriptions.entries()).map(([event, subscriptions]) => {
+					const extensionCount = new Set(subscriptions.map(({ extension }) => extension.directoryName)).size;
+					return `- [${event}](${safeName(event)}.md): ${subscriptions.length} handler${subscriptions.length === 1 ? "" : "s"}, ${extensionCount} extension${extensionCount === 1 ? "" : "s"}`;
+				}).join("\n")
+				: "(none)"
+		}\n`,
+	);
+
+	for (const [event, subscriptions] of eventSubscriptions) {
+		const byExtension = new Map<string, EventSubscription[]>();
+		for (const subscription of subscriptions) {
+			const extensionSubscriptions = byExtension.get(subscription.extension.directoryName) ?? [];
+			extensionSubscriptions.push(subscription);
+			byExtension.set(subscription.extension.directoryName, extensionSubscriptions);
+		}
+		const sections = Array.from(byExtension.values()).map((extensionSubscriptions) => {
+			const extension = extensionSubscriptions[0]?.extension;
+			if (!extension) return "";
+			return `## [${extension.name}](../Extensions/${extension.directoryName}/README.md)\n\n${
+				extensionSubscriptions.map(({ hook }) => `- ${sourceLocation(hook)}`).join("\n")
+			}`;
+		});
+		await writeSnapshot(
+			join(eventsDir, `${safeName(event)}.md`),
+			`# ${event}\n\n${sections.filter(Boolean).join("\n\n")}\n`,
 		);
 	}
 
