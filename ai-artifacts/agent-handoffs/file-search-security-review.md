@@ -1,0 +1,10 @@
+## Review
+
+- **Blocker — goal activation and subagent access are not implemented.** The extension is registered in the pi-extensions package (`package.json:35`; `packages/pi-ext/package.json:76`), but the managed agents configuration does not select it. The `pi-extensions` runtime allowlist omits `file-search` (`agents/runtime-extensions.json:59-81`), and the personal/work explicit package allowlists also omit it (`install-config.json:99-120`; `install-config.example.json:68-72`; `install-config.work.example.json:69-75`).  
+  All seven Pi roles that currently expose both `grep` and `find` omit `fd` and `rg`, for example `delegate.meta.json:8-17` and `worker.meta.json:9-18`. This fails facts 13–14 (`facts.md:15-16`) and the goal’s required personal/work and subagent activation (`goal.md:14-16`).  
+  **Fix:** after publishing the pi-extensions commit and updating the pinned SHA, add the extension to the runtime catalog and both profile allowlists, add `fd`/`rg` only to the seven existing `find`+`grep` role lists, then render both profiles, apply personal, and run the offline doctor checks.
+
+- **Blocker — required promotion verification and receipts are absent.** The goal dev log remains `Status: Not started` (`dev-log.md:1-3`). There is no evidence of profile rendering, role rendering, personal apply, or offline doctor, despite fact 15 requiring automated proof for profile activation and rendered role access (`facts.meta.json:101-105`). This also prevents satisfying the done condition’s release/apply/evidence requirements (`goal.md:16`).  
+  **Fix:** record the release SHA, profile/render results, personal apply, and offline doctor evidence in the goal dev log after the activation changes.
+
+- **Correct:** no source-level security, cancellation, timeout, or process-leak blocker was found in the current pi-extensions implementation. Focused file-search tests passed (21 tests), plus `npm run typecheck --workspace @iurysza/pi-ext`, `npm run check:catalog`, and `git diff --check`.
