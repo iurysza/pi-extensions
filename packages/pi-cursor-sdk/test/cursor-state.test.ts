@@ -8,10 +8,10 @@ import {
 	getCursorProviderAgentModeOrThrow,
 	getStoredCursorAgentMode,
 	resolveCursorAgentMode,
-	formatCursorToolsDebugReport,
 	getCursorCliConfig,
 	__testUtils,
 } from "../src/cursor-state.js";
+import { formatCursorToolsDebugReport } from "../src/cursor-tools-debug-report.js";
 import { __testUtils as modelDiscoveryTestUtils } from "../src/model-discovery.js";
 import type { ModelListItem } from "@cursor/sdk";
 import type { ExtensionContext, SessionEntry } from "@earendil-works/pi-coding-agent";
