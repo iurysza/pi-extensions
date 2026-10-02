@@ -33,8 +33,8 @@ function formatUpdatedTime(fetchedAt?: number): string {
 }
 
 export function formatGauge(percent: number): string {
-  const filled = percent <= 0 ? 0 : Math.min(4, Math.ceil(percent / 25));
-  return "▰".repeat(filled) + "▱".repeat(4 - filled);
+  const filled = percent <= 0 ? 0 : Math.min(5, Math.ceil(percent / 20));
+  return "▰".repeat(filled) + "▱".repeat(5 - filled);
 }
 
 export function formatResetTime(resetsAt: number, weekly: boolean): string {

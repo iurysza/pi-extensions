@@ -13,7 +13,7 @@ export const providers: readonly QuotaProvider[] = [
     matchesModel: (model) => model?.provider === "claude-code",
     fetch: fetchClaudeCodeQuota,
     credentialsHint: "Run claude auth login in a terminal.",
-    footerWindows: { minimal: ["five-hour"], full: ["five-hour", "weekly"] },
+    footerWindows: { minimal: ["weekly"], full: ["five-hour", "weekly"] },
   },
   {
     id: "codex",

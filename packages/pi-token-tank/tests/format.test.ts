@@ -22,22 +22,31 @@ function liveQuota(provider: ProviderQuota["provider"], five: number, weekly: nu
 }
 
 describe("footer gauges", () => {
-  it("buckets pressure into four truthful cells", () => {
+  it("buckets pressure into five truthful cells", () => {
     assert.deepEqual([0, 1, 24, 25, 26, 50, 51, 72, 75, 76, 100].map(formatGauge), [
-      "▱▱▱▱", "▰▱▱▱", "▰▱▱▱", "▰▱▱▱", "▰▰▱▱", "▰▰▱▱",
-      "▰▰▰▱", "▰▰▰▱", "▰▰▰▱", "▰▰▰▰", "▰▰▰▰",
+      "▱▱▱▱▱", "▰▱▱▱▱", "▰▰▱▱▱", "▰▰▱▱▱", "▰▰▱▱▱", "▰▰▰▱▱",
+      "▰▰▰▱▱", "▰▰▰▰▱", "▰▰▰▰▱", "▰▰▰▰▱", "▰▰▰▰▰",
     ]);
   });
 
   it("renders exact minimal and full shapes", () => {
     const quota = liveQuota("codex", 24, 15);
-    assert.equal(formatFooter(quota, "minimal", plainTheme, undefined, NOW_MS), "▰▱▱▱  󰔛 3h 25m");
-    assert.equal(formatFooter(quota, "full", plainTheme, undefined, NOW_MS), "5h  ▰▱▱▱  󰔛 3h 25m   ·   7d  ▰▱▱▱  󰔛 4d 11h");
+    assert.equal(formatFooter(quota, "minimal", plainTheme, undefined, NOW_MS), "▰▰▱▱▱  󰔛 3h 25m");
+    assert.equal(formatFooter(quota, "full", plainTheme, undefined, NOW_MS), "5h  ▰▰▱▱▱  󰔛 3h 25m   ·   7d  ▰▱▱▱▱  󰔛 4d 11h");
+  });
+
+  it("shows only the weekly window in Claude Code minimal mode", () => {
+    const claude = providers.find((provider) => provider.id === "claude-code")!;
+    const quota = liveQuota("claude-code", 24, 15);
+    assert.equal(
+      formatFooter(quota, "minimal", plainTheme, claude.footerWindows.minimal, NOW_MS),
+      "▰▱▱▱▱  󰔛 4d 11h",
+    );
   });
 
   it("changes gauge colour at 90%, not before", () => {
-    assert.ok(formatFooter(liveQuota("codex", 89.96, 15), "minimal", theme).includes("[success:▰▰▰▰]"));
-    assert.ok(formatFooter(liveQuota("codex", 90, 15), "minimal", theme).includes("[error:▰▰▰▰]"));
+    assert.ok(formatFooter(liveQuota("codex", 89.96, 15), "minimal", theme).includes("[success:▰▰▰▰▰]"));
+    assert.ok(formatFooter(liveQuota("codex", 90, 15), "minimal", theme).includes("[error:▰▰▰▰▰]"));
   });
 
   it("falls back to and labels a remaining weekly window", () => {
@@ -45,7 +54,7 @@ describe("footer gauges", () => {
     quota.windows = quota.windows.filter((window) => window.id === "weekly");
     assert.equal(
       formatFooter(quota, "minimal", plainTheme, ["five-hour"], NOW_MS),
-      "▰▰▱▱  󰔛 4d 11h",
+      "▰▰▱▱▱  󰔛 4d 11h",
     );
   });
 
@@ -61,21 +70,21 @@ describe("footer gauges", () => {
     };
     assert.equal(
       formatFooter(quota, "full", plainTheme, ["billing-cycle", "auto", "api"]),
-      "cycle  ▰▱▱▱   ·   auto  ▰▱▱▱   ·   api  ▰▰▱▱",
+      "cycle  ▰▱▱▱▱   ·   auto  ▰▱▱▱▱   ·   api  ▰▰▱▱▱",
     );
   });
 
   it("marks cached quota percentages as stale", () => {
     const quota = liveQuota("kimi", 48, 35);
     quota.state = "stale";
-    assert.equal(formatFooter(quota, "minimal", plainTheme, undefined, NOW_MS), "▰▰▱▱~  󰔛 3h 25m");
+    assert.equal(formatFooter(quota, "minimal", plainTheme, undefined, NOW_MS), "▰▰▰▱▱~  󰔛 3h 25m");
   });
 
   it("keeps labels dim and only colours gauges at the 90% threshold", () => {
     const normal = formatFooter(liveQuota("codex", 70, 89), "full", theme);
-    assert.ok(normal.includes("[dim:5h  ][success:▰▰▰▱]"));
-    assert.ok(normal.includes("[dim:7d  ][success:▰▰▰▰]"));
-    assert.ok(formatFooter(liveQuota("codex", 69, 90), "full", theme).includes("[error:▰▰▰▰]"));
+    assert.ok(normal.includes("[dim:5h  ][success:▰▰▰▰▱]"));
+    assert.ok(normal.includes("[dim:7d  ][success:▰▰▰▰▰]"));
+    assert.ok(formatFooter(liveQuota("codex", 69, 90), "full", theme).includes("[error:▰▰▰▰▰]"));
   });
 
   it("formats reset timestamps in local wall-clock time", () => {

@@ -152,8 +152,9 @@ describe("createTokenTank", () => {
       const f = fakeAPI("claude-code");
       createTokenTank(f.api, fakeCredentials());
       await f.fire("session_start", {});
-      assert.ok(f.status["pi-token-tank"]?.includes("▰▱▱▱"));
+      assert.ok(f.status["pi-token-tank"]?.includes("▰▰▰▱▱"));
       await f.commands["token-tank"]!.handler("full", f.ctx);
+      assert.ok(f.status["pi-token-tank"]?.includes("5h"));
       assert.ok(f.status["pi-token-tank"]?.includes("7d"));
     } finally {
       globalThis.fetch = originalFetch;

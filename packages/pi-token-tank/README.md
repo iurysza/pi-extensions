@@ -4,7 +4,7 @@ See your subscription mileage without leaving Pi. Token Tank follows the active
 model and adds provider quota, usage pressure, and reset timing to the footer.
 
 ```text
-▰▱▱▱  󰔛 3h 25m
+▰▰▱▱▱  󰔛 3h 25m
 ```
 
 ## Install
@@ -37,16 +37,17 @@ Unsupported providers produce no footer status. Token Tank always publishes thro
 
 ## Footer modes
 
-Minimal mode shows the active provider's primary window:
+Minimal mode shows the active provider's primary window. Claude Code shows its
+weekly window instead:
 
 ```text
-▰▱▱▱  󰔛 3h 25m
+▰▰▱▱▱  󰔛 3h 25m
 ```
 
 Full mode includes every available window:
 
 ```text
-5h  ▰▱▱▱  󰔛 3h 25m   ·   7d  ▰▱▱▱  󰔛 4d 11h
+5h  ▰▰▱▱▱  󰔛 3h 25m   ·   7d  ▰▱▱▱  󰔛 4d 11h
 ```
 
 | Command | Description |
@@ -55,7 +56,7 @@ Full mode includes every available window:
 | `/token-tank minimal` | Use the compact primary-window footer. |
 | `/token-tank full` | Show every available quota window. |
 
-Four gauge cells represent 25-point usage buckets. The gauge turns red at 90%
+Five gauge cells represent 20-point usage buckets. The gauge turns red at 90%
 used; below that it stays green. `󰔛` marks time until reset. Minimal mode omits
 the window label and percentage; full mode keeps labels to distinguish windows.
 `~` marks stale last-good data; `—` means credentials are missing; `!` means a
