@@ -46,7 +46,6 @@ import type {
 	CursorReplayGenerateImageDetailFields,
 } from "./cursor-replay-tool-details.js";
 
-
 import {
 	CURSOR_REPLAY_ACTIVITY_TOOL_NAME,
 	isCursorReplayToolName,
