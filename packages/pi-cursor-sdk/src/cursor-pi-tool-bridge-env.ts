@@ -19,3 +19,11 @@ export function resolveCursorPiToolBridgeCallTimeoutMs(env: Record<string, strin
 	if (!Number.isFinite(parsed) || parsed <= 0) return mcpToolTimeoutMs;
 	return Math.min(Math.max(Math.trunc(parsed), 1), mcpToolTimeoutMs);
 }
+
+// Debug env helpers live here (not in -diagnostics) so the extension entry can read them without loading the diagnostics module.
+export const CURSOR_PI_TOOL_BRIDGE_DEBUG_ENV = "PI_CURSOR_PI_TOOL_BRIDGE_DEBUG";
+export const CURSOR_PI_TOOL_BRIDGE_DIAGNOSTIC_PREFIX = "[pi-cursor-sdk:bridge]";
+
+export function resolveCursorPiToolBridgeDebugEnabled(env: Record<string, string | undefined> = process.env): boolean {
+	return parseEnvBoolean(env[CURSOR_PI_TOOL_BRIDGE_DEBUG_ENV], false);
+}

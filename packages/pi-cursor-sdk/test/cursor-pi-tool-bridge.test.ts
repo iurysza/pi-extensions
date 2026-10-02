@@ -11,6 +11,7 @@ import {
 	createTestToolInfo,
 	getCursorPiBridgeMcpUrl,
 } from "./helpers/pi-harness.js";
+import { serializeCursorPiToolBridgeDiagnostic } from "../src/cursor-pi-tool-bridge-diagnostics.js";
 import { __testUtils as nativeToolDisplayTestUtils } from "../src/cursor-native-tool-display-state.js";
 import {
 	__testUtils,
@@ -339,9 +340,9 @@ describe("cursor pi tool bridge loopback MCP lifecycle", () => {
 	});
 
 	it("serializes only allowlisted diagnostic fields", () => {
-		type DiagnosticEventForTests = Parameters<typeof __testUtils.serializeDiagnosticForTests>[0];
+		type DiagnosticEventForTests = Parameters<typeof serializeCursorPiToolBridgeDiagnostic>[0];
 		const rawCursorMcpCallId = "http://127.0.0.1/secret-cursor-mcp-call-id?token=secret-token";
-		const record = __testUtils.serializeDiagnosticForTests({
+		const record = serializeCursorPiToolBridgeDiagnostic({
 			event: "request_queued",
 			runId: "safe-run",
 			bridgeCallId: "safe-bridge",

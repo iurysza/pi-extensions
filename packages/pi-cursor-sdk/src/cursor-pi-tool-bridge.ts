@@ -1,13 +1,9 @@
 import { spawnSync } from "node:child_process";
 import {
-	CURSOR_PI_TOOL_BRIDGE_DEBUG_ENV,
-	CURSOR_PI_TOOL_BRIDGE_DIAGNOSTIC_PREFIX,
-	type CursorPiToolBridgeDiagnosticEvent,
-	serializeCursorPiToolBridgeDiagnostic,
-} from "./cursor-pi-tool-bridge-diagnostics.js";
-import {
 	CURSOR_PI_TOOL_BRIDGE_BUILTINS_ENV,
 	CURSOR_PI_TOOL_BRIDGE_CALL_TIMEOUT_MS_ENV,
+	CURSOR_PI_TOOL_BRIDGE_DEBUG_ENV,
+	CURSOR_PI_TOOL_BRIDGE_DIAGNOSTIC_PREFIX,
 	CURSOR_PI_TOOL_BRIDGE_ENV,
 } from "./cursor-pi-tool-bridge-env.js";
 import { bridgeToolExecutionAbortTracker } from "./cursor-pi-tool-bridge-abort.js";
@@ -32,7 +28,7 @@ export type {
 	CursorPiToolBridgeSnapshotOptions,
 } from "./cursor-pi-tool-bridge-types.js";
 export type { CursorPiToolBridgeDiagnosticEvent } from "./cursor-pi-tool-bridge-diagnostics.js";
-export { resolveCursorPiToolBridgeDebugEnabled } from "./cursor-pi-tool-bridge-diagnostics.js";
+export { resolveCursorPiToolBridgeDebugEnabled } from "./cursor-pi-tool-bridge-env.js";
 export {
 	CURSOR_PI_TOOL_BRIDGE_BUILTINS_ENV,
 	CURSOR_PI_TOOL_BRIDGE_CALL_TIMEOUT_MS_ENV,
@@ -145,9 +141,6 @@ export const __testUtils = {
 	},
 	getRegisteredBridgeForTests() {
 		return registeredCursorPiToolBridge;
-	},
-	serializeDiagnosticForTests(event: CursorPiToolBridgeDiagnosticEvent) {
-		return serializeCursorPiToolBridgeDiagnostic(event);
 	},
 	getActiveBridgeToolExecutionAbortCount() {
 		return bridgeToolExecutionAbortTracker.getActiveCount();

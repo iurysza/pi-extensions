@@ -1,15 +1,18 @@
 import { appendFileSync } from "node:fs";
 import { stableNameHash } from "./cursor-pi-tool-bridge-mcp.js";
-import { parseEnvBoolean } from "./cursor-env-boolean.js";
+import {
+	CURSOR_PI_TOOL_BRIDGE_DIAGNOSTIC_PREFIX,
+	resolveCursorPiToolBridgeDebugEnabled,
+} from "./cursor-pi-tool-bridge-env.js";
 import type { CursorSdkEventDebugRecorder } from "./cursor-sdk-event-debug.js";
 
-export const CURSOR_PI_TOOL_BRIDGE_DEBUG_ENV = "PI_CURSOR_PI_TOOL_BRIDGE_DEBUG";
 export const CURSOR_PI_TOOL_BRIDGE_DEBUG_FILE_ENV = "PI_CURSOR_PI_TOOL_BRIDGE_DEBUG_FILE";
-export const CURSOR_PI_TOOL_BRIDGE_DIAGNOSTIC_PREFIX = "[pi-cursor-sdk:bridge]";
 
-export function resolveCursorPiToolBridgeDebugEnabled(env: Record<string, string | undefined> = process.env): boolean {
-	return parseEnvBoolean(env[CURSOR_PI_TOOL_BRIDGE_DEBUG_ENV], false);
-}
+export {
+	CURSOR_PI_TOOL_BRIDGE_DEBUG_ENV,
+	CURSOR_PI_TOOL_BRIDGE_DIAGNOSTIC_PREFIX,
+	resolveCursorPiToolBridgeDebugEnabled,
+} from "./cursor-pi-tool-bridge-env.js";
 
 function createCursorMcpCallDiagnosticId(cursorMcpCallId: string | undefined): string | undefined {
 	return cursorMcpCallId ? `cursor-mcp-call-${stableNameHash(cursorMcpCallId)}` : undefined;
