@@ -4,7 +4,7 @@ import { stripVTControlCharacters } from "node:util";
 import { visibleWidth } from "@earendil-works/pi-tui";
 import { SettingsManager, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import customFooter, { formatResponseTime } from "../../extensions/custom-footer/custom-footer.js";
-import { agentsFolderFromPrompt, nearestAgentsFolder, renderContextUsage, renderPath } from "../../extensions/custom-footer/renderers.js";
+import { agentsFolderFromPrompt, nearestAgentsFolder, renderContextUsage, renderModelInfo, renderPath } from "../../extensions/custom-footer/renderers.js";
 import {
   FOOTER_SLOT_HOST_READY,
   FOOTER_SLOT_REGISTER,
@@ -169,9 +169,9 @@ describe("custom footer", () => {
     const feature = widget?.render(200)[0] ?? "";
     assert.match(feature, /󰘬 feature\/very-long-branch │/);
     assert.doesNotMatch(feature, /󱂵|\/repo/);
-    const narrow = widget?.render(60)[0] ?? "";
+    const narrow = widget?.render(45)[0] ?? "";
     assert.match(stripVTControlCharacters(narrow), /󰘬 feature\/.*… │ 󱜙/);
-    assert.ok(visibleWidth(narrow) <= 60);
+    assert.ok(visibleWidth(narrow) <= 45);
     usedTokens = 100_000;
     const countdown = widget?.render(60)[0] ?? "";
     assert.match(countdown, /8\.0k left/);
@@ -278,7 +278,7 @@ describe("custom footer", () => {
     handlers.get("agent_end")?.({}, ctx);
 
     const lines = widgetFactory?.({ requestRender() {} }, theme).render(200) ?? [];
-    assert.match(lines[0] ?? "", /^ 󱂵 \/repo 󰘬 │ 󱜙 test-model \(test\) │ ▰▱▱▱ 128k  󱘿 │ 🎙/);
+    assert.match(lines[0] ?? "", /^ 󱂵 \/repo 󰘬 │ 󱜙 test-model │ ▰▱▱▱▱ 128k  󱘿 │ 🎙/);
     assert.doesNotMatch(lines[0] ?? "", /tokens|MCP|◷/);
     assert.match(lines[1] ?? "", /^ tokens.*MCP connected.*archived.*◷ \d+s ago/);
     assert.doesNotMatch(lines[1] ?? "", /🎙|󱘿/);
@@ -350,20 +350,34 @@ describe("instruction scope and context bar", () => {
     const theme = { fg(_role: string, text: string) { return text; } };
     const compaction = { enabled: true, reserveTokens: 16_384 };
     // 272000 - 16384 = 255616; final 10% starts at 230054.4 tokens.
-    assert.equal(renderContextUsage(85, 272_000, 230_054, theme, compaction), "▰▰▰▰ 272k");
-    assert.equal(renderContextUsage(85, 272_000, 230_055, theme, compaction), "▰▰▰▰ 26k left");
-    assert.equal(renderContextUsage(89, 272_000, 240_000, theme, compaction), "▰▰▰▰ 16k left");
-    assert.equal(renderContextUsage(92, 272_000, 255_000, theme, compaction), "▰▰▰▰ 616 left");
-    assert.equal(renderContextUsage(95, 272_000, 260_000, theme, compaction), "▰▰▰▰ 0 left");
-    assert.equal(renderContextUsage(0, 272_000, null, theme, compaction), "▱▱▱▱ 272k");
-    assert.equal(renderContextUsage(95, 272_000, 260_000, theme, { ...compaction, enabled: false }), "▰▰▰▰ 272k");
-    assert.equal(renderContextUsage(58, 1_000_000, 580_000, theme, { enabled: true, reserveTokens: 400_000 }), "▰▰▰▱ 20k left");
+    assert.equal(renderContextUsage(85, 272_000, 230_054, theme, compaction), "▰▰▰▰▰ 272k");
+    assert.equal(renderContextUsage(85, 272_000, 230_055, theme, compaction), "▰▰▰▰▰ 26k left");
+    assert.equal(renderContextUsage(89, 272_000, 240_000, theme, compaction), "▰▰▰▰▰ 16k left");
+    assert.equal(renderContextUsage(92, 272_000, 255_000, theme, compaction), "▰▰▰▰▰ 616 left");
+    assert.equal(renderContextUsage(95, 272_000, 260_000, theme, compaction), "▰▰▰▰▰ 0 left");
+    assert.equal(renderContextUsage(0, 272_000, null, theme, compaction), "▱▱▱▱▱ 272k");
+    assert.equal(renderContextUsage(95, 272_000, 260_000, theme, { ...compaction, enabled: false }), "▰▰▰▰▰ 272k");
+    assert.equal(renderContextUsage(58, 1_000_000, 580_000, theme, { enabled: true, reserveTokens: 400_000 }), "▰▰▰▱▱ 20k left");
   });
 
   it("warns at 200k estimated context tokens regardless of model window", () => {
     const theme = { fg(role: string, text: string) { return `[${role}:${text}]`; } };
-    assert.equal(renderContextUsage(74, 272_000, 199_999, theme), "[success:▰▰▰][dim:▱ 272k]");
-    assert.equal(renderContextUsage(74, 272_000, 200_000, theme), "[warning:▰▰▰][dim:▱ 272k]");
+    assert.equal(renderContextUsage(74, 272_000, 199_999, theme), "[success:▰▰▰▰][dim:▱ 272k]");
+    assert.equal(renderContextUsage(74, 272_000, 200_000, theme), "[warning:▰▰▰▰][dim:▱ 272k]");
+  });
+});
+
+describe("renderModelInfo", () => {
+  const theme = { fg(role: string, text: string) { return `[${role}:${text}]`; } };
+
+  it("shows a colour-coded speedometer for thinking level and nothing when off", () => {
+    assert.equal(renderModelInfo("m", "off", theme).text, "[accent:󱜙 m]");
+    assert.equal(renderModelInfo("m", "minimal", theme).text, "[accent:󱜙 m] [dim:󰾆]");
+    assert.equal(renderModelInfo("m", "low", theme).text, "[accent:󱜙 m] [success:󰾆]");
+    assert.equal(renderModelInfo("m", "medium", theme).text, "[accent:󱜙 m] [warning:󰾅]");
+    assert.equal(renderModelInfo("m", "high", theme).text, "[accent:󱜙 m] [bashMode:󰓅]");
+    assert.equal(renderModelInfo("m", "xhigh", theme).text, "[accent:󱜙 m] [error:󰓅]");
+    assert.equal(renderModelInfo("m", "max", theme).text, "[accent:󱜙 m] [error:󰓅󰓅]");
   });
 });
 

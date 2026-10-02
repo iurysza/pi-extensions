@@ -74,7 +74,7 @@ export function renderContextUsage(
 	theme: { fg: (role: any, text: string) => string },
 	compaction?: { enabled: boolean; reserveTokens: number },
 ): string {
-	const filled = Math.min(4, Math.ceil(Math.max(0, pct) / 25));
+	const filled = Math.min(5, Math.ceil(Math.max(0, pct) / 20));
 	const role = used !== null && used >= 200_000 ? "warning" : "success";
 	const threshold = Math.max(0, win - (compaction?.reserveTokens ?? 0));
 	const remaining = used === null ? null : Math.max(0, threshold - used);
@@ -82,24 +82,33 @@ export function renderContextUsage(
 		&& remaining <= threshold * 0.1;
 	const label = nearCompaction ? `${fmtTokens(Math.floor(remaining))} left` : fmtTokens(win);
 	return theme.fg(role, "▰".repeat(filled))
-		+ theme.fg("dim", "▱".repeat(4 - filled) + ` ${label}`);
+		+ theme.fg("dim", "▱".repeat(5 - filled) + ` ${label}`);
 }
 
 // ── Model + Thinking ───────────────────────────────────────────────────
 
+// Three speedometer steps, doubled for max; the theme role (see THINKING_ROLES) separates levels that share one.
+const THINKING_ICONS: Record<string, string> = {
+	minimal: "\u{F0F86}", // md-speedometer_slow
+	low:     "\u{F0F86}",
+	medium:  "\u{F0F85}", // md-speedometer_medium
+	high:    "\u{F04C5}", // md-speedometer
+	xhigh:   "\u{F04C5}",
+	max:     "\u{F04C5}\u{F04C5}", // doubled so it differs from xhigh
+};
+
 export function renderModelInfo(
 	modelName: string,
-	provider: string,
 	thinking: string,
 	theme: ThemeFg,
 ): { text: string; rawWidth: number } {
-	const thinkSuffix = thinking !== "off" ? ` • ${thinking}` : "";
-	const rawWidth = visibleWidth(`󱜙 ${modelName} (${provider})${thinkSuffix}`);
+	const icon = thinking !== "off" ? THINKING_ICONS[thinking] : undefined;
+	const rawWidth = visibleWidth(`󱜙 ${modelName}${icon ? ` ${icon}` : ""}`);
 
-	let text = theme.fg("accent", `󱜙 ${modelName}`) + theme.fg("muted", ` (${provider})`);
-	if (thinking !== "off") {
+	let text = theme.fg("accent", `󱜙 ${modelName}`);
+	if (icon) {
 		const role = THINKING_ROLES[thinking] ?? THINKING_ROLES.off;
-		text += theme.fg("dim", " • ") + theme.fg(role, thinking);
+		text += " " + theme.fg(role, icon);
 	}
 
 	return { text, rawWidth };

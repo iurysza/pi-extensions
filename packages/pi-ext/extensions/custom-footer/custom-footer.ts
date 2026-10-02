@@ -192,9 +192,8 @@ export default function customFooter(
     const context = [renderContextUsage(percent, contextWindow, usage?.tokens ?? null, theme,
       settings?.getCompactionSettings(activeModel)), ...contextValues].join("  ");
 
-    const provider = ctx.model?.provider || "unknown";
     const modelName = ctx.model?.id || "no-model";
-    const model = renderModelInfo(modelName, provider, pi.getThinkingLevel(), theme);
+    const model = renderModelInfo(modelName, pi.getThinkingLevel(), theme);
     const coreWidth = coreValues.reduce((sum, value) => sum + separatorWidth + visibleWidth(value), 0);
     const rightBlockWidth = model.rawWidth + separatorWidth + visibleWidth(context) + coreWidth;
     const pathBudget = width - 1 - rightBlockWidth - separatorWidth;
