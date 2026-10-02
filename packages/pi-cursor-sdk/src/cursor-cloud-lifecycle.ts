@@ -17,6 +17,12 @@ import { truncateCursorDisplayLine } from "./cursor-display-text.js";
 import { asRecord, getString } from "./cursor-record-utils.js";
 import { scrubSensitiveText } from "./cursor-sensitive-text.js";
 import { loadCursorSdk } from "./cursor-sdk-runtime.js";
+import {
+	captureCloudLifecycleSession,
+	cloudLifecycleState,
+	registerCursorCloudLifecycleSessionCapture,
+	type CloudLifecycleApi,
+} from "./cursor-cloud-lifecycle-session.js";
 
 export { CLOUD_LIFECYCLE_ENTRY_TYPE };
 
@@ -56,9 +62,7 @@ export interface CursorCloudLifecycleAgentRecord {
 	pendingAction?: "archive" | "delete";
 }
 
-type CloudLifecycleApi = Pick<ExtensionAPI, "appendEntry" | "on">;
 type CloudLifecycleCommandContext = Pick<ExtensionCommandContext, "modelRegistry" | "sessionManager" | "ui">;
-type CloudLifecycleSessionContext = Pick<ExtensionContext, "sessionManager">;
 type CloudLifecycleSdkOperations = {
 	archive(agentId: string, options?: { apiKey?: string }): Promise<void>;
 	delete(agentId: string, options?: { apiKey?: string }): Promise<void>;
@@ -77,14 +81,6 @@ interface ParsedDurableCloudLifecycleEntry {
 	anchorEntryId: string | null;
 }
 
-interface CloudLifecycleSessionState {
-	sessionFile?: string;
-	sessionId?: string;
-	getBranch?: () => SessionEntry[];
-}
-
-let cloudLifecycleApi: CloudLifecycleApi | undefined;
-let cloudLifecycleSession: CloudLifecycleSessionState = {};
 let durableWriterForTests: ((data: CursorCloudLifecycleEntryData) => boolean) | undefined;
 let sessionFsyncForTests: (() => boolean) | undefined;
 let runtimeApiKeyResolverForTests: (() => Promise<string | undefined>) | undefined;
@@ -178,14 +174,6 @@ function buildBaseEntry(agentId: string, action: CloudLifecycleAction): CursorCl
 	};
 }
 
-function captureCloudLifecycleSession(ctx: CloudLifecycleSessionContext): void {
-	cloudLifecycleSession = {
-		sessionFile: ctx.sessionManager.getSessionFile?.() ?? undefined,
-		sessionId: ctx.sessionManager.getSessionId?.() ?? undefined,
-		getBranch: () => ctx.sessionManager.getBranch(),
-	};
-}
-
 function durableLedgerPath(sessionFile: string, sessionId: string): string {
 	const sessionHash = createHash("sha256").update(sessionId).digest("hex").slice(0, 32);
 	return join(dirname(sessionFile), `${DURABLE_LEDGER_PREFIX}-${sessionHash}.journal`);
@@ -215,14 +203,14 @@ function createRegularFileExclusive(path: string, flags: number, mode: number): 
 
 function fsyncCloudLifecycleSessionFile(): boolean {
 	if (sessionFsyncForTests) return sessionFsyncForTests();
-	const sessionFile = cloudLifecycleSession.sessionFile;
+	const sessionFile = cloudLifecycleState.session.sessionFile;
 	if (!sessionFile || !existsSync(sessionFile)) return true;
 	return fsyncExistingRegularFile(sessionFile);
 }
 
 function appendDurableCloudLifecycleEntry(data: CursorCloudLifecycleEntryData, anchorEntryId: string): boolean {
 	if (durableWriterForTests) return durableWriterForTests(data);
-	const { sessionFile, sessionId } = cloudLifecycleSession;
+	const { sessionFile, sessionId } = cloudLifecycleState.session;
 	if (!sessionFile || !sessionId) return false;
 	const entry: DurableCloudLifecycleEntry = {
 		...data,
@@ -270,12 +258,12 @@ function appendDurableCloudLifecycleEntry(data: CursorCloudLifecycleEntryData, a
 }
 
 function appendCloudLifecycleEntry(pi: CloudLifecycleApi, data: CursorCloudLifecycleEntryData | undefined): boolean {
-	if (!data || (!durableWriterForTests && (!cloudLifecycleSession.sessionFile || !cloudLifecycleSession.sessionId))) return false;
+	if (!data || (!durableWriterForTests && (!cloudLifecycleState.session.sessionFile || !cloudLifecycleState.session.sessionId))) return false;
 	let anchorEntryId: string | undefined;
 	try {
-		const previousEntryId = durableWriterForTests ? undefined : cloudLifecycleSession.getBranch?.().at(-1)?.id;
+		const previousEntryId = durableWriterForTests ? undefined : cloudLifecycleState.session.getBranch?.().at(-1)?.id;
 		pi.appendEntry<CursorCloudLifecycleEntryData>(CLOUD_LIFECYCLE_ENTRY_TYPE, data);
-		const anchor = cloudLifecycleSession.getBranch?.().at(-1);
+		const anchor = cloudLifecycleState.session.getBranch?.().at(-1);
 		anchorEntryId = durableWriterForTests
 			? "test-cloud-lifecycle-entry"
 			: anchor?.type === "custom" &&
@@ -307,16 +295,14 @@ function appendCloudLifecycleMutationEntry(
 }
 
 export function registerCursorCloudLifecycleLedger(pi: CloudLifecycleApi): void {
-	cloudLifecycleApi = pi;
-	pi.on("session_start", (_event, ctx) => captureCloudLifecycleSession(ctx));
-	pi.on("before_agent_start", (_event, ctx) => captureCloudLifecycleSession(ctx));
-	pi.on("session_tree", (_event, ctx) => captureCloudLifecycleSession(ctx));
+	registerCursorCloudLifecycleSessionCapture(pi);
 }
 
 export function recordCursorCloudLifecycleRun(
 	report: Omit<CursorCloudRunReport, "runId"> & { runId?: string },
 	options: { apiKey?: string } = {},
 ): boolean {
+	const cloudLifecycleApi = cloudLifecycleState.api;
 	if (!cloudLifecycleApi) return false;
 	const baseEntry = buildBaseEntry(report.agentId, "record");
 	if (!baseEntry) return false;
@@ -710,8 +696,8 @@ export async function runCursorCloudLifecycleCommand(pi: CloudLifecycleApi, args
 
 export const __testUtils = {
 	reset: () => {
-		cloudLifecycleApi = undefined;
-		cloudLifecycleSession = {};
+		cloudLifecycleState.api = undefined;
+		cloudLifecycleState.session = {};
 		durableWriterForTests = undefined;
 		sessionFsyncForTests = undefined;
 		runtimeApiKeyResolverForTests = undefined;

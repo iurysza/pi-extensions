@@ -1,9 +1,5 @@
 import type { ExtensionAPI, ExtensionContext, SessionEntry } from "@earendil-works/pi-coding-agent";
 import {
-	registerCursorCloudLifecycleLedger,
-	runCursorCloudLifecycleCommand,
-} from "./cursor-cloud-lifecycle.js";
-import {
 	CURSOR_AUTO_REVIEW_ENV,
 	CURSOR_CLOUD_ACK_ENV,
 	CURSOR_CLOUD_ALLOW_LOCAL_STATE_ENV,
@@ -34,6 +30,7 @@ import {
 	type CursorRuntime,
 	type CursorSdkConfig,
 } from "./cursor-config.js";
+import { registerCursorCloudLifecycleSessionCapture } from "./cursor-cloud-lifecycle-session.js";
 import { asRecord } from "./cursor-record-utils.js";
 import { getResolvedSessionCursorHttp1Enabled } from "./cursor-http1.js";
 import { getCursorSessionCwd, getCursorSessionProjectTrusted } from "./cursor-session-scope.js";
@@ -477,12 +474,13 @@ export function registerCursorCloudRuntimeControls(
 	pi: CursorRuntimeStateExtensionApi,
 	options: { refreshStatus: CursorStatusRefresh },
 ): void {
-	registerCursorCloudLifecycleLedger(pi);
+	registerCursorCloudLifecycleSessionCapture(pi);
 	registerCursorRuntimeFlags(pi);
 	registerCursorRuntimeCommand(pi, options.refreshStatus);
 	pi.registerCommand("cursor-cloud", {
 		description: "List, archive, or delete recorded Cursor cloud agents for this session branch",
 		handler: async (args, ctx) => {
+			const { runCursorCloudLifecycleCommand } = await import("./cursor-cloud-lifecycle.js");
 			await runCursorCloudLifecycleCommand(pi, args, ctx);
 		},
 	});
