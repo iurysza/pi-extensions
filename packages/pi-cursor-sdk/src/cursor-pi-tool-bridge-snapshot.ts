@@ -12,7 +12,7 @@ export {
 	resolveCursorPiToolBridgeEnabled,
 } from "./cursor-pi-tool-bridge-env.js";
 import { isRegisteredCursorNativeToolName } from "./cursor-native-tool-display-state.js";
-import { isExcludedFromCursorBridgeExposure } from "./cursor-tool-presentation-registry.js";
+import { isExcludedFromCursorBridgeExposure } from "./cursor-replay-tool-name.js";
 
 const OVERLAPPING_CURSOR_NATIVE_PI_BUILTIN_TOOL_NAMES = new Set(["read", "bash", "write", "edit", "grep", "find", "ls"]);
 

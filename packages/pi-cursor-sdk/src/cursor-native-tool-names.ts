@@ -1,4 +1,4 @@
-import { CURSOR_REPLAY_ACTIVITY_TOOL_NAME } from "./cursor-tool-presentation-registry.js";
+import { CURSOR_REPLAY_ACTIVITY_TOOL_NAME } from "./cursor-replay-tool-name.js";
 
 export const CURSOR_MODEL_ACTIVE_REPLAY_TOOL_NAMES = [CURSOR_REPLAY_ACTIVITY_TOOL_NAME] as const;
 export const CURSOR_REPLAY_TOOL_NAMES = [CURSOR_REPLAY_ACTIVITY_TOOL_NAME] as const;

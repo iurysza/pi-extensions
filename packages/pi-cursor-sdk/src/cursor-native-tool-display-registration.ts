@@ -17,7 +17,7 @@ import {
 	setCursorNativeToolDisplayRuntimeRequested,
 	skippedNativeToolNames,
 } from "./cursor-native-tool-display-state.js";
-import { isCursorReplayToolName } from "./cursor-tool-presentation-registry.js";
+import { isCursorReplayToolName } from "./cursor-replay-tool-name.js";
 import { createCursorSharedReplayProducer } from "./cursor-shared-replay-producer.js";
 
 export const CURSOR_CORE_PI_REPLAY_TOOL_NAMES = ["read", "bash", "edit", "write"] as const;

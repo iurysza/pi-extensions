@@ -46,7 +46,13 @@ import type {
 	CursorReplayGenerateImageDetailFields,
 } from "./cursor-replay-tool-details.js";
 
-export const CURSOR_REPLAY_ACTIVITY_TOOL_NAME = "cursor" as const;
+
+import {
+	CURSOR_REPLAY_ACTIVITY_TOOL_NAME,
+	isCursorReplayToolName,
+	isExcludedFromCursorBridgeExposure,
+	type CursorReplayToolName,
+} from "./cursor-replay-tool-name.js";
 
 const EMPTY_REPLAY_DETAIL_FIELDS = (): Record<string, never> => ({});
 const COLLAPSED_REPLAY_DETAIL_FIELDS = (): { collapseDetailsByDefault: true } => ({ collapseDetailsByDefault: true });
@@ -310,7 +316,6 @@ export const CURSOR_TOOL_PRESENTATION_SPECS = [
 type CursorToolPresentationSpecEntry = (typeof CURSOR_TOOL_PRESENTATION_SPECS)[number];
 
 export type CursorNormalizedToolName = CursorReplaySourceToolName;
-export type CursorReplayToolName = typeof CURSOR_REPLAY_ACTIVITY_TOOL_NAME;
 
 type CursorToolPresentationSpecWithNeutralActivity = Extract<
 	CursorToolPresentationSpecEntry,
@@ -375,13 +380,8 @@ export function classifyCursorWebToolKind(name: string | undefined): CursorWebTo
 	return spec?.webKind;
 }
 
-export function isCursorReplayToolName(toolName: string): toolName is CursorReplayToolName {
-	return toolName === CURSOR_REPLAY_ACTIVITY_TOOL_NAME;
-}
-
-export function isExcludedFromCursorBridgeExposure(toolName: string): boolean {
-	return toolName === CURSOR_REPLAY_ACTIVITY_TOOL_NAME;
-}
+export { CURSOR_REPLAY_ACTIVITY_TOOL_NAME, isCursorReplayToolName, isExcludedFromCursorBridgeExposure };
+export type { CursorReplayToolName };
 
 export function getCursorReplayPromptLabel(toolName: string): string {
 	return toolName === CURSOR_REPLAY_ACTIVITY_TOOL_NAME ? "Cursor activity" : toolName;
