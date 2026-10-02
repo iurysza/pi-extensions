@@ -10,7 +10,7 @@ import { registerCursorSessionAgentLifecycle } from "./cursor-session-agent-life
 import { registerCursorSessionAgentResume } from "./cursor-session-agent-resume.js";
 import { streamCursorLazy } from "./cursor-provider-lazy.js";
 import { CURSOR_API_KEY_CONFIG_VALUE, resolveCursorApiKey } from "./cursor-api-key.js";
-import { registerCursorFallbackIssueWarning } from "./cursor-fallback-warning.js";
+import type { registerCursorFallbackIssueWarning } from "./cursor-fallback-warning.js";
 import { registerCursorAgentsContextDedup } from "./cursor-agents-context-registration.js";
 import { registerCursorOverflowNormalization } from "./cursor-provider-overflow.js";
 import { registerCursorSdkSessionProcessErrorGuard } from "./cursor-sdk-process-error-guard.js";
@@ -69,6 +69,7 @@ export default async function (pi: CursorExtensionApi) {
 	});
 
 	if (fallbackIssue) {
+		const { registerCursorFallbackIssueWarning } = await import("./cursor-fallback-warning.js");
 		registerCursorFallbackIssueWarning(pi, fallbackIssue);
 	}
 
