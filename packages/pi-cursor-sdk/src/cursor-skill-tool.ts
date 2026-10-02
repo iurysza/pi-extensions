@@ -13,6 +13,7 @@ import type { CursorRuntime } from "./cursor-config.js";
 import { isCursorModel } from "./cursor-model.js";
 import { registerCursorModelLifecycle, type CursorModelLifecycleExtensionApi } from "./cursor-model-lifecycle.js";
 import { resolveCursorPiToolBridgeEnabled } from "./cursor-pi-tool-bridge-env.js";
+import { resolveEffectiveCursorConfigForContext } from "./cursor-runtime-state.js";
 
 export const CURSOR_ACTIVATE_SKILL_TOOL_NAME = "cursor_activate_skill";
 export const CURSOR_ACTIVATE_SKILL_MCP_NAME = "pi__cursor_activate_skill";
@@ -58,14 +59,11 @@ function getAvailableSkillNames(): string[] {
 	return [...currentSkillsByName.keys()].sort();
 }
 
-async function resolveEffectiveRuntimeForSkillLifecycle(
+function resolveEffectiveRuntimeForSkillLifecycle(
 	cursorModel: boolean,
 	ctx: Pick<ExtensionContext, "cwd"> & Partial<Pick<ExtensionContext, "isProjectTrusted">>,
-): Promise<CursorRuntime> {
-	if (!cursorModel) return "local";
-	// Runtime state pulls in the cloud lifecycle graph; load it only once a Cursor model is active.
-	const { resolveEffectiveCursorConfigForContext } = await import("./cursor-runtime-state.js");
-	return resolveEffectiveCursorConfigForContext(ctx).runtime.value;
+): CursorRuntime {
+	return cursorModel ? resolveEffectiveCursorConfigForContext(ctx).runtime.value : "local";
 }
 
 function shouldExposeSkillTool(model: ExtensionContext["model"], runtime: CursorRuntime): boolean {
@@ -245,15 +243,15 @@ export function registerCursorSkillTool(pi: CursorSkillToolExtensionApi): void {
 		modelSelect: (event) => {
 			clearSkillsAndSync(event.model);
 		},
-		turnStart: async (_event, ctx) => {
+		turnStart: (_event, ctx) => {
 			const cursorModel = isCursorModel(ctx.model);
-			const runtime = await resolveEffectiveRuntimeForSkillLifecycle(cursorModel, ctx);
+			const runtime = resolveEffectiveRuntimeForSkillLifecycle(cursorModel, ctx);
 			if (!cursorModel || runtime === "cloud") setCurrentSkills([]);
 			syncCursorSkillToolForModel(pi, ctx.model, runtime);
 		},
-		beforeAgentStart: async (event, ctx) => {
+		beforeAgentStart: (event, ctx) => {
 			const cursorModel = isCursorModel(ctx.model);
-			const runtime = await resolveEffectiveRuntimeForSkillLifecycle(cursorModel, ctx);
+			const runtime = resolveEffectiveRuntimeForSkillLifecycle(cursorModel, ctx);
 			if (cursorModel && runtime === "local") {
 				setCurrentSkills(event.systemPromptOptions?.skills);
 			} else {
