@@ -22,6 +22,8 @@ export interface ProviderQuota {
   plan?: string;
   windows: QuotaWindow[];
   error?: string;
+  /** When a rate-limit cooldown ends and the provider may be asked again. */
+  retryAt?: number;
 }
 
 export type QuotaSnapshot = Record<ProviderId, ProviderQuota>;

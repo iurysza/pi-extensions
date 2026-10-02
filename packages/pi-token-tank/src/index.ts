@@ -6,7 +6,7 @@ import { truncateToWidth } from "@earendil-works/pi-tui";
 
 import { createCredentialSource, type CredentialSourceLike } from "./auth.js";
 import { captureCursorSessionToken, fetchCursorQuotaWithToken } from "./cursor.js";
-import { formatFooter, formatWidget } from "./format.js";
+import { FRESHNESS_MS, formatFooter, formatWidget } from "./format.js";
 import { createFooterSlotRegistration } from "./footer-slot.js";
 import { loadFooterMode, saveFooterMode, type FooterMode } from "./preferences.js";
 import { createFileQuotaStore, type QuotaStore, type StoredQuota } from "./quota-store.js";
@@ -20,7 +20,6 @@ import type { ProviderId, ProviderQuota, QuotaProvider, QuotaSnapshot } from "./
 
 const STATUS_KEY = "pi-token-tank";
 const WIDGET_KEY = "pi-token-tank";
-const FRESHNESS_MS = 5 * 60 * 1000;
 export const COOLDOWN_BASE_MS = 5 * 60 * 1000;
 export const COOLDOWN_MAX_MS = 30 * 60 * 1000;
 
@@ -49,7 +48,9 @@ function isRateLimited(quota: ProviderQuota): boolean {
 
 /** Keep showing last-good numbers, marked stale, when a refresh fails. */
 function staleOr(previous: ProviderQuota | undefined, failure: ProviderQuota): ProviderQuota {
-  return hasData(previous) ? { ...previous, state: "stale", error: failure.error } : failure;
+  return hasData(previous)
+    ? { ...previous, state: "stale", error: failure.error, retryAt: failure.retryAt }
+    : failure;
 }
 
 /** Per-process cache with the same contract as the shared file store. Used when no store is given. */
@@ -85,9 +86,11 @@ export function createCoordinator(
     const nowMs = Date.now();
     // A 429 cooldown binds every session, including forced refreshes.
     if (stored.cooldownUntil !== undefined && stored.cooldownUntil > nowMs) {
-      return known ?? cache.data ?? {
-        provider: provider.id, state: "error", windows: [], error: "Rate limited. Waiting before retrying.",
-      };
+      return staleOr(known, {
+        provider: provider.id, state: "error", windows: [],
+        error: hasData(known) && known.error ? known.error : "Quota request failed (429)",
+        retryAt: stored.cooldownUntil,
+      });
     }
     if (!force && known && isFresh(known, nowMs)) return known;
 
@@ -104,7 +107,9 @@ export function createCoordinator(
       }
       if (isRateLimited(quota)) {
         const backoffMs = Math.min(COOLDOWN_MAX_MS, stored.backoffMs ? stored.backoffMs * 2 : COOLDOWN_BASE_MS);
-        await store.write(provider.id, { quota: stored.quota, cooldownUntil: Date.now() + backoffMs, backoffMs });
+        const cooldownUntil = Date.now() + backoffMs;
+        await store.write(provider.id, { quota: stored.quota, cooldownUntil, backoffMs });
+        return staleOr(known, { ...quota, retryAt: cooldownUntil });
       }
       return staleOr(known, quota);
     } finally {
@@ -234,9 +239,10 @@ export function createTokenTank(
     const activeCoordinator = getCoordinator(ctx);
     const snapshot = activeCoordinator.getSnapshot();
     const widgetRegistry = runtimeRegistry;
+    const activeProviderId = findProviderForModel(ctx.model, runtimeRegistry)?.id;
     ctx.ui.setWidget(WIDGET_KEY, (_tui, theme) => ({
       render(width: number) {
-        return formatWidget(snapshot, widgetRegistry, makeThemeLike(theme), Date.now())
+        return formatWidget(snapshot, widgetRegistry, makeThemeLike(theme), Date.now(), activeProviderId)
           .map((line) => truncateToWidth(line, Math.max(1, width), "…"));
       },
       invalidate() {},
@@ -280,7 +286,7 @@ export function createTokenTank(
   });
 
   pi.registerCommand("token-tank", {
-    description: "Toggle details or set footer mode: minimal | full",
+    description: "Toggle the quota table, or set the footer: minimal | full",
     getArgumentCompletions: (prefix) => ["minimal", "full"]
       .filter((value) => value.startsWith(prefix.trim()))
       .map((value) => ({ value, label: value })),

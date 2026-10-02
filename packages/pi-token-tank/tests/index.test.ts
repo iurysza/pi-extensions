@@ -231,7 +231,7 @@ describe("createTokenTank", () => {
         await f.commands["token-tank"]!.handler("", f.ctx);
         const widget = f.widgets["pi-token-tank"]?.join("\n") ?? "";
         assert.ok(widget.includes("Cursor"));
-        assert.ok(widget.includes("Credentials missing"));
+        assert.ok(widget.includes("not set up"));
       } finally {
         if (originalToken === undefined) delete process.env.CURSOR_SESSION_TOKEN;
         else process.env.CURSOR_SESSION_TOKEN = originalToken;
@@ -259,7 +259,7 @@ describe("createTokenTank", () => {
       await f.commands["token-tank"]!.handler("", f.ctx);
       const widget = f.widgets["pi-token-tank"]?.join("\n") ?? "";
       assert.ok(widget.includes("Cursor"));
-      assert.ok(widget.includes("19% used"));
+      assert.ok(widget.includes("19%"));
     } finally {
       globalThis.fetch = originalFetch;
       if (originalToken === undefined) delete process.env.CURSOR_SESSION_TOKEN;
@@ -285,8 +285,8 @@ describe("createTokenTank", () => {
       await f.fire("turn_end", {});
       const widget = f.widgets["pi-token-tank"]?.join("\n") ?? "";
       assert.ok(widget.includes("Cursor"));
-      assert.ok(widget.includes("19% used"));
-      assert.ok(!widget.includes("Credentials missing. Set CURSOR_SESSION_TOKEN"));
+      assert.ok(widget.includes("19%"));
+      assert.ok(!widget.split("\n").some((line) => line.includes("Cursor") && line.includes("not set up")));
     } finally {
       globalThis.fetch = originalFetch;
       if (originalToken === undefined) delete process.env.CURSOR_SESSION_TOKEN;
@@ -381,7 +381,7 @@ describe("createTokenTank", () => {
       await f.commands["token-tank"]!.handler("", f.ctx);
       const widget = f.widgets["pi-token-tank"]?.join("\n") ?? "";
       assert.ok(widget.includes("Existing"));
-      assert.ok(widget.includes("42% used"));
+      assert.ok(widget.includes("42%"));
       assert.ok(widget.includes("Cursor"));
     } finally {
       globalThis.fetch = originalFetch;
@@ -403,8 +403,8 @@ describe("createTokenTank", () => {
       await f.commands["token-tank"]!.handler("", f.ctx);
       const widget = f.widgets["pi-token-tank"]?.join("\n") ?? "";
       assert.ok(widget.includes("Cursor"));
-      assert.ok(widget.includes("Credentials missing"));
-      assert.ok(!widget.includes("0% used"));
+      assert.ok(widget.includes("not set up"));
+      assert.ok(!widget.includes(" 0%"));
     } finally {
       globalThis.fetch = originalFetch;
       if (originalToken === undefined) delete process.env.CURSOR_SESSION_TOKEN;
@@ -516,11 +516,11 @@ describe("createTokenTank", () => {
       assert.ok(widget.includes("GitHub Copilot"));
       assert.ok(widget.includes("xAI"));
       assert.ok(widget.includes("Monthly"));
-      assert.ok(widget.includes("25% used"));
-      assert.ok(widget.includes("43% used") || widget.includes("42% used"));
+      assert.ok(widget.includes("25%"));
+      assert.ok(widget.includes("43%") || widget.includes("42%"));
       assert.equal(f.widgetKinds["pi-token-tank"], "component");
-      assert.ok((f.widgets["pi-token-tank"]?.length ?? Infinity) <= 7);
-      assert.ok(f.widgets["pi-token-tank"]?.some((line) => line.includes("/token-tank hides")));
+      assert.ok(f.widgets["pi-token-tank"]?.[0]?.startsWith("Token Tank"));
+      assert.ok(f.widgets["pi-token-tank"]?.[0]?.includes("Status"));
       assert.ok(f.widgetRenderers["pi-token-tank"]?.(32).every((line) => visibleWidth(line) <= 32));
       await f.commands["token-tank"]!.handler("", f.ctx);
       assert.equal(f.widgets["pi-token-tank"], undefined);

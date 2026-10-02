@@ -94,38 +94,51 @@ describe("footer gauges", () => {
 });
 
 describe("formatWidget", () => {
-  it("keeps every provider to one line below Pi's widget cap", () => {
-    const registry = [...providers, createCursorProvider()];
-    const snapshot: QuotaSnapshot = {
-      codex: liveQuota("codex", 24, 61),
-      kimi: liveQuota("kimi", 18, 43),
-      copilot: { provider: "copilot", state: "missing", windows: [] },
-      xai: {
-        provider: "xai",
-        state: "live",
-        plan: "SuperGrok",
-        windows: [{
-          id: "weekly",
-          shortLabel: "7d",
-          longLabel: "Weekly",
-          resetStyle: "weekday-time",
-          usedPercent: 42.5,
-        }],
-      },
-      cursor: { provider: "cursor", state: "missing", windows: [] },
-    };
-    const lines = formatWidget(snapshot, registry, theme, 1752306000000);
-    const text = lines.join("\n");
-    assert.equal(lines.length, 7);
-    assert.ok(text.includes("Codex"));
-    assert.ok(text.includes("Kimi"));
-    assert.ok(text.includes("GitHub Copilot"));
-    assert.ok(text.includes("xAI"));
-    assert.ok(text.includes("SuperGrok"));
-    assert.ok(text.includes("Cursor"));
-    assert.ok(text.includes("24% used"));
-    assert.ok(text.includes("42% used") || text.includes("43% used"));
-    assert.ok(text.includes("/token-tank minimal|full"));
-    assert.ok(text.includes("/token-tank hides"));
+  const registry = [...providers, createCursorProvider()];
+  const MINUTE = 60_000;
+  const snapshot: QuotaSnapshot = {
+    "claude-code": {
+      ...liveQuota("claude-code", 14, 3), plan: "Max", state: "stale", fetchedAt: NOW_MS - 22 * MINUTE,
+      retryAt: NOW_MS + 8 * MINUTE, error: "Claude Code quota request failed (429)",
+    },
+    codex: { ...liveQuota("codex", 24, 91), fetchedAt: NOW_MS - MINUTE },
+    kimi: { provider: "kimi", state: "missing", windows: [] },
+    copilot: { provider: "copilot", state: "error", windows: [], error: "GitHub Copilot quota request failed (401)" },
+    xai: {
+      provider: "xai", state: "live", plan: "SuperGrok", fetchedAt: NOW_MS - 12 * MINUTE,
+      windows: [{ id: "weekly", shortLabel: "7d", longLabel: "Weekly", resetStyle: "weekday-time", usedPercent: 42.5 }],
+    },
+    cursor: { provider: "cursor", state: "error", windows: [], error: "Cursor quota request failed (500)" },
+  };
+
+  it("renders one header line, data rows in registry order, then problem rows", () => {
+    assert.deepEqual(formatWidget(snapshot, registry, plainTheme, NOW_MS, "claude-code"), [
+      "Token Tank        Plan       Window  Used        Resets in  Status",
+      "▸ Claude Code     Max        5h      ▰▱▱▱▱  14%  3h 25m     stale 22m · retry 8m",
+      "                             Weekly  ▰▱▱▱▱   3%  4d 11h",
+      "  Codex           plus       5h      ▰▰▱▱▱  24%  3h 25m",
+      "                             Weekly  ▰▰▰▰▰  91%  4d 11h",
+      "  xAI             SuperGrok  Weekly  ▰▰▰▱▱  43%             12m old",
+      "  Kimi                       not set up · Run /login kimi-coding or set KIMI_API_KEY",
+      "  GitHub Copilot             auth failed (401) · Run /login github-copilot",
+      "  Cursor                     unavailable (500) · Set CURSOR_SESSION_TOKEN to your cursor.com WorkosCursorSessionToken cookie value",
+    ]);
+  });
+
+  it("leaves Status blank while data is fresh and shows stale without a retry when no cooldown applies", () => {
+    const fresh = formatWidget({ codex: { ...liveQuota("codex", 24, 15), fetchedAt: NOW_MS } }, providers, plainTheme, NOW_MS);
+    assert.equal(fresh[1], "  Codex     plus  5h      ▰▰▱▱▱  24%  3h 25m");
+    const stale = formatWidget({
+      codex: { ...liveQuota("codex", 24, 15), state: "stale", fetchedAt: NOW_MS - 7 * MINUTE, error: "Codex quota request failed (500)" },
+    }, providers, plainTheme, NOW_MS);
+    assert.ok(stale[1]?.endsWith("stale 7m"));
+  });
+
+  it("colours usage by the 90% threshold and problem reasons as errors", () => {
+    const text = formatWidget(snapshot, registry, theme, NOW_MS).join("\n");
+    assert.ok(text.includes("[success:▰▰▱▱▱  24%]"));
+    assert.ok(text.includes("[error:▰▰▰▰▰  91%]"));
+    assert.ok(text.includes("[warning:stale 22m · retry 8m]"));
+    assert.ok(text.includes("[error:auth failed (401)][dim: · Run /login github-copilot]"));
   });
 });

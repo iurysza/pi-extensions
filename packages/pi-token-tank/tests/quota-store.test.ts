@@ -89,6 +89,19 @@ describe("429 cooldown", () => {
     assert.ok((stored.cooldownUntil ?? 0) > Date.now() + COOLDOWN_BASE_MS - 5_000);
   });
 
+  it("reports when the cooldown ends, both on the 429 and while it is active", async () => {
+    await store.write("claude-code", { quota: live(30, Date.now() - 6 * 60_000) });
+    const first = await createCoordinator(credentials, [provider(async () => rateLimited)], {}, store)
+      .refresh("claude-code", false);
+    const { cooldownUntil } = await store.read("claude-code");
+    assert.equal(first.retryAt, cooldownUntil);
+
+    const other = await createCoordinator(credentials, [provider(async () => live(1))], {}, store)
+      .refresh("claude-code", true);
+    assert.equal(other.state, "stale");
+    assert.equal(other.retryAt, cooldownUntil);
+  });
+
   it("doubles the cooldown on consecutive 429s up to the cap", async () => {
     const coordinator = () => createCoordinator(credentials, [provider(async () => rateLimited)], {}, store);
     const expected = [COOLDOWN_BASE_MS, COOLDOWN_BASE_MS * 2, COOLDOWN_BASE_MS * 4, COOLDOWN_MAX_MS, COOLDOWN_MAX_MS];

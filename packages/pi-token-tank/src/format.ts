@@ -1,3 +1,4 @@
+import { visibleWidth } from "@earendil-works/pi-tui";
 import type { FooterMode } from "./preferences.js";
 import type { ProviderQuota, QuotaProvider, QuotaSnapshot, QuotaWindow } from "./types.js";
 
@@ -22,14 +23,6 @@ function formatResetDuration(deltaMs: number): string {
   if (days === 0 && remMinutes > 0) parts.push(`${remMinutes}m`);
   if (parts.length === 0) return "soon";
   return parts.join(" ");
-}
-
-function formatUpdatedTime(fetchedAt?: number): string {
-  if (!fetchedAt) return "—";
-  const date = new Date(fetchedAt);
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-  return `${hours}:${minutes}`;
 }
 
 export function formatGauge(percent: number): string {
@@ -78,42 +71,101 @@ export function formatFooter(
     .join(theme.fg("dim", "   ·   "));
 }
 
+/** Quota older than this is refetched, and the panel starts showing its age. */
+export const FRESHNESS_MS = 5 * 60 * 1000;
+
+type Color = Parameters<ThemeLike["fg"]>[0];
+type Cell = readonly [text: string, color: Color];
+/** A provider row is either full table cells or a problem message that spans the quota columns. */
+type Row = { cells: Cell[] } | { lead: Cell[]; reason: Cell; hint: string };
+
+const HEADERS = ["Plan", "Window", "Used", "Resets in", "Status"];
+const GAP = "  ";
+
+function padCell(text: string, width: number): string {
+  return text + " ".repeat(Math.max(0, width - visibleWidth(text)));
+}
+
+/** Blank when fresh, so an empty Status column means every provider is healthy. */
+function statusCell(quota: ProviderQuota, nowMs: number): Cell {
+  const age = quota.fetchedAt ? formatResetDuration(nowMs - quota.fetchedAt) : undefined;
+  if (quota.state === "live") {
+    const fresh = !quota.fetchedAt || nowMs - quota.fetchedAt < FRESHNESS_MS;
+    return fresh ? ["", "dim"] : [`${age} old`, "dim"];
+  }
+  const retry = quota.retryAt ? ` · retry ${formatResetDuration(quota.retryAt - nowMs)}` : "";
+  return [`stale${age ? ` ${age}` : ""}${retry}`, "warning"];
+}
+
+function problemReason(quota: ProviderQuota): Cell {
+  if (quota.state === "missing") return ["not set up", "error"];
+  const code = /\((\d{3})\)/.exec(quota.error ?? "")?.[1];
+  if (code === "401" || code === "403") return [`auth failed (${code})`, "error"];
+  return [code ? `unavailable (${code})` : "unavailable", "error"];
+}
+
+function hasProblem(quota: ProviderQuota): boolean {
+  return quota.state === "missing" || quota.state === "error" || quota.windows.length === 0;
+}
+
+function providerRows(provider: QuotaProvider, quota: ProviderQuota, active: boolean, nowMs: number): Row[] {
+  const name: Cell = [`${active ? "▸" : " "} ${provider.label}`, active ? "accent" : "text"];
+  if (hasProblem(quota)) {
+    const reason: Cell = quota.windows.length === 0 && (quota.state === "live" || quota.state === "stale")
+      ? ["no quota windows", "dim"]
+      : problemReason(quota);
+    return [{ lead: [name, ["", "dim"]], reason, hint: provider.credentialsHint.replace(/\.$/, "") }];
+  }
+  const blankLead: Cell[] = [["", "dim"], ["", "dim"]];
+  return quota.windows.map((window, index) => ({
+    cells: [
+      ...(index === 0 ? [name, [quota.plan ?? "", "dim"] as Cell] : blankLead),
+      [window.longLabel, "text"],
+      [`${formatGauge(window.usedPercent)} ${`${Math.round(window.usedPercent)}%`.padStart(4)}`, thresholdColor(window.usedPercent)],
+      [window.resetsAt ? formatResetDuration(window.resetsAt - nowMs) : "", "dim"],
+      index === 0 ? statusCell(quota, nowMs) : ["", "dim"],
+    ],
+  }));
+}
+
 export function formatWidget(
   snapshot: QuotaSnapshot,
   registry: readonly QuotaProvider[],
   theme: ThemeLike,
   nowMs: number,
+  activeProviderId?: string,
 ): string[] {
-  const lines = [
-    `${theme.fg("accent", "Quota usage")}${theme.fg("dim", " · footer /token-tank minimal|full")}`,
+  const present = registry.filter((provider) => snapshot[provider.id]);
+  // Providers with data keep registry order; unavailable ones go last so they do not break the scan.
+  const ordered = [
+    ...present.filter((provider) => !hasProblem(snapshot[provider.id]!)),
+    ...present.filter((provider) => hasProblem(snapshot[provider.id]!)),
   ];
+  const rows = ordered.flatMap((provider) =>
+    providerRows(provider, snapshot[provider.id]!, provider.id === activeProviderId, nowMs));
 
-  for (const provider of registry) {
-    const q = snapshot[provider.id];
-    if (!q) continue;
-    const prefix = `${theme.fg("accent", provider.label)}${theme.fg("dim", ` · ${q.plan ?? "—"} · ${q.state}`)}`;
-
-    if (q.state === "missing") {
-      lines.push(`${prefix}${theme.fg("dim", ` · Credentials missing. ${provider.credentialsHint}`)}`);
-      continue;
-    }
-    if (q.state === "error") {
-      lines.push(`${prefix}${theme.fg("error", ` · ${q.error ?? "Quota unavailable."}`)}`);
-      continue;
-    }
-
-    const windows = q.windows.map((window) => {
-      const reset = window.resetsAt ? ` ↻ ${formatResetDuration(window.resetsAt - nowMs)}` : "";
-      return `${window.longLabel} ${theme.fg(thresholdColor(window.usedPercent), `${Math.round(window.usedPercent)}% used`)}${theme.fg("dim", reset)}`;
-    });
-    const details = windows.length > 0 ? windows.join(theme.fg("dim", " · ")) : theme.fg("dim", "No quota windows");
-    const staleError = q.error && q.state === "stale" ? theme.fg("warning", ` · ${q.error}`) : "";
-    lines.push(`${prefix}${theme.fg("dim", " · ")}${details}${staleError}`);
+  const header: Cell[] = [["Token Tank", "accent"], ...HEADERS.map((text): Cell => [text, "dim"])];
+  const widths = header.map(([text]) => visibleWidth(text));
+  for (const row of rows) {
+    const cells = "cells" in row ? row.cells : row.lead;
+    cells.forEach(([text], index) => { widths[index] = Math.max(widths[index]!, visibleWidth(text)); });
   }
 
-  const updated = formatUpdatedTime(registry.map((provider) => snapshot[provider.id]?.fetchedAt).find(Boolean));
-  lines.push(theme.fg("dim", `Updated ${updated} · /token-tank hides`));
-  return lines;
+  const renderCells = (cells: readonly Cell[], last: boolean) => {
+    // Drop empty trailing cells so rows carry no trailing spaces.
+    let end = cells.length;
+    while (last && end > 0 && cells[end - 1]![0] === "") end--;
+    return cells.slice(0, end)
+      .map(([text, color], index) => theme.fg(color, last && index === end - 1 ? text : padCell(text, widths[index]!)))
+      .join(GAP);
+  };
+
+  return [
+    renderCells(header, true),
+    ...rows.map((row) => "cells" in row
+      ? renderCells(row.cells, true)
+      : `${renderCells(row.lead, false)}${GAP}${theme.fg(row.reason[1], row.reason[0])}${theme.fg("dim", ` · ${row.hint}`)}`),
+  ];
 }
 
 export { formatResetDuration };
