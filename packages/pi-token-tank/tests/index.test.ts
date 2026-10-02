@@ -1,4 +1,4 @@
-import { describe, it } from "node:test";
+import { afterEach, beforeEach, describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
@@ -116,6 +116,19 @@ function fakeAPI(provider = "openai-codex", registeredProviderIds: string[] = []
 
   };
 }
+
+// The default quota store writes under Pi's agent dir. Give every test its own.
+let isolatedAgentDir: string | undefined;
+const priorAgentDir = process.env.PI_CODING_AGENT_DIR;
+beforeEach(async () => {
+  isolatedAgentDir = await mkdtemp(join(tmpdir(), "pi-token-tank-agent-"));
+  process.env.PI_CODING_AGENT_DIR = isolatedAgentDir;
+});
+afterEach(async () => {
+  if (priorAgentDir === undefined) delete process.env.PI_CODING_AGENT_DIR;
+  else process.env.PI_CODING_AGENT_DIR = priorAgentDir;
+  if (isolatedAgentDir) await rm(isolatedAgentDir, { recursive: true, force: true });
+});
 
 describe("createTokenTank", () => {
   it("routes supported model families and rejects unsupported providers", () => {

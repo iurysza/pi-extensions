@@ -8,7 +8,21 @@ import type { ProviderQuota, QuotaWindow } from "./types.js";
 const execFileAsync = promisify(execFile);
 const USAGE_URL = "https://api.anthropic.com/api/oauth/usage";
 
+// The usage endpoint answers 429 to clients that do not identify as Claude Code.
+const FALLBACK_CLAUDE_CODE_VERSION = "2.1.283";
+
 type CredentialReader = () => Promise<string | undefined>;
+type VersionReader = () => Promise<string>;
+
+let cachedVersion: Promise<string> | undefined;
+
+/** Installed Claude Code CLI version, read once per process. Falls back when the CLI is unavailable. */
+export function readClaudeCodeVersion(): Promise<string> {
+  cachedVersion ??= execFileAsync("claude", ["--version"], { timeout: 5_000 })
+    .then(({ stdout }) => /\d+\.\d+\.\d+/.exec(stdout)?.[0] ?? FALLBACK_CLAUDE_CODE_VERSION)
+    .catch(() => FALLBACK_CLAUDE_CODE_VERSION);
+  return cachedVersion;
+}
 
 /** Read the CLI's existing login. Never return the token through quota snapshots or errors. */
 export async function readClaudeCodeToken(): Promise<string | undefined> {
@@ -59,6 +73,7 @@ export function parseClaudeCodeUsage(body: unknown): QuotaWindow[] {
 export async function fetchClaudeCodeQuota(
   _credentials: unknown,
   readToken: CredentialReader = readClaudeCodeToken,
+  readVersion: VersionReader = readClaudeCodeVersion,
 ): Promise<ProviderQuota> {
   const token = await readToken();
   if (!token) {
@@ -71,6 +86,7 @@ export async function fetchClaudeCodeQuota(
         Authorization: `Bearer ${token}`,
         "anthropic-beta": "oauth-2025-04-20",
         Accept: "application/json",
+        "User-Agent": `claude-code/${await readVersion()}`,
       },
       signal: AbortSignal.timeout(10_000),
     });

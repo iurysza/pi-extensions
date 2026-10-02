@@ -47,7 +47,7 @@ weekly window instead:
 Full mode includes every available window:
 
 ```text
-5h  ▰▰▱▱▱  󰔛 3h 25m   ·   7d  ▰▱▱▱  󰔛 4d 11h
+5h  ▰▰▱▱▱  󰔛 3h 25m   ·   7d  ▰▱▱▱▱  󰔛 4d 11h
 ```
 
 | Command | Description |
@@ -95,15 +95,24 @@ process memory, and never logs or persists it.
 
 ## Refresh behavior
 
-- Fetches the active provider at session start.
-- Refreshes stale data after turns and model switches.
+- Checks the active provider at session start, after turns, and after model
+  switches. It fetches only when the shared data is more than 5 minutes old.
 - Refreshes all configured providers when `/token-tank` opens.
-- Preserves last-good data when a later request fails.
-- Keeps normalized quota only in the process-memory cache.
+- Preserves last-good data, marked `~`, when a later request fails.
+
+All Pi sessions on a machine share one quota cache, so running many agents does
+not multiply requests. Each provider has a file under
+`pi-token-tank/<provider>.json` in Pi's agent directory. It holds normalized
+quota numbers and any rate-limit cooldown, never tokens or raw responses. A
+lock file lets only one session fetch a provider at a time.
+
+When a provider answers 429, every session stops calling it for 5 minutes. The
+wait doubles on each consecutive 429, up to 30 minutes, and resets after a
+successful request. To retry sooner, delete that provider's file.
 
 Claude Code, GitHub Copilot, Cursor, and xAI quota depend on read-only undocumented
-endpoints. Those endpoints can change without notice. Raw responses, tokens,
-and quota snapshots are never logged or persisted.
+endpoints. Those endpoints can change without notice. Raw responses and tokens
+are never logged or persisted.
 
 ## Requirements
 

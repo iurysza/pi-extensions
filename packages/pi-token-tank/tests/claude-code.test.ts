@@ -48,10 +48,11 @@ describe("Claude Code quota", () => {
       assert.equal(init?.method, "GET");
       assert.equal(new Headers(init?.headers).get("authorization"), "Bearer secret-test-token");
       assert.equal(new Headers(init?.headers).get("anthropic-beta"), "oauth-2025-04-20");
+      assert.equal(new Headers(init?.headers).get("user-agent"), "claude-code/9.8.7");
       return new Response(JSON.stringify(body), { status: 200 });
     }) as typeof fetch;
     try {
-      const result = await fetchClaudeCodeQuota(undefined, async () => "secret-test-token");
+      const result = await fetchClaudeCodeQuota(undefined, async () => "secret-test-token", async () => "9.8.7");
       assert.equal(result.state, "live");
       assert.equal(result.windows.length, 2);
       assert.ok(!JSON.stringify(result).includes("secret-test-token"));

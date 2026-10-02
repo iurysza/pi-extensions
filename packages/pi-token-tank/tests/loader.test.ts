@@ -16,6 +16,8 @@ describe("official Pi extension loader", () => {
     const agentDir = await mkdtemp(join(tmpdir(), "pi-token-tank-loader-"));
     const originalFetch = globalThis.fetch;
     const originalToken = process.env.CURSOR_SESSION_TOKEN;
+    const originalAgentDir = process.env.PI_CODING_AGENT_DIR;
+    process.env.PI_CODING_AGENT_DIR = agentDir;
     process.env.CURSOR_SESSION_TOKEN = "loader-user%3A%3Aheader.payload.signature";
     globalThis.fetch = async (url) => String(url).includes("cursor.com")
       ? new Response(JSON.stringify(cursorUsage), { status: 200 })
@@ -56,6 +58,8 @@ describe("official Pi extension loader", () => {
       globalThis.fetch = originalFetch;
       if (originalToken === undefined) delete process.env.CURSOR_SESSION_TOKEN;
       else process.env.CURSOR_SESSION_TOKEN = originalToken;
+      if (originalAgentDir === undefined) delete process.env.PI_CODING_AGENT_DIR;
+      else process.env.PI_CODING_AGENT_DIR = originalAgentDir;
       await rm(agentDir, { recursive: true, force: true });
     }
   });

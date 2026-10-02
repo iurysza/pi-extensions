@@ -9,6 +9,7 @@ import { captureCursorSessionToken, fetchCursorQuotaWithToken } from "./cursor.j
 import { formatFooter, formatWidget } from "./format.js";
 import { createFooterSlotRegistration } from "./footer-slot.js";
 import { loadFooterMode, saveFooterMode, type FooterMode } from "./preferences.js";
+import { createFileQuotaStore, type QuotaStore, type StoredQuota } from "./quota-store.js";
 import {
   createCursorProvider,
   providerForModel as findProviderForModel,
@@ -20,16 +21,57 @@ import type { ProviderId, ProviderQuota, QuotaProvider, QuotaSnapshot } from "./
 const STATUS_KEY = "pi-token-tank";
 const WIDGET_KEY = "pi-token-tank";
 const FRESHNESS_MS = 5 * 60 * 1000;
+export const COOLDOWN_BASE_MS = 5 * 60 * 1000;
+export const COOLDOWN_MAX_MS = 30 * 60 * 1000;
 
 interface CacheEntry {
   data?: ProviderQuota;
   inflight?: Promise<ProviderQuota>;
 }
 
+function hasData(quota: ProviderQuota | undefined): quota is ProviderQuota {
+  return quota?.state === "live" || quota?.state === "stale";
+}
+
+function isFresh(quota: ProviderQuota | undefined, nowMs: number): boolean {
+  return quota?.state === "live" && quota.fetchedAt !== undefined && nowMs - quota.fetchedAt < FRESHNESS_MS;
+}
+
+function newer(left: ProviderQuota | undefined, right: ProviderQuota | undefined): ProviderQuota | undefined {
+  if (!hasData(right)) return left;
+  if (!hasData(left)) return right;
+  return (right.fetchedAt ?? 0) > (left.fetchedAt ?? 0) ? right : left;
+}
+
+function isRateLimited(quota: ProviderQuota): boolean {
+  return quota.state === "error" && /\(429\)/.test(quota.error ?? "");
+}
+
+/** Keep showing last-good numbers, marked stale, when a refresh fails. */
+function staleOr(previous: ProviderQuota | undefined, failure: ProviderQuota): ProviderQuota {
+  return hasData(previous) ? { ...previous, state: "stale", error: failure.error } : failure;
+}
+
+/** Per-process cache with the same contract as the shared file store. Used when no store is given. */
+export function createMemoryQuotaStore(): QuotaStore {
+  const entries = new Map<ProviderId, StoredQuota>();
+  const claimed = new Set<ProviderId>();
+  return {
+    read: async (providerId) => ({ ...entries.get(providerId) }),
+    write: async (providerId, entry) => { entries.set(providerId, entry); },
+    claim: async (providerId) => {
+      if (claimed.has(providerId)) return undefined;
+      claimed.add(providerId);
+      return async () => { claimed.delete(providerId); };
+    },
+  };
+}
+
 export function createCoordinator(
   credentials: CredentialSourceLike,
   registry: readonly QuotaProvider[],
   initialSnapshot: QuotaSnapshot = {},
+  store: QuotaStore = createMemoryQuotaStore(),
 ) {
   const caches = new Map<ProviderId, CacheEntry>(registry.map((provider) => [
     provider.id,
@@ -37,37 +79,54 @@ export function createCoordinator(
   ]));
   const providerById = new Map(registry.map((provider) => [provider.id, provider]));
 
+  async function fetchShared(provider: QuotaProvider, cache: CacheEntry, force: boolean): Promise<ProviderQuota> {
+    const stored = await store.read(provider.id);
+    const known = newer(cache.data, stored.quota);
+    const nowMs = Date.now();
+    // A 429 cooldown binds every session, including forced refreshes.
+    if (stored.cooldownUntil !== undefined && stored.cooldownUntil > nowMs) {
+      return known ?? cache.data ?? {
+        provider: provider.id, state: "error", windows: [], error: "Rate limited. Waiting before retrying.",
+      };
+    }
+    if (!force && known && isFresh(known, nowMs)) return known;
+
+    const release = await store.claim(provider.id);
+    // Another session is fetching; its result lands in the store for the next refresh.
+    if (!release) return known ?? cache.data ?? { provider: provider.id, state: "missing", windows: [] };
+    try {
+      const quota = await provider.fetch(credentials).catch((): ProviderQuota => ({
+        provider: provider.id, state: "error", windows: [], error: "Unexpected quota refresh failure.",
+      }));
+      if (quota.state === "live") {
+        await store.write(provider.id, { quota });
+        return quota;
+      }
+      if (isRateLimited(quota)) {
+        const backoffMs = Math.min(COOLDOWN_MAX_MS, stored.backoffMs ? stored.backoffMs * 2 : COOLDOWN_BASE_MS);
+        await store.write(provider.id, { quota: stored.quota, cooldownUntil: Date.now() + backoffMs, backoffMs });
+      }
+      return staleOr(known, quota);
+    } finally {
+      await release();
+    }
+  }
+
   async function refresh(providerId: ProviderId, force: boolean): Promise<ProviderQuota> {
     const provider = providerById.get(providerId);
     const cache = caches.get(providerId);
     if (!provider || !cache) throw new Error(`Unknown quota provider: ${providerId}`);
-    if (!force && cache.data?.fetchedAt && Date.now() - cache.data.fetchedAt < FRESHNESS_MS) {
-      return cache.data;
-    }
+    if (!force && isFresh(cache.data, Date.now())) return cache.data!;
     if (cache.inflight) return cache.inflight;
 
-    cache.inflight = provider.fetch(credentials)
+    cache.inflight = fetchShared(provider, cache, force)
+      .catch((): ProviderQuota => staleOr(cache.data, {
+        provider: providerId, state: "error", windows: [], error: "Unexpected quota refresh failure.",
+      }))
       .then((quota) => {
-        const previous = cache.data;
-        if (
-          (quota.state === "error" || quota.state === "missing") &&
-          previous &&
-          (previous.state === "live" || previous.state === "stale")
-        ) {
-          cache.data = { ...previous, state: "stale", error: quota.error };
-        } else {
-          cache.data = quota;
-        }
+        cache.data = quota;
         cache.inflight = undefined;
-        return cache.data;
-      })
-      .catch(() => {
-        const previous = cache.data;
-        cache.data = previous && (previous.state === "live" || previous.state === "stale")
-          ? { ...previous, state: "stale", error: "Unexpected quota refresh failure." }
-          : { provider: providerId, state: "error", windows: [], error: "Unexpected quota refresh failure." };
-        cache.inflight = undefined;
-        return cache.data;
+        return quota;
       });
     return cache.inflight;
   }
@@ -109,6 +168,7 @@ export function createTokenTank(
   credentialSourceOverride?: CredentialSourceLike,
   preferenceFile?: string,
   registry: readonly QuotaProvider[] = providers,
+  quotaStore: QuotaStore = createFileQuotaStore(),
 ) {
   const cursorSessionToken = captureCursorSessionToken();
   const detectedCursorProvider = createCursorProvider(
@@ -147,7 +207,7 @@ export function createTokenTank(
         ? runtimeRegistry.filter((provider) => !previousIds.has(provider.id)).map((provider) => provider.id)
         : [];
       credentials ??= createCredentialSource(ctx.modelRegistry);
-      coordinator = createCoordinator(credentials, runtimeRegistry, previousSnapshot);
+      coordinator = createCoordinator(credentials, runtimeRegistry, previousSnapshot, quotaStore);
     }
     return coordinator;
   }
@@ -202,7 +262,8 @@ export function createTokenTank(
   pi.on("session_start", async (_event, ctx) => {
     footerSlot.register();
     footerMode = await loadFooterMode(preferenceFile);
-    await refreshAndRender(ctx, true);
+    // Not forced: a session that starts while the shared cache is fresh must not refetch.
+    await refreshAndRender(ctx, false);
   });
   pi.on("turn_end", async (_event, ctx) => refreshAndRender(ctx, false));
   pi.on("model_select", async (event, ctx) => {
