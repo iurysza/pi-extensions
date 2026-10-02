@@ -5,7 +5,6 @@ import {
 	CURSOR_TOOL_MANIFEST_ENV,
 	resolveCursorToolManifestEnabled,
 } from "./cursor-tool-manifest.js";
-import { runCursorSessionAgentCleanupCommand } from "./cursor-session-agent-cleanup.js";
 import {
 	CURSOR_HTTP1_ENTRY_TYPE,
 	getStoredCursorHttp1Enabled,
@@ -28,7 +27,6 @@ import { isCursorModel } from "./cursor-model.js";
 import { registerCursorModelLifecycle } from "./cursor-model-lifecycle.js";
 import { asRecord } from "./cursor-record-utils.js";
 import { getCursorSessionScopeKey } from "./cursor-session-scope.js";
-import { refreshSessionCursorAgentConfig } from "./cursor-session-agent.js";
 import { getCursorModelMetadata } from "./model-discovery.js";
 import {
 	cursorFastDefaultsFromConfig,
@@ -556,6 +554,7 @@ export function registerCursorRuntimeControls(pi: CursorRuntimeControlsExtension
 	pi.registerCommand("cursor-local-resume-cleanup", {
 		description: "Dry-run or delete recorded superseded local Cursor SDK agents",
 		handler: async (args, ctx) => {
+			const { runCursorSessionAgentCleanupCommand } = await import("./cursor-session-agent-cleanup.js");
 			await runCursorSessionAgentCleanupCommand(pi, args, ctx);
 		},
 	});
@@ -568,6 +567,7 @@ export function registerCursorRuntimeControls(pi: CursorRuntimeControlsExtension
 				return;
 			}
 			try {
+				const { refreshSessionCursorAgentConfig } = await import("./cursor-session-agent.js");
 				const result = await refreshSessionCursorAgentConfig();
 				const messages: Record<typeof result, string> = {
 					reloaded: "Cursor SDK agent config refreshed.",
