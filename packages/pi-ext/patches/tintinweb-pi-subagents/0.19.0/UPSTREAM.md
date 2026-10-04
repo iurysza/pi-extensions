@@ -10,4 +10,4 @@ Proposal for `@tintinweb/pi-subagents`:
 2. Ship `renderCall`/`renderResult` for both, built on those fields instead of regexes.
 3. Keep the text header stable meanwhile; the patch's fallback parser depends on its shape.
 
-This patch already adds the `kind/agentId/status` subset. No upstream PR has been opened.
+This patch already adds the `kind/agentId/status/type` subset. No upstream PR has been opened.

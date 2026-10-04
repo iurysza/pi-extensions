@@ -1,5 +1,5 @@
 diff --git a/src/index.ts b/src/index.ts
-index 4989968..c0b0647 100644
+index 4989968..27a915b 100644
 --- a/src/index.ts
 +++ b/src/index.ts
 @@ -59,6 +59,7 @@ import {
@@ -34,7 +34,7 @@ index 4989968..c0b0647 100644
        }
  
 -      return textResult(output);
-+      return textResult(output, { kind: "result", agentId: record.id, status: record.status } as any);
++      return textResult(output, { kind: "result", agentId: record.id, status: record.status, type: displayName } as any);
      },
    }));
  
@@ -57,7 +57,7 @@ index 4989968..c0b0647 100644
        }
        if (record.status !== "running") {
 -        return textResult(`Agent "${params.agent_id}" is not running (status: ${record.status}). Cannot steer a non-running agent.`);
-+        return textResult(`Agent "${params.agent_id}" is not running (status: ${record.status}). Cannot steer a non-running agent.`, { kind: "not_running", agentId: record.id, status: record.status } as any);
++        return textResult(`Agent "${params.agent_id}" is not running (status: ${record.status}). Cannot steer a non-running agent.`, { kind: "not_running", agentId: record.id, status: record.status, type: getDisplayName(record.type) } as any);
        }
        if (!record.session) {
          // Session not ready yet — queue the steer for delivery once initialized
@@ -65,7 +65,7 @@ index 4989968..c0b0647 100644
          record.pendingSteers.push(params.message);
          pi.events.emit("subagents:steered", { id: record.id, message: params.message });
 -        return textResult(`Steering message queued for agent ${record.id}. It will be delivered once the session initializes.`);
-+        return textResult(`Steering message queued for agent ${record.id}. It will be delivered once the session initializes.`, { kind: "queued", agentId: record.id } as any);
++        return textResult(`Steering message queued for agent ${record.id}. It will be delivered once the session initializes.`, { kind: "queued", agentId: record.id, type: getDisplayName(record.type) } as any);
        }
  
        try {
@@ -73,28 +73,31 @@ index 4989968..c0b0647 100644
          return textResult(
            `Steering message sent to agent ${record.id}. The agent will process it after its current tool execution.\n` +
            `Current state: ${stateParts.join(" · ")}`,
-+          { kind: "steered", agentId: record.id } as any,
++          { kind: "steered", agentId: record.id, type: getDisplayName(record.type) } as any,
          );
        } catch (err) {
 -        return textResult(`Failed to steer agent: ${err instanceof Error ? err.message : String(err)}`);
-+        return textResult(`Failed to steer agent: ${err instanceof Error ? err.message : String(err)}`, { kind: "failed", agentId: record.id } as any);
++        return textResult(`Failed to steer agent: ${err instanceof Error ? err.message : String(err)}`, { kind: "failed", agentId: record.id, type: getDisplayName(record.type) } as any);
        }
      },
    }));
-diff --git a/b/src/ui/tool-pills.ts b/src/ui/tool-pills.ts
+diff --git a/src/ui/tool-pills.ts b/src/ui/tool-pills.ts
 new file mode 100644
-index 0000000..9c9cc3f
+index 0000000..b32d092
 --- /dev/null
 +++ b/src/ui/tool-pills.ts
-@@ -0,0 +1,243 @@
+@@ -0,0 +1,308 @@
 +/**
 + * tool-pills.ts — compact two-line "pill" rendering for get_subagent_result and
 + * steer_subagent. Display only: nothing here changes what the model receives.
 + *
-+ * Line 1: {icon} {headline}      (headline = args.reasoning when present)
-+ * Line 2: {handle} · {type} → {summary}
-+ * Expanded (C-o) appends the description/result or steering message, dimmed
-+ * and indented two spaces.
++ * The row background is the status (pending / success / error); no status words.
++ *
++ *   Line 1: {icon} {bold}subagent · {action}{/bold}  {role} @{name}
++ *   Line 2: {dim reasoning} · {facts}
++ *
++ * Expanded (C-o) appends the ORIGINAL model-facing tool text, dimmed and
++ * indented two spaces (capped at MAX_BODY_LINES).
 + *
 + * Self-contained on purpose: mirrors the look of pi-ext's tool-presentation
 + * pills without importing from it.
@@ -104,33 +107,44 @@ index 0000000..9c9cc3f
 +
 +const RESET = "\x1b[0m";
 +const DIM = "\x1b[2m";
++const BOLD = "\x1b[1m";
 +const RED = "\x1b[31m";
-+const GREEN = "\x1b[32m";
-+const YELLOW = "\x1b[33m";
 +const MAGENTA = "\x1b[35m";
 +const ICON = "󰚩";
 +const INDENT = "  ";
-+const MAX_BODY_LINES = 50;
++const MAX_BODY_LINES = 200;
++const MAX_REASON = 60;
++const GENERIC_ROLES = new Set(["agent", "general-purpose"]);
 +
-+export type PillKind = "result" | "not_found";
 +export type SteerKind = "steered" | "queued" | "not_running" | "not_found" | "failed";
++export type PillKind = "result" | "not_found" | SteerKind;
 +
 +/** Non-model-facing `details` added to the tools' results. */
 +export interface PillDetails {
-+  kind: PillKind | SteerKind;
++  kind: PillKind;
 +  agentId?: string;
 +  status?: string;
++  /** Display name of the agent type, e.g. "Explore". */
++  type?: string;
 +}
++
++const oneLine = (s: string) => s.replace(/\s+/g, " ").trim();
++const cut = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1).trimEnd()}…` : s);
++const plural = (n: string, unit: string) => `${n} ${unit}${n === "1" ? "" : "s"}`;
++
++function textOf(result: any): string {
++  const c = result?.content;
++  return Array.isArray(c) && c[0]?.type === "text" ? String(c[0].text ?? "") : "";
++}
++
++// ---- parsing (fallback for results without `details`) ----
 +
 +interface ParsedResult {
 +  type: string;
 +  status: string;
 +  stats: Record<string, string>;
-+  description: string;
 +  body: string;
 +}
-+
-+const oneLine = (s: string) => s.replace(/\s+/g, " ").trim();
 +
 +/** Defensive parse of the get_subagent_result text header. Undefined when the shape is unknown. */
 +export function parseResultText(text: string): ParsedResult | undefined {
@@ -142,142 +156,81 @@ index 0000000..9c9cc3f
 +    if (kv) stats[kv[1]] = kv[2];
 +    else if (/token/.test(part)) stats.Tokens = part.replace(/\s*tokens?$/, "");
 +  }
-+  return { type: m[1], status: m[2], stats, description: m[4], body: m[5] };
++  return { type: m[1], status: m[2], stats, body: m[5] };
 +}
 +
-+/** `Jack` stays as typed; a raw id is shortened to 8 chars. */
++/** `Jack` stays as typed; a raw id (hex-ish with dashes) is shortened to 8 chars. */
 +export function shortHandle(raw: unknown): string {
-+  const s = typeof raw === "string" ? raw.trim() : "";
-+  return /^[0-9a-f-]{12,}$/i.test(s) ? s.slice(0, 8) : s;
++  const s = typeof raw === "string" ? raw.trim().replace(/^@/, "") : "";
++  return /^[0-9a-f][0-9a-f-]{11,}$/i.test(s) ? s.slice(0, 8) : s;
 +}
 +
-+function shortDuration(d: string): string {
-+  return d.replace(/\s*\(running\)$/, "").replace(/^(\d+)\.\d+s$/, "$1s").replace(/(\d+m \d+)\.\d+s$/, "$1s");
++/** "58.3s (running)" -> "58s"; "125.3s" -> "2m 5s". */
++export function shortDuration(d: string): string {
++  const m = d.replace(/\s*\(running\)$/, "").match(/^(\d+(?:\.\d+)?)s$/);
++  if (!m) return d;
++  const s = Math.round(Number(m[1]));
++  return s >= 60 ? `${Math.floor(s / 60)}m ${s % 60}s` : `${s}s`;
 +}
 +
-+function textOf(result: any): string {
-+  const c = result?.content;
-+  return Array.isArray(c) && c[0]?.type === "text" ? String(c[0].text ?? "") : "";
++// ---- views ----
++
++type Tone = "pending" | "success" | "error";
++
++interface View {
++  tone: Tone;
++  /** Role (agent type) to show, if known and not generic. */
++  role?: string;
++  /** Outcome facts, already styled. Plain-text length matters for fitting. */
++  facts: string;
++  /** Original model-facing text for the expanded view. */
++  original: string;
++  /** Extra expanded content (e.g. the full steering message). */
++  extra?: string;
 +}
 +
-+/** Fit a line; keep the `→ summary` tail visible when narrow. */
-+export function fitPillLine(line: string, width: number): string {
-+  const max = Math.max(1, width);
-+  if (visibleWidth(line) <= max) return line;
-+  const arrow = line.indexOf("→");
-+  if (arrow < 0) return truncateToWidth(line, max, "…");
-+  const tail = line.slice(arrow);
-+  const tailWidth = visibleWidth(tail);
-+  if (tailWidth >= max) return truncateToWidth(tail, max, "…");
-+  return `${truncateToWidth(line.slice(0, arrow).trimEnd(), max - tailWidth - 1, "…")} ${tail}`;
++function roleOf(type: string | undefined): string | undefined {
++  const t = (type ?? "").trim();
++  return t && !GENERIC_ROLES.has(t.toLowerCase()) ? t : undefined;
 +}
 +
-+/** Width-aware component: one fitted, background-padded row per line. */
-+class PillLines {
-+  constructor(
-+    private readonly build: (width: number) => string[],
-+    private readonly background: (text: string) => string,
-+  ) {}
-+  invalidate(): void {}
-+  render(width: number): string[] {
-+    const max = Math.max(1, width);
-+    return this.build(max).map((line) => {
-+      const fitted = fitPillLine(line, max);
-+      const padded = fitted + " ".repeat(Math.max(0, max - visibleWidth(fitted)));
-+      // Foreground resets clear the row background, so re-apply it per segment.
-+      return padded.split(RESET).map((seg) => this.background(`${seg}${RESET}`)).join("");
-+    });
-+  }
++function errorReason(body: string): string {
++  const first = body.replace(/^Error:\s*/, "").split(/\n\nPartial output before the failure:/)[0];
++  return cut(oneLine(first), MAX_REASON) || "failed";
 +}
 +
-+function indented(text: string, width: number, max = MAX_BODY_LINES): string[] {
-+  const out: string[] = [];
-+  for (const raw of text.replace(/\s+$/, "").split("\n")) {
-+    const wrapped = raw === "" ? [""] : wrapTextWithAnsi(raw, Math.max(1, width - INDENT.length));
-+    for (const w of wrapped) out.push(`${INDENT}${DIM}${w}${RESET}`);
-+  }
-+  if (out.length <= max) return out;
-+  const more = out.length - max;
-+  return [...out.slice(0, max), `${INDENT}${DIM}… ${more} more line${more === 1 ? "" : "s"}${RESET}`];
-+}
-+
-+function head(args: any, running: boolean, fallback: string): string {
-+  const reasoning = typeof args?.reasoning === "string" ? oneLine(args.reasoning) : "";
-+  return `${running ? `${DIM}·${RESET} ` : ""}${MAGENTA}${ICON}${RESET} ${reasoning || fallback}`;
-+}
-+
-+// ---- get_subagent_result ----
-+
-+interface GetView { summary: string; failed: boolean; running?: boolean; type?: string; description?: string; body?: string }
-+
-+function viewGetResult(result: any): GetView {
++function viewGet(result: any, args: any): View {
 +  const text = textOf(result);
 +  const details = result?.details as Partial<PillDetails> | undefined;
 +  if (details?.kind === "not_found" || /^Agent not found/.test(text)) {
-+    return { summary: `${RED}not found${RESET}`, failed: true };
++    return { tone: "error", facts: `${RED}no such agent${RESET}`, original: text };
 +  }
 +  const p = parseResultText(text);
-+  if (!p) return { summary: `${DIM}${oneLine(text).slice(0, 80)}${RESET}`, failed: false, body: text };
-+  const tail: string[] = [];
-+  if (p.stats["Tool uses"]) tail.push(`${p.stats["Tool uses"]} tool${p.stats["Tool uses"] === "1" ? "" : "s"}`);
-+  if (p.stats.Tokens) tail.push(p.stats.Tokens);
-+  if (p.stats.Context) tail.push(`${p.stats.Context} ctx`);
-+  const stats = tail.map((t) => `${DIM}· ${t}${RESET}`).join(" ");
-+  const duration = p.stats.Duration ? `${DIM}· ${shortDuration(p.stats.Duration)}${RESET}` : "";
-+  let status: string;
-+  let failed = false;
-+  switch (p.status) {
-+    case "completed": status = `${GREEN}done${RESET}`; break;
-+    case "running": case "queued": status = `${DIM}${p.status}${RESET}`; break;
-+    case "error": {
-+      const msg = oneLine(p.body.replace(/^Error:\s*/, ""));
-+      status = `${RED}error${msg ? `: ${msg}` : ""}${RESET}`;
-+      failed = true;
-+      break;
-+    }
-+    default: status = `${YELLOW}${p.status}${RESET}`; // aborted | stopped | steered
++  if (!p) return { tone: "success", facts: cut(oneLine(text), MAX_REASON), original: text };
++  const status = details?.status ?? p.status;
++  const role = roleOf(details?.type ?? p.type);
++  const facts: string[] = [];
++  const dur = p.stats.Duration ? shortDuration(p.stats.Duration) : "";
++  if (status === "running" || status === "queued") {
++    if (args?.wait) { if (dur) facts.push(dur); } else facts.push("still running");
++  } else if (dur) facts.push(dur);
++  if (p.stats["Tool uses"]) facts.push(plural(p.stats["Tool uses"], "tool call"));
++  if (p.stats.Tokens) facts.push(plural(p.stats.Tokens.replace(/ token.*$/, ""), "token"));
++  if (p.stats.Context) facts.push(`${p.stats.Context} ctx`);
++  const base = { role, original: text };
++  switch (status) {
++    case "running": case "queued":
++      return { ...base, tone: "pending", facts: facts.join(" · ") };
++    case "error":
++      return { ...base, tone: "error", facts: `${RED}${errorReason(p.body)}${RESET}` };
++    case "aborted":
++      return { ...base, tone: "error", facts: `${RED}hit turn limit, output may be incomplete${RESET}` };
++    case "stopped":
++      return { ...base, tone: "error", facts: `${RED}stopped by user, output is partial${RESET}` };
++    default:
++      return { ...base, tone: "success", facts: facts.join(" · ") };
 +  }
-+  return {
-+    summary: [status, stats, duration].filter(Boolean).join(" "),
-+    failed,
-+    running: p.status === "running" || p.status === "queued",
-+    type: p.type,
-+    description: p.description,
-+    body: p.body,
-+  };
 +}
-+
-+function bg(theme: any, running: boolean, failed: boolean) {
-+  const color = running ? "toolPendingBg" : failed ? "toolErrorBg" : "toolSuccessBg";
-+  return (text: string) => theme.bg(color, text);
-+}
-+
-+export function renderGetCall(args: any, theme: any, context: any): any {
-+  if (!context?.isPartial) return emptyComponent();
-+  return new PillLines(() => [
-+    head(args, true, "get result"),
-+    `${DIM}${shortHandle(args?.agent_id)}${RESET} ${DIM}→ ${args?.wait ? "waiting" : "checking"}${RESET}`,
-+  ], bg(theme, true, false));
-+}
-+
-+export function renderGetResult(result: any, options: any, theme: any, context: any): any {
-+  const args = context?.args ?? {};
-+  if (options?.isPartial) return emptyComponent();
-+  if (context?.isError) return new PillLines(() => [head(args, false, "get result"), `${RED}${oneLine(textOf(result)) || "error"}${RESET}`], bg(theme, false, true));
-+  const view = viewGetResult(result);
-+  const handle = shortHandle(args.agent_id);
-+  const who = `${DIM}${handle}${view.type ? ` · ${view.type}` : ""}${RESET}`;
-+  return new PillLines((width) => {
-+    const lines = [head(args, !!view.running, "get result"), `${who} ${DIM}→${RESET} ${view.summary}`];
-+    if (options?.expanded) {
-+      if (view.description) lines.push(`${INDENT}${DIM}${oneLine(view.description)}${RESET}`);
-+      if (view.body) lines.push(...indented(view.body, width));
-+    }
-+    return lines;
-+  }, bg(theme, !!view.running, view.failed));
-+}
-+
-+// ---- steer_subagent ----
 +
 +export function classifySteer(result: any): SteerKind {
 +  const kind = (result?.details as Partial<PillDetails> | undefined)?.kind;
@@ -290,43 +243,155 @@ index 0000000..9c9cc3f
 +  return "steered";
 +}
 +
-+function steerSummary(kind: SteerKind, args: any, result: any): { summary: string; failed: boolean } {
++function viewSteer(result: any, args: any): View {
++  const text = textOf(result);
++  const details = result?.details as Partial<PillDetails> | undefined;
++  const kind = classifySteer(result);
 +  const msg = oneLine(typeof args?.message === "string" ? args.message : "");
-+  const quote = msg ? ` ${DIM}· "${msg.length > 50 ? `${msg.slice(0, 49)}…` : msg}"${RESET}` : "";
++  const quote = msg ? `"${cut(msg, MAX_REASON)}"` : "";
++  const truncated = msg.length > MAX_REASON || (typeof args?.message === "string" && args.message.trim().includes("\n"));
++  const extra = truncated ? args.message : undefined;
++  const base = { role: roleOf(details?.type), original: text, extra };
 +  switch (kind) {
-+    case "steered": return { summary: `${GREEN}steered${RESET}${quote}`, failed: false };
-+    case "queued": return { summary: `${YELLOW}queued${RESET}${quote}`, failed: false };
-+    case "not_found": return { summary: `${RED}not found${RESET}`, failed: true };
-+    case "not_running": {
-+      const status = textOf(result).match(/\(status: ([^)]*)\)/)?.[1] ?? (result?.details as any)?.status;
-+      return { summary: `${RED}not running${status ? ` (${status})` : ""}${RESET}`, failed: true };
++    case "steered": return { ...base, tone: "success", facts: quote };
++    case "queued": return { ...base, tone: "success", facts: `queued${quote ? ` · ${quote}` : ""}` };
++    case "not_found": return { ...base, tone: "error", facts: `${RED}no such agent${RESET}`, extra: undefined };
++    case "not_running": return { ...base, tone: "error", facts: `${RED}not running, already finished${RESET}`, extra: undefined };
++    default: {
++      const why = cut(oneLine(text.replace(/^Failed to steer agent:\s*/, "")), MAX_REASON) || "failed";
++      return { ...base, tone: "error", facts: `${RED}${why}${RESET}`, extra: undefined };
 +    }
-+    default: return { summary: `${RED}failed${RESET}`, failed: true };
 +  }
 +}
 +
-+export function renderSteerCall(args: any, theme: any, context: any): any {
-+  if (!context?.isPartial) return emptyComponent();
-+  const msg = oneLine(typeof args?.message === "string" ? args.message : "");
-+  return new PillLines(() => [
-+    head(args, true, "steer agent"),
-+    `${DIM}${shortHandle(args?.agent_id)}${RESET} ${DIM}→ sending${msg ? ` · "${msg.slice(0, 50)}"` : ""}${RESET}`,
-+  ], bg(theme, true, false));
++// ---- layout ----
++
++function plain(s: string): string {
++  return s.replace(/\x1b\[[0-9;]*m/g, "");
 +}
 +
-+export function renderSteerResult(result: any, options: any, theme: any, context: any): any {
-+  const args = context?.args ?? {};
-+  if (options?.isPartial) return emptyComponent();
-+  if (context?.isError) return new PillLines(() => [head(args, false, "steer agent"), `${RED}${oneLine(textOf(result)) || "error"}${RESET}`], bg(theme, false, true));
-+  const { summary, failed } = steerSummary(classifySteer(result), args, result);
-+  return new PillLines((width) => {
-+    const lines = [head(args, false, "steer agent"), `${DIM}${shortHandle(args.agent_id)}${RESET} ${DIM}→${RESET} ${summary}`];
-+    if (options?.expanded && typeof args.message === "string" && args.message) lines.push(...indented(args.message, width, Number.MAX_SAFE_INTEGER));
-+    return lines;
-+  }, bg(theme, false, failed));
++function reasoningOf(args: any, fallback: string): string {
++  const r = typeof args?.reasoning === "string" ? oneLine(args.reasoning) : "";
++  return r || fallback;
 +}
 +
-+/** Renders nothing: with `renderShell: "self"` the result component owns the row. */
++export function line1(action: string, role: string | undefined, handle: string, running: boolean): string {
++  const who = [role, handle ? `@${handle}` : ""].filter(Boolean).join(" ");
++  return `${running ? `${DIM}·${RESET} ` : ""}${MAGENTA}${ICON}${RESET} ${BOLD}subagent · ${action}${RESET}${who ? `  ${DIM}${who}${RESET}` : ""}`;
++}
++
++/** Dim reasoning, then ` · facts`. Reasoning is truncated first; the facts tail stays visible. */
++export function line2(reasoning: string, facts: string, width: number): string {
++  const max = Math.max(1, width);
++  // Narrow: drop whole trailing facts (ctx, tokens, ...) before cutting inside one.
++  const parts = facts.split(" · ");
++  while (parts.length > 1 && visibleWidth(reasoning) + 3 + visibleWidth(parts.join(" · ")) > max && visibleWidth(parts.join(" · ")) > max - 8) parts.pop();
++  facts = parts.join(" · ");
++  const factsW = visibleWidth(facts);
++  if (!facts) return `${DIM}${truncateToWidth(reasoning, max, "…")}${RESET}`;
++  const sep = " · ";
++  const room = max - factsW - sep.length;
++  if (room >= 4) {
++    const r = visibleWidth(reasoning) <= room ? reasoning : truncateToWidth(reasoning, room, "…");
++    return `${DIM}${r}${RESET}${DIM}${sep}${RESET}${facts}`;
++  }
++  return factsW <= max ? facts : truncateToWidth(facts, max, "…");
++}
++
++function indented(text: string, width: number): string[] {
++  const out: string[] = [];
++  for (const raw of text.replace(/\s+$/, "").split("\n")) {
++    const wrapped = raw === "" ? [""] : wrapTextWithAnsi(raw, Math.max(1, width - INDENT.length));
++    for (const w of wrapped) out.push(`${INDENT}${DIM}${w}${RESET}`);
++  }
++  if (out.length <= MAX_BODY_LINES) return out;
++  const more = out.length - MAX_BODY_LINES;
++  return [...out.slice(0, MAX_BODY_LINES), `${INDENT}${DIM}… ${more} more line${more === 1 ? "" : "s"}${RESET}`];
++}
++
++/** Width-aware component: one background-padded row per line, background continuous across resets. */
++class PillLines {
++  constructor(
++    private readonly build: (width: number) => string[],
++    private readonly background: (text: string) => string,
++  ) {}
++  invalidate(): void {}
++  render(width: number): string[] {
++    const max = Math.max(1, width);
++    return this.build(max).map((line) => {
++      const fitted = visibleWidth(line) <= max ? line : truncateToWidth(line, max, "…");
++      const padded = fitted + " ".repeat(Math.max(0, max - visibleWidth(fitted)));
++      // Foreground resets clear the row background, so re-apply it per segment.
++      return padded.split(RESET).map((seg) => this.background(`${seg}${RESET}`)).join("");
++    });
++  }
++}
++
++function bg(theme: any, tone: Tone) {
++  const color = tone === "pending" ? "toolPendingBg" : tone === "error" ? "toolErrorBg" : "toolSuccessBg";
++  return (text: string) => theme.bg(color, text);
++}
++
 +function emptyComponent() {
 +  return { invalidate() {}, render: () => [] as string[] };
 +}
++
++const getAction = (args: any) => (args?.wait === true ? "wait for result" : "get result");
++
++// ---- in-flight elapsed timer (state is shared per tool row) ----
++
++function elapsed(context: any): string {
++  const st = context?.state;
++  if (!st) return "";
++  st.pillStartedAt ??= Date.now();
++  if (!st.pillTimer && typeof context.invalidate === "function") {
++    st.pillTimer = setInterval(() => context.invalidate(), 1000);
++    st.pillTimer.unref?.();
++  }
++  return shortDuration(`${((Date.now() - st.pillStartedAt) / 1000).toFixed(1)}s`);
++}
++
++function stopTimer(context: any): void {
++  const st = context?.state;
++  if (st?.pillTimer) { clearInterval(st.pillTimer); st.pillTimer = undefined; }
++}
++
++// ---- tool renderers ----
++
++function renderCallFor(action: (a: any) => string, fallback: (a: any) => string, withElapsed: boolean) {
++  return (args: any, theme: any, context: any): any => {
++    if (!context?.isPartial) return emptyComponent();
++    const time = withElapsed ? elapsed(context) : "";
++    return new PillLines((width) => [
++      line1(action(args), undefined, shortHandle(args?.agent_id), true),
++      line2(reasoningOf(args, fallback(args)), time, width),
++    ], bg(theme, "pending"));
++  };
++}
++
++function renderResultFor(view: (r: any, a: any) => View, action: (a: any) => string, fallback: (a: any) => string) {
++  return (result: any, options: any, theme: any, context: any): any => {
++    const args = context?.args ?? {};
++    if (options?.isPartial) return emptyComponent();
++    stopTimer(context);
++    const v: View = context?.isError
++      ? { tone: "error", facts: `${RED}${cut(oneLine(textOf(result)) || "error", MAX_REASON)}${RESET}`, original: textOf(result) }
++      : view(result, args);
++    const handle = shortHandle(args.agent_id);
++    return new PillLines((width) => {
++      const lines = [line1(action(args), v.role, handle, false), line2(reasoningOf(args, fallback(args)), v.facts, width)];
++      if (options?.expanded) {
++        if (v.original) lines.push(...indented(v.original, width));
++        if (v.extra) lines.push(...indented(`message: ${v.extra}`, width));
++      }
++      return lines;
++    }, bg(theme, v.tone));
++  };
++}
++
++export const renderGetCall = renderCallFor(getAction, getAction, true);
++export const renderGetResult = renderResultFor(viewGet, getAction, getAction);
++export const renderSteerCall = renderCallFor(() => "steer", () => "steer agent", false);
++export const renderSteerResult = renderResultFor(viewSteer, () => "steer", () => "steer agent");
++
++export { plain as _plainForTests };

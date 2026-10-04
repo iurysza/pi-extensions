@@ -1,0 +1,332 @@
+diff --git a/src/index.ts b/src/index.ts
+index 4989968..c0b0647 100644
+--- a/src/index.ts
++++ b/src/index.ts
+@@ -59,6 +59,7 @@ import {
+ import { FleetList, type FleetUICtx, type FleetWorkflow } from "./ui/fleet-list.js";
+ import { showSchedulesMenu } from "./ui/schedule-menu.js";
+ import { selectItem } from "./ui/select-item.js";
++import { renderGetCall, renderGetResult, renderSteerCall, renderSteerResult } from "./ui/tool-pills.js";
+ import { renderWorkflowCard, renderWorkflowEntryCard } from "./ui/workflow-card.js";
+ import { openWorkflowFromFleet, showWorkflowsMenu, type WorkflowMenuDeps } from "./ui/workflow-menu.js";
+ import { getLifetimeCost, getLifetimeTotal, getSessionContextPercent, type LifetimeUsage, PendingUsagePool, toReportedUsage } from "./usage.js";
+@@ -2735,6 +2736,9 @@ Terse command-style prompts produce shallow, generic work.
+     description:
+       "Check status and retrieve a background agent's full result — its completion notification carries only a preview. Use the agent ID returned by Agent.",
+     promptSnippet: "Check status and retrieve results from a background agent",
++    renderShell: "self",
++    renderCall: renderGetCall,
++    renderResult: renderGetResult,
+     parameters: Type.Object({
+       agent_id: Type.String({
+         description: "The agent ID to check. The agent's handle also works — its `name` if you gave it one, otherwise its type (`explore`, `explore-2`).",
+@@ -2753,7 +2757,7 @@ Terse command-style prompts produce shallow, generic work.
+     execute: async (_toolCallId, params, signal, _onUpdate, _ctx) => {
+       const record = resolveAgentRef(params.agent_id);
+       if (!record || !isTopLevelAgent(record)) {
+-        return textResult(`Agent not found: "${params.agent_id}". It may have been cleaned up.`);
++        return textResult(`Agent not found: "${params.agent_id}". It may have been cleaned up.`, { kind: "not_found" } as any);
+       }
+ 
+       // Wait for completion if requested. Cancellation stops only this tool
+@@ -2812,7 +2816,7 @@ Terse command-style prompts produce shallow, generic work.
+         }
+       }
+ 
+-      return textResult(output);
++      return textResult(output, { kind: "result", agentId: record.id, status: record.status } as any);
+     },
+   }));
+ 
+@@ -2825,6 +2829,9 @@ Terse command-style prompts produce shallow, generic work.
+       "Send a steering message to a running agent. The message will interrupt the agent after its current tool execution " +
+       "and be injected into its conversation, allowing you to redirect its work mid-run. Only works on running agents.",
+     promptSnippet: "Send a steering message to redirect a running background agent",
++    renderShell: "self",
++    renderCall: renderSteerCall,
++    renderResult: renderSteerResult,
+     parameters: Type.Object({
+       agent_id: Type.String({
+         description: "The agent ID to steer (must be currently running). The agent's handle also works — its `name` if you gave it one, otherwise its type (`explore`, `explore-2`).",
+@@ -2836,17 +2843,17 @@ Terse command-style prompts produce shallow, generic work.
+     execute: async (_toolCallId, params, _signal, _onUpdate, _ctx) => {
+       const record = resolveAgentRef(params.agent_id);
+       if (!record || !isTopLevelAgent(record)) {
+-        return textResult(`Agent not found: "${params.agent_id}". It may have been cleaned up.`);
++        return textResult(`Agent not found: "${params.agent_id}". It may have been cleaned up.`, { kind: "not_found" } as any);
+       }
+       if (record.status !== "running") {
+-        return textResult(`Agent "${params.agent_id}" is not running (status: ${record.status}). Cannot steer a non-running agent.`);
++        return textResult(`Agent "${params.agent_id}" is not running (status: ${record.status}). Cannot steer a non-running agent.`, { kind: "not_running", agentId: record.id, status: record.status } as any);
+       }
+       if (!record.session) {
+         // Session not ready yet — queue the steer for delivery once initialized
+         if (!record.pendingSteers) record.pendingSteers = [];
+         record.pendingSteers.push(params.message);
+         pi.events.emit("subagents:steered", { id: record.id, message: params.message });
+-        return textResult(`Steering message queued for agent ${record.id}. It will be delivered once the session initializes.`);
++        return textResult(`Steering message queued for agent ${record.id}. It will be delivered once the session initializes.`, { kind: "queued", agentId: record.id } as any);
+       }
+ 
+       try {
+@@ -2866,9 +2873,10 @@ Terse command-style prompts produce shallow, generic work.
+         return textResult(
+           `Steering message sent to agent ${record.id}. The agent will process it after its current tool execution.\n` +
+           `Current state: ${stateParts.join(" · ")}`,
++          { kind: "steered", agentId: record.id } as any,
+         );
+       } catch (err) {
+-        return textResult(`Failed to steer agent: ${err instanceof Error ? err.message : String(err)}`);
++        return textResult(`Failed to steer agent: ${err instanceof Error ? err.message : String(err)}`, { kind: "failed", agentId: record.id } as any);
+       }
+     },
+   }));
+diff --git a/b/src/ui/tool-pills.ts b/src/ui/tool-pills.ts
+new file mode 100644
+index 0000000..9c9cc3f
+--- /dev/null
++++ b/src/ui/tool-pills.ts
+@@ -0,0 +1,243 @@
++/**
++ * tool-pills.ts — compact two-line "pill" rendering for get_subagent_result and
++ * steer_subagent. Display only: nothing here changes what the model receives.
++ *
++ * Line 1: {icon} {headline}      (headline = args.reasoning when present)
++ * Line 2: {handle} · {type} → {summary}
++ * Expanded (C-o) appends the description/result or steering message, dimmed
++ * and indented two spaces.
++ *
++ * Self-contained on purpose: mirrors the look of pi-ext's tool-presentation
++ * pills without importing from it.
++ */
++
++import { truncateToWidth, visibleWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
++
++const RESET = "\x1b[0m";
++const DIM = "\x1b[2m";
++const RED = "\x1b[31m";
++const GREEN = "\x1b[32m";
++const YELLOW = "\x1b[33m";
++const MAGENTA = "\x1b[35m";
++const ICON = "󰚩";
++const INDENT = "  ";
++const MAX_BODY_LINES = 50;
++
++export type PillKind = "result" | "not_found";
++export type SteerKind = "steered" | "queued" | "not_running" | "not_found" | "failed";
++
++/** Non-model-facing `details` added to the tools' results. */
++export interface PillDetails {
++  kind: PillKind | SteerKind;
++  agentId?: string;
++  status?: string;
++}
++
++interface ParsedResult {
++  type: string;
++  status: string;
++  stats: Record<string, string>;
++  description: string;
++  body: string;
++}
++
++const oneLine = (s: string) => s.replace(/\s+/g, " ").trim();
++
++/** Defensive parse of the get_subagent_result text header. Undefined when the shape is unknown. */
++export function parseResultText(text: string): ParsedResult | undefined {
++  const m = text.match(/^Agent: .+\nType: (.+?) \| Status: (\w+)(?: \([^)]*\))? \| (.*)\nDescription: (.*)\n\n([\s\S]*)$/);
++  if (!m) return undefined;
++  const stats: Record<string, string> = {};
++  for (const part of m[3].split(" | ")) {
++    const kv = part.match(/^(Tool uses|Context|Duration|Cost|Compactions): (.*)$/);
++    if (kv) stats[kv[1]] = kv[2];
++    else if (/token/.test(part)) stats.Tokens = part.replace(/\s*tokens?$/, "");
++  }
++  return { type: m[1], status: m[2], stats, description: m[4], body: m[5] };
++}
++
++/** `Jack` stays as typed; a raw id is shortened to 8 chars. */
++export function shortHandle(raw: unknown): string {
++  const s = typeof raw === "string" ? raw.trim() : "";
++  return /^[0-9a-f-]{12,}$/i.test(s) ? s.slice(0, 8) : s;
++}
++
++function shortDuration(d: string): string {
++  return d.replace(/\s*\(running\)$/, "").replace(/^(\d+)\.\d+s$/, "$1s").replace(/(\d+m \d+)\.\d+s$/, "$1s");
++}
++
++function textOf(result: any): string {
++  const c = result?.content;
++  return Array.isArray(c) && c[0]?.type === "text" ? String(c[0].text ?? "") : "";
++}
++
++/** Fit a line; keep the `→ summary` tail visible when narrow. */
++export function fitPillLine(line: string, width: number): string {
++  const max = Math.max(1, width);
++  if (visibleWidth(line) <= max) return line;
++  const arrow = line.indexOf("→");
++  if (arrow < 0) return truncateToWidth(line, max, "…");
++  const tail = line.slice(arrow);
++  const tailWidth = visibleWidth(tail);
++  if (tailWidth >= max) return truncateToWidth(tail, max, "…");
++  return `${truncateToWidth(line.slice(0, arrow).trimEnd(), max - tailWidth - 1, "…")} ${tail}`;
++}
++
++/** Width-aware component: one fitted, background-padded row per line. */
++class PillLines {
++  constructor(
++    private readonly build: (width: number) => string[],
++    private readonly background: (text: string) => string,
++  ) {}
++  invalidate(): void {}
++  render(width: number): string[] {
++    const max = Math.max(1, width);
++    return this.build(max).map((line) => {
++      const fitted = fitPillLine(line, max);
++      const padded = fitted + " ".repeat(Math.max(0, max - visibleWidth(fitted)));
++      // Foreground resets clear the row background, so re-apply it per segment.
++      return padded.split(RESET).map((seg) => this.background(`${seg}${RESET}`)).join("");
++    });
++  }
++}
++
++function indented(text: string, width: number, max = MAX_BODY_LINES): string[] {
++  const out: string[] = [];
++  for (const raw of text.replace(/\s+$/, "").split("\n")) {
++    const wrapped = raw === "" ? [""] : wrapTextWithAnsi(raw, Math.max(1, width - INDENT.length));
++    for (const w of wrapped) out.push(`${INDENT}${DIM}${w}${RESET}`);
++  }
++  if (out.length <= max) return out;
++  const more = out.length - max;
++  return [...out.slice(0, max), `${INDENT}${DIM}… ${more} more line${more === 1 ? "" : "s"}${RESET}`];
++}
++
++function head(args: any, running: boolean, fallback: string): string {
++  const reasoning = typeof args?.reasoning === "string" ? oneLine(args.reasoning) : "";
++  return `${running ? `${DIM}·${RESET} ` : ""}${MAGENTA}${ICON}${RESET} ${reasoning || fallback}`;
++}
++
++// ---- get_subagent_result ----
++
++interface GetView { summary: string; failed: boolean; running?: boolean; type?: string; description?: string; body?: string }
++
++function viewGetResult(result: any): GetView {
++  const text = textOf(result);
++  const details = result?.details as Partial<PillDetails> | undefined;
++  if (details?.kind === "not_found" || /^Agent not found/.test(text)) {
++    return { summary: `${RED}not found${RESET}`, failed: true };
++  }
++  const p = parseResultText(text);
++  if (!p) return { summary: `${DIM}${oneLine(text).slice(0, 80)}${RESET}`, failed: false, body: text };
++  const tail: string[] = [];
++  if (p.stats["Tool uses"]) tail.push(`${p.stats["Tool uses"]} tool${p.stats["Tool uses"] === "1" ? "" : "s"}`);
++  if (p.stats.Tokens) tail.push(p.stats.Tokens);
++  if (p.stats.Context) tail.push(`${p.stats.Context} ctx`);
++  const stats = tail.map((t) => `${DIM}· ${t}${RESET}`).join(" ");
++  const duration = p.stats.Duration ? `${DIM}· ${shortDuration(p.stats.Duration)}${RESET}` : "";
++  let status: string;
++  let failed = false;
++  switch (p.status) {
++    case "completed": status = `${GREEN}done${RESET}`; break;
++    case "running": case "queued": status = `${DIM}${p.status}${RESET}`; break;
++    case "error": {
++      const msg = oneLine(p.body.replace(/^Error:\s*/, ""));
++      status = `${RED}error${msg ? `: ${msg}` : ""}${RESET}`;
++      failed = true;
++      break;
++    }
++    default: status = `${YELLOW}${p.status}${RESET}`; // aborted | stopped | steered
++  }
++  return {
++    summary: [status, stats, duration].filter(Boolean).join(" "),
++    failed,
++    running: p.status === "running" || p.status === "queued",
++    type: p.type,
++    description: p.description,
++    body: p.body,
++  };
++}
++
++function bg(theme: any, running: boolean, failed: boolean) {
++  const color = running ? "toolPendingBg" : failed ? "toolErrorBg" : "toolSuccessBg";
++  return (text: string) => theme.bg(color, text);
++}
++
++export function renderGetCall(args: any, theme: any, context: any): any {
++  if (!context?.isPartial) return emptyComponent();
++  return new PillLines(() => [
++    head(args, true, "get result"),
++    `${DIM}${shortHandle(args?.agent_id)}${RESET} ${DIM}→ ${args?.wait ? "waiting" : "checking"}${RESET}`,
++  ], bg(theme, true, false));
++}
++
++export function renderGetResult(result: any, options: any, theme: any, context: any): any {
++  const args = context?.args ?? {};
++  if (options?.isPartial) return emptyComponent();
++  if (context?.isError) return new PillLines(() => [head(args, false, "get result"), `${RED}${oneLine(textOf(result)) || "error"}${RESET}`], bg(theme, false, true));
++  const view = viewGetResult(result);
++  const handle = shortHandle(args.agent_id);
++  const who = `${DIM}${handle}${view.type ? ` · ${view.type}` : ""}${RESET}`;
++  return new PillLines((width) => {
++    const lines = [head(args, !!view.running, "get result"), `${who} ${DIM}→${RESET} ${view.summary}`];
++    if (options?.expanded) {
++      if (view.description) lines.push(`${INDENT}${DIM}${oneLine(view.description)}${RESET}`);
++      if (view.body) lines.push(...indented(view.body, width));
++    }
++    return lines;
++  }, bg(theme, !!view.running, view.failed));
++}
++
++// ---- steer_subagent ----
++
++export function classifySteer(result: any): SteerKind {
++  const kind = (result?.details as Partial<PillDetails> | undefined)?.kind;
++  if (kind === "steered" || kind === "queued" || kind === "not_running" || kind === "not_found" || kind === "failed") return kind;
++  const t = textOf(result);
++  if (/^Agent not found/.test(t)) return "not_found";
++  if (/is not running \(status:/.test(t)) return "not_running";
++  if (/^Steering message queued/.test(t)) return "queued";
++  if (/^Failed to steer/.test(t)) return "failed";
++  return "steered";
++}
++
++function steerSummary(kind: SteerKind, args: any, result: any): { summary: string; failed: boolean } {
++  const msg = oneLine(typeof args?.message === "string" ? args.message : "");
++  const quote = msg ? ` ${DIM}· "${msg.length > 50 ? `${msg.slice(0, 49)}…` : msg}"${RESET}` : "";
++  switch (kind) {
++    case "steered": return { summary: `${GREEN}steered${RESET}${quote}`, failed: false };
++    case "queued": return { summary: `${YELLOW}queued${RESET}${quote}`, failed: false };
++    case "not_found": return { summary: `${RED}not found${RESET}`, failed: true };
++    case "not_running": {
++      const status = textOf(result).match(/\(status: ([^)]*)\)/)?.[1] ?? (result?.details as any)?.status;
++      return { summary: `${RED}not running${status ? ` (${status})` : ""}${RESET}`, failed: true };
++    }
++    default: return { summary: `${RED}failed${RESET}`, failed: true };
++  }
++}
++
++export function renderSteerCall(args: any, theme: any, context: any): any {
++  if (!context?.isPartial) return emptyComponent();
++  const msg = oneLine(typeof args?.message === "string" ? args.message : "");
++  return new PillLines(() => [
++    head(args, true, "steer agent"),
++    `${DIM}${shortHandle(args?.agent_id)}${RESET} ${DIM}→ sending${msg ? ` · "${msg.slice(0, 50)}"` : ""}${RESET}`,
++  ], bg(theme, true, false));
++}
++
++export function renderSteerResult(result: any, options: any, theme: any, context: any): any {
++  const args = context?.args ?? {};
++  if (options?.isPartial) return emptyComponent();
++  if (context?.isError) return new PillLines(() => [head(args, false, "steer agent"), `${RED}${oneLine(textOf(result)) || "error"}${RESET}`], bg(theme, false, true));
++  const { summary, failed } = steerSummary(classifySteer(result), args, result);
++  return new PillLines((width) => {
++    const lines = [head(args, false, "steer agent"), `${DIM}${shortHandle(args.agent_id)}${RESET} ${DIM}→${RESET} ${summary}`];
++    if (options?.expanded && typeof args.message === "string" && args.message) lines.push(...indented(args.message, width, Number.MAX_SAFE_INTEGER));
++    return lines;
++  }, bg(theme, false, failed));
++}
++
++/** Renders nothing: with `renderShell: "self"` the result component owns the row. */
++function emptyComponent() {
++  return { invalidate() {}, render: () => [] as string[] };
++}
