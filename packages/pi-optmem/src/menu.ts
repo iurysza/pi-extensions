@@ -38,6 +38,7 @@ export const MENU_GROUP = {
         run("d", "Default mode for new sessions", "default"),
         run("f", "Rule for this folder", "rule"),
         run("m", "Model for generation and naps", "model"),
+        run("p", "Distil prompt for generation", "prompt"),
       ],
     },
     {

@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 
 import { filterLines, parseLine } from "../src/generate/filter.js";
 import { genPaths, readJob, readState } from "../src/generate/job.js";
-import { ModelClient, distilLines, makeBatches, parseNaps } from "../src/generate/model.js";
+import { DISTIL_RULES, ModelClient, distilLines, distilPrompt, makeBatches, parseNaps } from "../src/generate/model.js";
 import { main, sinceDate } from "../src/generate/cli.js";
 import { capTranscript, discoverSessions, extractSession } from "../src/generate/sessions.js";
 import { selectSessions, spread } from "../src/generate/pipeline.js";
@@ -101,6 +101,15 @@ test("batches, distil line dates and nap parsing", () => {
   assert.deepEqual(distilLines("2025-01-01 ok\n2024-12-31 wrong date\n", batches[0]), ["2025-01-01 ok", "bad-date 2024-12-31 wrong date"]);
   assert.deepEqual([...parseNaps("B1 one\n[B3]: three\nB9 out of range\nB1 dup\n", 3)], [[0, "one"], [2, "three"]]);
   assert.deepEqual(spread([1, 2, 3, 4, 5, 6, 7, 8, 9], 3), [1, 5, 9]);
+});
+
+test("distilPrompt uses custom rules when given, the built-in ones otherwise", () => {
+  const item = { session: { path: "p", cwd: "/w" }, date: "2025-01-01", turns: [{ user: "hi", assistant: "" }] };
+  const [batch] = makeBatches([item], 2_000, 8);
+  assert.ok(distilPrompt(batch).startsWith(DISTIL_RULES));
+  const custom = distilPrompt(batch, "  MY RULES  ");
+  assert.ok(custom.startsWith("MY RULES\n\n=== Session 1 | date 2025-01-01 | cwd /w ==="));
+  assert.ok(!custom.includes("You distil past chat sessions"));
 });
 
 test("model client retries, then falls back to Pi's default once", async () => {

@@ -107,6 +107,7 @@ export function cliDeps(options: CliOptions, env: NodeJS.ProcessEnv, print: (m: 
     memoryDir: options.memoryDir ? resolve(expandHome(options.memoryDir, home)) : paths.memoryDir,
     sessionsDir: options.sessionsDir ? resolve(expandHome(options.sessionsDir, home)) : join(agentDir(env, home), "sessions"),
     model: options.model ?? loaded.config.model,
+    distilRules: loaded.config.distilPrompt,
     call: modelCall(env),
     env,
     concurrency: options.concurrency,

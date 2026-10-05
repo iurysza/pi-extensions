@@ -198,9 +198,9 @@ YYYY-MM-DD <memory>
 - English, one line, at most 280 bytes, no bullets, no quotes.
 - Write NONE if no session has anything durable.`;
 
-export function distilPrompt(batch: Batch): string {
+export function distilPrompt(batch: Batch, rules: string = DISTIL_RULES): string {
   const sessions = batch.items.map((item, i) => `=== Session ${i + 1} | date ${item.date} | cwd ${item.session.cwd} ===\n${batch.transcripts[i]}`);
-  return `${DISTIL_RULES}\n\n${sessions.join("\n\n")}\n\n=== End of sessions ===\nNow write the memory lines.`;
+  return `${rules.trim()}\n\n${sessions.join("\n\n")}\n\n=== End of sessions ===\nNow write the memory lines.`;
 }
 
 /** Raw lines from a distil reply, with dates outside the batch dropped as format errors by the filter. */

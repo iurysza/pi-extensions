@@ -161,6 +161,31 @@ test("Defaults items write the user config and reload it", async () => {
   }
 });
 
+test("distilPrompt config is optional and must be non-empty text", () => {
+  assert.equal(parseConfig({}).config.distilPrompt, undefined);
+  assert.equal(parseConfig({ distilPrompt: "rules" }).config.distilPrompt, "rules");
+  assert.equal(parseConfig({ distilPrompt: "  " }).ok, false);
+  assert.equal(parseConfig({ distilPrompt: 3 }).ok, false);
+});
+
+test("Distil prompt item saves a custom prompt and resets it", async () => {
+  const dir = tempDir();
+  try {
+    let reply = "  custom rules  ";
+    const { c, env, notes } = commandEnv(dir);
+    c.ctx.ui.editor = async (title, text) => (notes.push({ editor: title, text }), reply);
+    await HANDLERS.prompt("", c);
+    assert.match(notes[0].text, /You distil past chat sessions/, "editor starts from the built-in prompt");
+    assert.equal(readUserConfig(env).distilPrompt, "custom rules");
+    assert.equal(c.config.distilPrompt, "custom rules", "config reloaded");
+    reply = "";
+    await HANDLERS.prompt("", c);
+    assert.equal("distilPrompt" in readUserConfig(env), false, "empty restores the built-in prompt");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("Edit config validates before writing", async () => {
   const dir = tempDir();
   try {

@@ -7,6 +7,7 @@ import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { configPath, defaultsPath, readUserConfig, updateUserConfig, writeUserConfig } from "./config-file.ts";
 import { expandHome, isMode, wakeAll, type MemoRun, type OptMemConfig } from "./core.ts";
 import { formatBytes, logLength, readMemories, storeStats } from "./memstore.ts";
+import { DISTIL_RULES } from "./generate/model.ts";
 
 export const PINNED_MEMO_REV = "1fb164cf39028047781f72ac3bb1e5a691c1dcb0";
 export const PINNED_MEMO_SHA256 = "3dc120d01be3115ef6267eab4103e7909fc830d6227b549f20991ba999ee9ffb";
@@ -154,6 +155,7 @@ const paths: Handler = async (_args, c) => {
     `user config: ${configPath(c.env)}`,
     `profile defaults: ${defaultsPath(c.env)}`,
     `model: ${c.config.model}`,
+    `distil prompt: ${c.config.distilPrompt ? "custom" : "built-in"}`,
     `default mode: ${c.config.defaultMode}`,
   ];
   c.ctx.ui.notify(lines.join("\n"), "info");
@@ -205,6 +207,26 @@ const model: Handler = async (args, c) => {
   await writeConfig(c, (cur) => ({ ...cur, model: choice }), `Generation and naps use ${choice}.`);
 };
 
+/** Edit the distil prompt. Saving it unchanged from the default, or empty, removes the override. */
+const prompt: Handler = async (_args, c) => {
+  const current = c.config.distilPrompt ?? DISTIL_RULES;
+  if (!c.ctx.hasUI) {
+    c.ctx.ui.notify(`${c.config.distilPrompt ? "Custom" : "Built-in"} distil prompt:\n${current}`, "info");
+    return;
+  }
+  const edited = await c.ctx.ui.editor("Distil prompt (empty restores the built-in one; sessions are appended after it)", current);
+  if (edited === undefined || edited.trim() === current.trim()) return;
+  const reset = !edited.trim() || edited.trim() === DISTIL_RULES.trim();
+  await writeConfig(
+    c,
+    (cur) => {
+      const { distilPrompt: _old, ...rest } = cur;
+      return reset ? rest : { ...rest, distilPrompt: edited.trim() };
+    },
+    reset ? "Distil prompt reset to the built-in one." : "Saved the custom distil prompt. The next generation uses it.",
+  );
+};
+
 const stats: Handler = async (_args, c) => {
   const s = storeStats(c.paths.memoryDir);
   if (!s.exists) {
@@ -243,6 +265,7 @@ export const HANDLERS: Record<string, Handler> = {
   default: defaultMode,
   rule,
   model,
+  prompt,
   stats,
   forget,
 };

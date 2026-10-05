@@ -109,6 +109,7 @@ A layer that fails to parse is skipped with a warning, so a broken user file fal
 - `subagentMode`: the highest mode a subagent can have, either `off` or `read`.
 - `rules`: per-directory starting modes. The longest matching `cwd` prefix wins.
 - `model`: the model for generating memory from sessions and for background naps.
+- `distilPrompt`: optional. Replaces the built-in distil rules; the sessions are appended after it. Edit it from the menu (Defaults → Distil prompt); saving it empty restores the built-in prompt.
 - `memoPath`: optional. When unset, memo is found in this order: the agents2-installed copy (`~/.local/share/agents2/tools/optmem/<active rev>/memo`, active rev from `history.json`), then `~/.local/share/optmem/memo` (install-memo.sh).
 - `MEMORY_DIR` in the environment overrides `memoryDir`.
 
@@ -155,6 +156,7 @@ The same work from a terminal (Node 22.18+):
 ```sh
 node packages/pi-optmem/scripts/generate.mjs --help
 node packages/pi-optmem/scripts/generate.mjs generate --limit 40 --memory-dir /tmp/mem-pilot/memory
+node packages/pi-optmem/scripts/generate.mjs rebuild --since 7d --project agents2 --min-turns 3 --memory-dir /tmp/mem-pilot/memory
 node packages/pi-optmem/scripts/generate.mjs import --memory-dir /tmp/mem-pilot/memory
 ```
 

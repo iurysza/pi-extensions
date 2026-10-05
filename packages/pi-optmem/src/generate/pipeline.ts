@@ -27,6 +27,8 @@ export type PipelineDeps = {
   readonly memoryDir: string;
   readonly sessionsDir: string;
   readonly model: string;
+  /** Custom distil rules from config; the built-in ones when unset. */
+  readonly distilRules?: string;
   readonly call: ModelCall;
   readonly env?: NodeJS.ProcessEnv;
   readonly concurrency?: number;
@@ -191,7 +193,7 @@ export async function distil(deps: PipelineDeps, kind: "generate" | "rebuild" | 
     batches.map(async (batch) => {
       let output: string;
       try {
-        output = await c.client.complete(distilPrompt(batch));
+        output = await c.client.complete(distilPrompt(batch, deps.distilRules));
       } catch (error) {
         failed++;
         c.log(`batch failed (${batch.items.length} sessions, first ${batch.items[0]!.session.path}): ${(error as Error).message}`);

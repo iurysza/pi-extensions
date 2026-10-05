@@ -22,6 +22,8 @@ export type OptMemConfig = {
   readonly rules: readonly CwdRule[];
   /** Model for generating memory from sessions and for background naps. */
   readonly model: string;
+  /** Replaces the built-in distil rules when set. Sessions are appended after it. */
+  readonly distilPrompt?: string;
 };
 
 export const DEFAULT_MEMO_PATH = "~/.local/share/optmem/memo";
@@ -48,7 +50,7 @@ export type ConfigResult =
   | { readonly ok: true; readonly config: OptMemConfig }
   | { readonly ok: false; readonly error: string };
 
-export const CONFIG_KEYS = new Set(["defaultMode", "subagentMode", "memoPath", "memoryDir", "rules", "model"]);
+export const CONFIG_KEYS = new Set(["defaultMode", "subagentMode", "memoPath", "memoryDir", "rules", "model", "distilPrompt"]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -83,8 +85,20 @@ export function parseConfig(value: unknown): ConfigResult {
     }
     rules.push({ cwd: rule.cwd, mode: rule.mode });
   }
-  const config: OptMemConfig = { defaultMode, subagentMode, memoryDir, rules, model };
-  return { ok: true, config: memoPath === undefined ? config : { ...config, memoPath } };
+  const distilPrompt = value.distilPrompt;
+  if (distilPrompt !== undefined && (typeof distilPrompt !== "string" || !distilPrompt.trim())) {
+    return { ok: false, error: "distilPrompt must be a non-empty string; remove it to use the built-in prompt" };
+  }
+  const config: OptMemConfig = {
+    defaultMode,
+    subagentMode,
+    memoryDir,
+    rules,
+    model,
+    ...(memoPath === undefined ? {} : { memoPath }),
+    ...(distilPrompt === undefined ? {} : { distilPrompt }),
+  };
+  return { ok: true, config };
 }
 
 /**
