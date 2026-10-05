@@ -1,4 +1,4 @@
-import { expect, vi } from "vitest";
+import { afterEach, expect, vi } from "vitest";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 
@@ -114,6 +114,36 @@ export function mockCreatedAgent(
 ): void {
 	mockedCreate.mockResolvedValue(asMockSdkAgent(agent));
 }
+
+const realFetch = globalThis.fetch.bind(globalThis);
+
+function isCursorCloudUsageRequest(input: Parameters<typeof fetch>[0]): boolean {
+	const raw = typeof input === "string" || input instanceof URL ? input : input.url;
+	try {
+		const url = new URL(raw);
+		return url.hostname === "api.cursor.com" && url.pathname.endsWith("/usage");
+	} catch {
+		return false;
+	}
+}
+
+// Successful cloud turns fetch raw usage from api.cursor.com and abort after 5s,
+// the same budget as Vitest's default test timeout. Answer that call locally.
+// Other fetches, including the loopback pi tool bridge, stay on the real fetch.
+function installOfflineCursorCloudUsageFetch(): void {
+	const fetchMock = vi.isMockFunction(globalThis.fetch)
+		? vi.mocked(globalThis.fetch)
+		: vi.spyOn(globalThis, "fetch");
+	fetchMock.mockReset();
+	fetchMock.mockImplementation(async (input, init) => {
+		if (isCursorCloudUsageRequest(input)) return new Response("{}", { status: 404 });
+		return realFetch(input, init);
+	});
+}
+
+afterEach(() => {
+	if (vi.isMockFunction(globalThis.fetch)) vi.mocked(globalThis.fetch).mockRestore();
+});
 
 export function asMockCursorRun(
 	run: Pick<Run, "id" | "agentId" | "status" | "wait"> & Partial<Run>,
@@ -403,4 +433,5 @@ export async function resetCursorProviderTestState(): Promise<void> {
 	mockCreatedAgent({ send: vi.fn() });
 	mockedMessagesList.mockResolvedValue([]);
 	mockedCreateAgentPlatform.mockResolvedValue(createMockAgentPlatform());
+	installOfflineCursorCloudUsageFetch();
 }
