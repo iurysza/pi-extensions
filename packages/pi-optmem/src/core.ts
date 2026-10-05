@@ -1,3 +1,4 @@
+import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { isAbsolute, join, resolve, sep } from "node:path";
 
@@ -15,20 +16,26 @@ export type CwdRule = { readonly cwd: string; readonly mode: MemoryMode };
 export type OptMemConfig = {
   readonly defaultMode: MemoryMode;
   readonly subagentMode: "off" | "read";
-  readonly memoPath: string;
+  /** Explicit memo path. When unset, memo is probed: see `findMemo`. */
+  readonly memoPath?: string;
   readonly memoryDir: string;
   readonly rules: readonly CwdRule[];
+  /** Model for generating memory from sessions and for background naps. */
+  readonly model: string;
 };
 
 export const DEFAULT_MEMO_PATH = "~/.local/share/optmem/memo";
 export const DEFAULT_MEMORY_DIR = "~/.local/share/optmem/memory";
+export const DEFAULT_MODEL = "openai-codex/gpt-6-luna";
+/** agents2 installs the pinned OptMem git tool here, one dir per rev. */
+export const AGENTS2_MEMO_TOOL = "~/.local/share/agents2/tools/optmem";
 
 export const DEFAULT_CONFIG: OptMemConfig = {
   defaultMode: "off",
   subagentMode: "off",
-  memoPath: DEFAULT_MEMO_PATH,
   memoryDir: DEFAULT_MEMORY_DIR,
   rules: [],
+  model: DEFAULT_MODEL,
 };
 
 export function expandHome(path: string, home = homedir()): string {
@@ -41,7 +48,7 @@ export type ConfigResult =
   | { readonly ok: true; readonly config: OptMemConfig }
   | { readonly ok: false; readonly error: string };
 
-const CONFIG_KEYS = new Set(["defaultMode", "subagentMode", "memoPath", "memoryDir", "rules"]);
+export const CONFIG_KEYS = new Set(["defaultMode", "subagentMode", "memoPath", "memoryDir", "rules", "model"]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -58,10 +65,14 @@ export function parseConfig(value: unknown): ConfigResult {
   if (subagentMode !== "off" && subagentMode !== "read") {
     return { ok: false, error: "subagentMode must be off or read" };
   }
-  const memoPath = value.memoPath ?? DEFAULT_CONFIG.memoPath;
+  const memoPath = value.memoPath;
   const memoryDir = value.memoryDir ?? DEFAULT_CONFIG.memoryDir;
-  if (typeof memoPath !== "string" || !memoPath.trim()) return { ok: false, error: "memoPath must be a non-empty string" };
+  const model = value.model ?? DEFAULT_CONFIG.model;
+  if (memoPath !== undefined && (typeof memoPath !== "string" || !memoPath.trim())) {
+    return { ok: false, error: "memoPath must be a non-empty string" };
+  }
   if (typeof memoryDir !== "string" || !memoryDir.trim()) return { ok: false, error: "memoryDir must be a non-empty string" };
+  if (typeof model !== "string" || !/^\S+$/.test(model)) return { ok: false, error: "model must be a model id like provider/model" };
 
   const rawRules = value.rules ?? [];
   if (!Array.isArray(rawRules)) return { ok: false, error: "rules must be an array" };
@@ -72,7 +83,50 @@ export function parseConfig(value: unknown): ConfigResult {
     }
     rules.push({ cwd: rule.cwd, mode: rule.mode });
   }
-  return { ok: true, config: { defaultMode, subagentMode, memoPath, memoryDir, rules } };
+  const config: OptMemConfig = { defaultMode, subagentMode, memoryDir, rules, model };
+  return { ok: true, config: memoPath === undefined ? config : { ...config, memoPath } };
+}
+
+/**
+ * Merge config layers, lowest first: built-in < profile defaults < user file.
+ * Each layer is validated on its own so errors name the right file. A later
+ * layer replaces whole keys; `rules` is not merged.
+ */
+export function layerConfigs(layers: readonly { readonly name: string; readonly value: unknown }[]): ConfigResult {
+  const merged: Record<string, unknown> = {};
+  for (const layer of layers) {
+    const parsed = parseConfig(layer.value);
+    if (!parsed.ok) return { ok: false, error: `${layer.name}: ${parsed.error}` };
+    Object.assign(merged, layer.value as Record<string, unknown>);
+  }
+  return parseConfig(merged);
+}
+
+export type FileProbe = { exists: (path: string) => boolean; read: (path: string) => string };
+const realProbe: FileProbe = { exists: existsSync, read: (path) => readFileSync(path, "utf8") };
+
+/** The memo agents2 activated: `<tool>/<rev>/memo`, rev = first entry of history.json. */
+export function agents2Memo(home = homedir(), probe: FileProbe = realProbe): string | undefined {
+  const tool = expandHome(AGENTS2_MEMO_TOOL, home);
+  try {
+    const history: unknown = JSON.parse(probe.read(join(tool, "history.json")));
+    const rev = Array.isArray(history) ? history[0] : undefined;
+    if (typeof rev !== "string" || !/^[\w.-]+$/.test(rev)) return undefined;
+    const path = join(tool, rev, "memo");
+    return probe.exists(path) ? path : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Where memo lives. An explicit `memoPath` wins. Otherwise the agents2-installed
+ * copy, then the install-memo.sh location. When nothing exists the
+ * install-memo.sh location is returned so the hint names it.
+ */
+export function findMemo(configured: string | undefined, home = homedir(), probe: FileProbe = realProbe): string {
+  if (configured) return resolve(expandHome(configured, home));
+  return agents2Memo(home, probe) ?? resolve(expandHome(DEFAULT_MEMO_PATH, home));
 }
 
 /** Effective paths. `MEMORY_DIR` in the environment wins over the config file. */
@@ -80,9 +134,10 @@ export function resolvePaths(
   config: OptMemConfig,
   env: NodeJS.ProcessEnv = process.env,
   home = homedir(),
+  probe: FileProbe = realProbe,
 ): { memoPath: string; memoryDir: string } {
   return {
-    memoPath: resolve(expandHome(config.memoPath, home)),
+    memoPath: findMemo(config.memoPath, home, probe),
     memoryDir: resolve(expandHome(env.MEMORY_DIR || config.memoryDir, home)),
   };
 }

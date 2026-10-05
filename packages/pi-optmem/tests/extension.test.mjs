@@ -16,7 +16,9 @@ function harness({ flags = {}, branch = [], mode = "tui", config = DEFAULT_CONFI
   const notes = [];
   const status = new Map();
   let active = ["read", "bash", "edit", "write"];
+  const menuHandlers = [];
   const pi = {
+    events: { on: (channel, handler) => (menuHandlers.push({ channel, handler }), () => {}) },
     registerFlag: () => {},
     getFlag: (name) => flags[name],
     registerCommand: (name, options) => commands.set(name, options),
@@ -54,6 +56,7 @@ function harness({ flags = {}, branch = [], mode = "tui", config = DEFAULT_CONFI
   return Object.assign(h, {
     pi,
     ctx,
+    menuHandlers,
     tools,
     entries,
     notes,

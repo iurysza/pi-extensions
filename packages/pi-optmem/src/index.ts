@@ -1,9 +1,9 @@
 import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { getAgentDir } from "@earendil-works/pi-coding-agent";
+import { configPath, loadLayeredConfig } from "./config-file.ts";
+import { HANDLERS, type CommandEnv } from "./commands.ts";
+import { subscribeMenu } from "./menu.ts";
 import { Type } from "typebox";
 import {
   DEFAULT_CONFIG,
@@ -37,30 +37,10 @@ import {
   type MemoryMode,
   type ModeSource,
   type OptMemConfig,
-} from "./core.js";
+} from "./core.ts";
 
-export const CONFIG_FILE_NAME = "pi-optmem.json";
+export { CONFIG_FILE_NAME, DEFAULTS_FILE_NAME, configPath, defaultsPath } from "./config-file.ts";
 const STATUS_KEY = "optmem";
-
-export function configPath(env: NodeJS.ProcessEnv = process.env): string {
-  return env.PI_OPTMEM_CONFIG || join(getAgentDir(), CONFIG_FILE_NAME);
-}
-
-export async function loadConfig(path: string): Promise<{ config: OptMemConfig; error?: string }> {
-  let text: string;
-  try {
-    text = await readFile(path, "utf8");
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") return { config: DEFAULT_CONFIG };
-    return { config: DEFAULT_CONFIG, error: `cannot read ${path}: ${(error as Error).message}` };
-  }
-  try {
-    const parsed = parseConfig(JSON.parse(text));
-    return parsed.ok ? { config: parsed.config } : { config: DEFAULT_CONFIG, error: `${path}: ${parsed.error}` };
-  } catch (error) {
-    return { config: DEFAULT_CONFIG, error: `${path}: ${(error as Error).message}` };
-  }
-}
 
 export function memoRunner(memoPath: string, memoryDir: string, env: NodeJS.ProcessEnv = process.env): MemoRun {
   return (args) =>
@@ -82,6 +62,9 @@ export type OptMemDeps = {
   readonly loadConfig?: () => Promise<{ config: OptMemConfig; error?: string }>;
   readonly memoExists?: (path: string) => boolean;
   readonly runner?: (memoPath: string, memoryDir: string) => MemoRun;
+  /** Extra `/memory` subcommands (generation lives in its own module). */
+  readonly extraHandlers?: Record<string, (args: string, c: CommandEnv) => Promise<void>>;
+  readonly open?: (path: string) => Promise<string | undefined>;
 };
 
 function isWakeMessage(message: unknown): boolean {
@@ -106,7 +89,7 @@ function text(value: string) {
 
 export function registerOptMem(pi: ExtensionAPI, deps: OptMemDeps = {}): void {
   const env = deps.env ?? process.env;
-  const readConfig = deps.loadConfig ?? (() => loadConfig(configPath(env)));
+  const readConfig = deps.loadConfig ?? (async () => loadLayeredConfig(env));
   const memoExists = deps.memoExists ?? existsSync;
   const makeRunner = deps.runner ?? ((memoPath: string, memoryDir: string) => memoRunner(memoPath, memoryDir, env));
 
@@ -126,6 +109,8 @@ export function registerOptMem(pi: ExtensionAPI, deps: OptMemDeps = {}): void {
     const { memoPath, memoryDir } = paths();
     return makeRunner(memoPath, memoryDir)(args);
   };
+
+  subscribeMenu(pi.events);
 
   pi.registerFlag("memory", { description: "Start this session with OptMem memory on", type: "boolean" });
   pi.registerFlag("memory-read", { description: "Start this session with OptMem memory read-only", type: "boolean" });
@@ -202,50 +187,72 @@ export function registerOptMem(pi: ExtensionAPI, deps: OptMemDeps = {}): void {
     return undefined;
   });
 
+  function status(ctx: ExtensionContext): void {
+    const { memoPath, memoryDir } = paths();
+    const wake =
+      mode === "off" ? "not loaded" : view?.ok && view.mode === mode ? `loaded (${view.lines} lines)` : "loads on next turn";
+    const lines = [
+      `mode: ${mode} (${source}${isSubagent ? ", subagent" : ""})`,
+      `memo: ${memoPath}${memoExists(memoPath) ? "" : " (missing)"}`,
+      `memory: ${memoryDir}`,
+      `config: ${configPath(env)}`,
+      `wake: ${wake}`,
+    ];
+    if (!memoExists(memoPath)) lines.push(missingMemoHint(memoPath));
+    ctx.ui.notify(lines.join("\n"), "info");
+  }
+
+  function switchMode(requested: MemoryMode, ctx: ExtensionContext): void {
+    if (isSubagent && RANK[requested] > RANK[config.subagentMode]) {
+      ctx.ui.notify(`Subagent sessions cannot go above mem:${config.subagentMode}.`, "warning");
+      return;
+    }
+    setMode(requested, ctx);
+    // An explicit switch also retries a failed or stale wake.
+    view = undefined;
+    source = "session";
+    pi.appendEntry(MODE_ENTRY, { mode });
+    const note =
+      mode === "off"
+        ? "Memory off. Writes stop now; the wake view and instructions leave the next request."
+        : "The wake view loads on the next turn.";
+    ctx.ui.notify(`mem:${mode}. ${note}`, "info");
+    const { memoPath } = paths();
+    if (mode !== "off" && !memoExists(memoPath)) ctx.ui.notify(missingMemoHint(memoPath), "warning");
+  }
+
+  const handlers = { ...HANDLERS, ...deps.extraHandlers };
+  const SUBCOMMANDS = [...MODES, "status", ...Object.keys(handlers)];
+  const USAGE = `Usage: /memory [${SUBCOMMANDS.join("|")}]`;
+
   pi.registerCommand("memory", {
-    description: "Show or set OptMem memory for this session: /memory [on|off|read]",
+    description: "OptMem memory: /memory [on|off|read|status|view|search|stats|generate|...]",
     getArgumentCompletions: (prefix) =>
-      MODES.filter((value) => value.startsWith(prefix.trim())).map((value) => ({ value, label: value })),
+      SUBCOMMANDS.filter((value) => value.startsWith(prefix.trim())).map((value) => ({ value, label: value })),
     handler: async (args, ctx) => {
-      const requested = args.trim();
-      const { memoPath, memoryDir } = paths();
-      if (!requested) {
-        const wake =
-          mode === "off"
-            ? "not loaded"
-            : view?.ok && view.mode === mode
-              ? `loaded (${view.lines} lines)`
-              : "loads on next turn";
-        const lines = [
-          `mode: ${mode} (${source}${isSubagent ? ", subagent" : ""})`,
-          `memo: ${memoPath}${memoExists(memoPath) ? "" : " (missing)"}`,
-          `memory: ${memoryDir}`,
-          `config: ${configPath(env)}`,
-          `wake: ${wake}`,
-        ];
-        if (!memoExists(memoPath)) lines.push(missingMemoHint(memoPath));
-        ctx.ui.notify(lines.join("\n"), "info");
+      const trimmed = args.trim();
+      const [sub = "", ...rest] = trimmed.split(/\s+/);
+      if (!sub || sub === "status") return status(ctx);
+      if (isMode(sub)) return switchMode(sub, ctx);
+      const handler = handlers[sub];
+      if (!handler) {
+        ctx.ui.notify(USAGE, "warning");
         return;
       }
-      if (!isMode(requested)) {
-        ctx.ui.notify("Usage: /memory [on|off|read]", "warning");
-        return;
-      }
-      if (isSubagent && RANK[requested] > RANK[config.subagentMode]) {
-        ctx.ui.notify(`Subagent sessions cannot go above mem:${config.subagentMode}.`, "warning");
-        return;
-      }
-      setMode(requested, ctx);
-      // An explicit switch also retries a failed or stale wake.
-      view = undefined;
-      source = "session";
-      pi.appendEntry(MODE_ENTRY, { mode });
-      const note =
-        mode === "off"
-          ? "Memory off. Writes stop now; the wake view and instructions leave the next request."
-          : "The wake view loads on the next turn.";
-      ctx.ui.notify(`mem:${mode}. ${note}`, "info");
-      if (mode !== "off" && !memoExists(memoPath)) ctx.ui.notify(missingMemoHint(memoPath), "warning");
+      await handler(trimmed.slice(sub.length).trim() || rest.join(" "), {
+        ctx,
+        config,
+        paths: paths(),
+        run,
+        env,
+        memoExists,
+        open: deps.open,
+        reloadConfig: async () => {
+          const loaded = await readConfig();
+          config = loaded.config;
+          if (loaded.error && ctx.hasUI) ctx.ui.notify(`pi-optmem: ${loaded.error}`, "warning");
+        },
+      });
     },
   });
 
@@ -260,6 +267,8 @@ export function registerOptMem(pi: ExtensionAPI, deps: OptMemDeps = {}): void {
       };
       return;
     }
+    // Create the store lazily on first use: memo refuses every command but init without one.
+    if (!existsSync(paths().memoryDir)) await run(["init"]);
     const result = await wakeAll(run);
     view = {
       mode,

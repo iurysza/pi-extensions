@@ -44,7 +44,7 @@ import {
 	withHerdrNavigationPassthrough,
 } from "./herdr-navigation.js";
 
-const ROOT_EXTENSION_MENU_IDS = ["themed-agents", "pi-voice"];
+const ROOT_EXTENSION_MENU_IDS = ["themed-agents", "pi-voice", "pi-optmem"];
 const CONTRIBUTED_EXTENSION_COMMAND_NAMES = new Set(["team", "voice"]);
 // Move home entries by listing their existing keys; no action implementation needs to move.
 const HOME_GROUPS: { key: string; label: string; children: string[] }[] = [];

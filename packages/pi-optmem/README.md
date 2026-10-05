@@ -55,24 +55,49 @@ The wake view is never saved in the session. It is held in memory and added to e
 
 ## Config
 
-Path: `~/.pi/agent/pi-optmem.json`, or the file named by `PI_OPTMEM_CONFIG`. Every field is optional:
+Three layers, lowest first. A later layer replaces whole keys (`rules` is not merged):
+
+1. Built-in defaults (below).
+2. Profile defaults: `~/.pi/agent/pi-optmem.defaults.json`, or `PI_OPTMEM_DEFAULTS`. agents2 links this file. Do not edit it.
+3. User config: `~/.pi/agent/pi-optmem.json`, or `PI_OPTMEM_CONFIG`. The leader menu's Defaults items write here. agents2 never touches it.
+
+A layer that fails to parse is skipped with a warning, so a broken user file falls back to the profile defaults. Every field is optional:
 
 ```json
 {
   "defaultMode": "off",
   "subagentMode": "off",
-  "memoPath": "~/.local/share/optmem/memo",
   "memoryDir": "~/.local/share/optmem/memory",
+  "model": "openai-codex/gpt-6-luna",
   "rules": [
     { "cwd": "~/dev/personal/obsidian-vault", "mode": "on" }
   ]
 }
 ```
 
-- `defaultMode`: `off`, `read` or `on`. The shipped default is `off`.
+- `defaultMode`: `off`, `read` or `on`. The built-in default is `off`; the personal and work profiles set `on`.
 - `subagentMode`: the highest mode a subagent can have, either `off` or `read`.
 - `rules`: per-directory starting modes. The longest matching `cwd` prefix wins.
+- `model`: the model for generating memory from sessions and for background naps.
+- `memoPath`: optional. When unset, memo is found in this order: the agents2-installed copy (`~/.local/share/agents2/tools/optmem/<active rev>/memo`, active rev from `history.json`), then `~/.local/share/optmem/memo` (install-memo.sh).
 - `MEMORY_DIR` in the environment overrides `memoryDir`.
+
+The memory directory is created with `memo init` the first time a session loads it.
+
+## Leader menu
+
+Leader → `b` (Memory). Every item runs a `/memory` subcommand, which you can also type:
+
+| Section | Items (`/memory …`) |
+|---|---|
+| This session | `on`, `read`, `off`, `status` |
+| Browse | `view` (wake view), `search [regex]`, `zoom [lo-hi]`, `log` (LOG.txt, newest 5,000) |
+| Files | `reveal` (open the folder), `config` (edit the user config, validated), `paths` (paths and memo version) |
+| Defaults | `default [on\|read\|off]`, `rule [on\|read\|off\|clear]` for the current folder, `model [id]` |
+| Maintenance | `stats`, `naps` (background), `forget [lo-hi]` |
+| Generate | `generate` (or rebuild), `catchup`, `job`, `cancel` |
+
+Viewers use Pi's editor dialog as a read-only pane: edits there are ignored. Without a UI, prompts must be passed as arguments.
 
 Keep the memory directory outside the Obsidian vault. Syncthing creates conflict copies of files that two machines change, and OptMem's fixed-width files do not merge. The installer refuses memory paths inside `obsidian-vault`.
 
