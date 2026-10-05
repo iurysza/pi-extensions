@@ -223,7 +223,7 @@ export type NapRequest = { readonly lo: number; readonly hi: number; readonly in
 
 export function napPrompt(requests: readonly NapRequest[]): string {
   const blocks = requests.map((r, i) => `[B${i + 1}] memories #${r.lo}-${r.hi - 1}:\n${r.input.map((l) => `  ${l}`).join("\n")}`);
-  return `Compress each block of memories below into one line of at most 280 bytes.
+  return `Compress each block of memories below into one line of at most 200 characters.
 Keep what has lasting effect, drop what does not. Invent nothing. English. No secrets, numbers of documents or amounts of money.
 
 Answer with exactly one line per block, in this format and nothing else:
@@ -239,16 +239,24 @@ export function parseNaps(output: string, count: number): Map<number, string> {
     const match = /^\s*\[?B(\d+)\]?[:.)]?\s+(.+)$/.exec(raw);
     if (!match) continue;
     const index = Number(match[1]) - 1;
-    const text = match[2]!.replace(/\s+/g, " ").trim();
-    if (index >= 0 && index < count && text && Buffer.byteLength(text, "utf8") <= 280 && !out.has(index)) out.set(index, text);
+    const text = fitBytes(match[2]!.replace(/\s+/g, " ").trim());
+    if (index >= 0 && index < count && text && !out.has(index)) out.set(index, text);
   }
   return out;
 }
 
+/** Cut to memo's 280-byte limit at a word boundary, ending in … when cut. */
+export function fitBytes(text: string, limit = 280): string {
+  if (Buffer.byteLength(text, "utf8") <= limit) return text;
+  const room = limit - Buffer.byteLength("…", "utf8");
+  let out = text;
+  while (Buffer.byteLength(out, "utf8") > room) out = out.slice(0, -1);
+  const space = out.lastIndexOf(" ");
+  if (space > room / 2) out = out.slice(0, space);
+  return `${out.replace(/[\s,;:.-]+$/, "")}…`;
+}
+
 /** Last resort when the model keeps failing a block: a truncated join of its inputs. */
 export function fallbackSummary(input: readonly string[]): string {
-  const text = input.map((l) => l.replace(/^#[\d-]+ (\d{4}-\d{2}-\d{2} )?/, "")).join("; ");
-  let out = text;
-  while (Buffer.byteLength(out, "utf8") > 279) out = out.slice(0, -1);
-  return out.length < text.length ? `${out.slice(0, -1)}…` : out;
+  return fitBytes(input.map((l) => l.replace(/^#[\d-]+ (\d{4}-\d{2}-\d{2} )?/, "")).join("; "));
 }
