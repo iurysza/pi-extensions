@@ -167,17 +167,6 @@ export function newJob(kind: JobKind, model: string, now = new Date()): Job {
   };
 }
 
-/** Short progress for the footer: `gen 120/1840`, `gen ready`, `naps 12`. */
-export function footerText(job: Job | undefined, running: boolean): string | undefined {
-  if (!job) return undefined;
-  if (job.phase === "awaiting-confirm") return "gen ready";
-  if (!running) return undefined;
-  if (job.phase === "distil") return `${job.kind === "catchup" ? "catchup" : "gen"} ${job.processed}/${job.total}`;
-  if (job.phase === "importing") return "gen importing";
-  if (job.phase === "naps") return `naps ${job.napsDone}${job.napsPending !== undefined ? `/${job.napsDone + job.napsPending}` : ""}`;
-  return undefined;
-}
-
 export function describeJob(job: Job | undefined, running: boolean): string {
   if (!job) return "No generation job has run yet.";
   const lines = [

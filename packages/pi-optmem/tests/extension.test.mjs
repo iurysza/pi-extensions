@@ -7,6 +7,9 @@ import test from "node:test";
 
 import { DEFAULT_CONFIG, MODE_ENTRY, WAKE_MESSAGE, guardBash } from "../src/core.js";
 import { memoRunner, registerOptMem } from "../src/index.js";
+import { ICON } from "../src/status.js";
+const ON = ICON.brain;
+const READ = `${ICON.brain} ${ICON.eye}`;
 
 // Never let a test default to the real memory dir: onboarding writes a marker next to it.
 const SAFE_ROOT = mkdtempSync(join(tmpdir(), "optmem-ext-"));
@@ -86,10 +89,10 @@ async function wakeIn(h, messages = [USER]) {
 }
 const prompt = (h) => h.emit("before_agent_start", { prompt: "hi", systemPrompt: "BASE", systemPromptOptions: {} });
 
-test("default off: no tools, no prompt, no wake, mem:off status", async () => {
+test("default off: no tools, no prompt, no wake, no status", async () => {
   const h = harness();
   await start(h);
-  assert.equal(h.status.get("optmem"), "mem:off");
+  assert.equal(h.status.get("optmem"), undefined);
   assert.deepEqual(h.active(), ["read", "bash", "edit", "write"]);
   assert.equal(await prompt(h), undefined);
   assert.deepEqual(h.calls, []);
@@ -98,7 +101,7 @@ test("default off: no tools, no prompt, no wake, mem:off status", async () => {
 test("--memory turns it on and persists the mode", async () => {
   const h = harness({ flags: { memory: true } });
   await start(h);
-  assert.equal(h.status.get("optmem"), "mem:on");
+  assert.equal(h.status.get("optmem"), ON);
   assert.deepEqual(h.active().filter((n) => n.startsWith("memo_")), ["memo_note", "memo_zoom", "memo_recall", "memo_nap"]);
   assert.deepEqual(h.entries, [{ customType: MODE_ENTRY, data: { mode: "on" } }]);
   const result = await prompt(h);
@@ -112,7 +115,7 @@ test("--memory turns it on and persists the mode", async () => {
 test("resumed session keeps its persisted mode", async () => {
   const h = harness({ branch: [{ type: "custom", customType: MODE_ENTRY, data: { mode: "read" } }] });
   await start(h, "resume");
-  assert.equal(h.status.get("optmem"), "mem:read");
+  assert.equal(h.status.get("optmem"), READ);
   assert.deepEqual(h.entries, []);
   const result = await prompt(h);
   assert.match(result.systemPrompt, /read-only/);
@@ -138,7 +141,7 @@ test("/memory switches mid-session; off drops wake from context", async () => {
   const h = harness();
   await start(h);
   await h.command("on");
-  assert.equal(h.status.get("optmem"), "mem:on");
+  assert.equal(h.status.get("optmem"), ON);
   assert.deepEqual(h.entries.at(-1), { customType: MODE_ENTRY, data: { mode: "on" } });
   await prompt(h);
   assert.match(await wakeIn(h), /likes tea/);
@@ -232,7 +235,7 @@ test("reload keeps a /memory switch made after --memory", async () => {
   await h.command("off");
   h.branch = h.entries.map((e) => ({ type: "custom", ...e }));
   await start(h, "reload");
-  assert.equal(h.status.get("optmem"), "mem:off");
+  assert.equal(h.status.get("optmem"), undefined);
   assert.deepEqual(h.active().filter((n) => n.startsWith("memo_")), []);
   assert.deepEqual(h.entries.at(-1).data, { mode: "off" });
 });
@@ -244,14 +247,14 @@ test("reload keeps a /memory switch made after --no-memory", async () => {
   h.branch = h.entries.map((e) => ({ type: "custom", ...e }));
   for (const reason of ["reload", "new", "resume", "fork"]) {
     await start(h, reason);
-    assert.equal(h.status.get("optmem"), "mem:on", reason);
+    assert.equal(h.status.get("optmem"), ON, reason);
   }
 });
 
 test("initial CLI resume still honours an explicit flag", async () => {
   const h = harness({ flags: { "no-memory": true }, branch: [{ type: "custom", customType: MODE_ENTRY, data: { mode: "on" } }] });
   await start(h, "startup");
-  assert.equal(h.status.get("optmem"), "mem:off");
+  assert.equal(h.status.get("optmem"), undefined);
 });
 
 // Finding 4: tree navigation kept the previous branch's mode and wake state.
@@ -266,14 +269,14 @@ test("tree navigation follows the destination branch's mode", async () => {
 
   h.branch = offBranch;
   await h.emit("session_tree", { newLeafId: "b", oldLeafId: "a" });
-  assert.equal(h.status.get("optmem"), "mem:off");
+  assert.equal(h.status.get("optmem"), undefined);
   assert.equal(await prompt(h), undefined);
   assert.equal(await wakeIn(h), undefined);
   assert.equal((await h.emit("tool_call", { toolName: "bash", input: { command: "memo note x" } })).block, true);
 
   h.branch = readBranch;
   await h.emit("session_tree", { newLeafId: "c", oldLeafId: "b" });
-  assert.equal(h.status.get("optmem"), "mem:read");
+  assert.equal(h.status.get("optmem"), READ);
   await prompt(h);
   assert.match(await wakeIn(h), /mode="read"/, "a fresh wake loads for the new branch");
   assert.equal(h.calls.filter((c) => c[0] === "wake").length, 2);
@@ -294,7 +297,7 @@ test("subagent cannot /memory on", async () => {
   await start(h);
   await h.command("on");
   assert.match(h.notes.at(-1).message, /cannot go above/);
-  assert.equal(h.status.get("optmem"), "mem:off");
+  assert.equal(h.status.get("optmem"), undefined);
 });
 
 test("bash guard and MEMORY_DIR injection", async () => {
@@ -316,7 +319,7 @@ test("missing memo: hint instead of crash", async () => {
   const h = harness({ flags: { memory: true }, memoExists: false });
   await start(h);
   assert.match(h.notes.at(-1).message, /install-memo\.sh/);
-  assert.equal(h.status.get("optmem"), "mem:on (no memo)");
+  assert.equal(h.status.get("optmem"), `${ICON.brain} ${ICON.alert} no memo`);
   await prompt(h);
   assert.match(await wakeIn(h), /status="missing"/);
   await assert.rejects(h.tools.get("memo_recall").execute("id", { regex: "x" }), /install-memo\.sh/);

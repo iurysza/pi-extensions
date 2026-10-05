@@ -4,6 +4,7 @@ import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-a
 import { configPath, loadLayeredConfig } from "./config-file.ts";
 import { HANDLERS, type CommandEnv } from "./commands.ts";
 import { subscribeMenu } from "./menu.ts";
+import { statusText } from "./status.ts";
 import { GENERATE_HANDLERS, generationFooter, jobWatcher, maybeOnboard, type Launch } from "./generate/ui.ts";
 import { Type } from "typebox";
 import {
@@ -129,7 +130,7 @@ export function registerOptMem(pi: ExtensionAPI, deps: OptMemDeps = {}): void {
     } catch {
       job = undefined;
     }
-    ctx.ui.setStatus(STATUS_KEY, `mem:${mode}${missing ? " (no memo)" : ""}${job ? ` · ${job}` : ""}`);
+    ctx.ui.setStatus(STATUS_KEY, statusText(mode, missing, job));
   }
 
   // Background jobs run in another process: poll their job file for the footer.

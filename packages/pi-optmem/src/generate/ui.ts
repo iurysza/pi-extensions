@@ -10,7 +10,8 @@ import type { CommandEnv, Handler } from "../commands.ts";
 import { agentDir } from "../config-file.ts";
 import { logLength } from "../memstore.ts";
 import { main } from "./cli.ts";
-import { describeJob, footerText, genPaths, jobRunning, readJob, writeJob, type Job } from "./job.ts";
+import { jobStatus as jobFooter } from "../status.ts";
+import { describeJob, genPaths, jobRunning, readJob, writeJob, type Job } from "./job.ts";
 import { readDraft } from "./pipeline.ts";
 import { countSessionFiles } from "./sessions.ts";
 
@@ -45,7 +46,7 @@ function sessionsDir(env: NodeJS.ProcessEnv): string {
 export function generationFooter(memoryDir: string): string | undefined {
   const paths = genPaths(memoryDir);
   if (!existsSync(paths.job)) return undefined;
-  return footerText(readJob(paths), jobRunning(paths));
+  return jobFooter(readJob(paths), jobRunning(paths));
 }
 
 /** Evenly spaced sample of draft lines. */

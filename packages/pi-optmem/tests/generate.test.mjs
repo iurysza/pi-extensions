@@ -336,7 +336,7 @@ test("generate launches detached work and the review dialog imports only on Impo
     const accepted = uiEnv(root, { select: () => "Import" });
     await GENERATE_HANDLERS.generate("", accepted.c);
     assert.deepEqual(accepted.launches[0].args.slice(0, 1), ["import"]);
-    assert.equal(generationFooter(u.memoryDir), "gen ready");
+    assert.equal(generationFooter(u.memoryDir), "\u{F012C} review");
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

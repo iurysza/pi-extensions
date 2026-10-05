@@ -22,6 +22,25 @@ Stock OptMem puts its instructions in `AGENTS.md`, which turns memory on in ever
 
 If `memo` is missing, Pi still starts. The extension tells you how to install it.
 
+## Compared with stock OptMem
+
+In `on` mode, memory itself is unchanged. The extension runs the same `memo` against the same memory directory, so notes, the tree and naps are identical, and a store works with or without the extension.
+
+What changes is how a session gets the instructions and the wake view:
+
+| | Stock OptMem | pi-optmem `on` |
+|---|---|---|
+| Instructions | Upstream `## Memory` block in `AGENTS.md`, word for word, in every session | A rewritten section in the system prompt, only in `on` and `read` |
+| Wake | The agent runs `memo wake` as its first tool call | The extension runs it before the turn, fetching every page |
+| Wake output | A tool result saved in the transcript, then summarised by compaction | Added to each request and never saved. It reloads after compaction, even mid-run |
+| Writing | `memo note` and `memo nap` in bash | `memo_note` and `memo_nap` tools. Bash memo commands still work |
+| Compressions | memo's `Run: memo nap …` lines | The same requests, rewritten to name `memo_nap` |
+| Subagents | Asked to skip memory | Capped at `subagentMode` and blocked from writing |
+
+The rewritten instructions keep upstream's rules: read the wake view first, note anything worth keeping, avoid redundant notes, compress when asked, never edit the memory directory. They add one rule upstream lacks: store pointers, never IDs, credentials or other secrets. The agent may therefore save less detail than stock OptMem would.
+
+In `read` mode, if memo needs compressions before it can wake, the session continues without memory, because it cannot nap.
+
 ## Modes
 
 | | off | read | on |
@@ -35,7 +54,18 @@ The bash guard fails closed. In `off` it blocks any command that mentions `memo`
 
 The extension also blocks `edit` and `write` calls inside the memory directory.
 
-The footer shows `mem:on`, `mem:read` or `mem:off`.
+The footer uses Nerd Font v3 icons (`src/status.ts`). Off shows nothing.
+
+| State | Footer |
+|---|---|
+| on | `󰧑` |
+| read | `󰧑 󰈈` |
+| memo missing | `󰧑 󰀦 no memo` |
+| generating / catching up | `󰧑 󰓦 120/1957`, `󰧑 󰓦 catchup 3/10` |
+| draft waiting | `󰧑 󰄬 review` |
+| importing | `󰧑 󰇚 import` |
+| naps | `󰧑 󰒲 12/40` |
+| job failed (until the next job) | `󰧑 󰀦 failed` |
 
 ## Controls
 
@@ -116,7 +146,7 @@ Sessions are the source of truth; memory is derived from them. Leader → `b` �
 
 Generate on a non-empty memory offers **Catch up** (only session entries newer than the last generated one, imported with their own dates) or **Rebuild** (confirm; on import the old dir moves to `memory.bak-YYYYMMDD-HHMM` under memo's lock, and a busy store refuses the move).
 
-State lives in `<memoryDir>/../generate/`: `job.json`, `job.log`, `draft.txt`, `lines.jsonl`, `state.json` (last generated session time), `lock` (one job at a time) and `onboarding-shown`. A killed job resumes: run the same command again. The footer shows `mem:on · gen 120/1840` while a job runs and `gen ready` when a draft waits.
+State lives in `<memoryDir>/../generate/`: `job.json`, `job.log`, `draft.txt`, `lines.jsonl`, `state.json` (last generated session time), `lock` (one job at a time) and `onboarding-shown`. A killed job resumes: run the same command again. The footer shows job progress (see Modes).
 
 The model runs as `pi -p --model <id> --no-extensions --no-tools --no-session --no-skills --no-context-files` with `PI_OPTMEM_SUBAGENT=1`, so a child never wakes or writes memory. `PI_OPTMEM_MODEL_CMD` swaps in any command (model id as argument, prompt on stdin) for tests.
 
