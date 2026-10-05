@@ -174,14 +174,44 @@ test("the wake view is request-local and replaces stale copies when on", async (
   assert.doesNotMatch(JSON.stringify(result.messages), /STALE/);
 });
 
-test("compaction refreshes the wake view", async () => {
-  const h = harness({ flags: { memory: true } });
+// Re-review: automatic compaction continues the run without before_agent_start.
+for (const reason of ["threshold", "overflow"]) {
+  test(`${reason} compaction: the next request reloads the wake view without a new prompt`, async () => {
+    const h = harness({ flags: { memory: true } });
+    await start(h);
+    await prompt(h);
+    assert.match(await wakeIn(h), /likes tea/);
+
+    const canary = { role: "custom", customType: WAKE_MESSAGE, content: "CANARY" };
+    const preparation = { messagesToSummarize: [canary, USER], turnPrefixMessages: [canary] };
+    await h.emit("session_before_compact", { preparation, branchEntries: [], reason, willRetry: reason === "overflow" });
+    assert.doesNotMatch(JSON.stringify(preparation), /CANARY|likes tea/, "summary input has no wake");
+    await h.emit("session_compact", { compactionEntry: {}, fromExtension: false, reason });
+
+    // Straight to the continuation request: no before_agent_start.
+    assert.match(await wakeIn(h), /likes tea/);
+    assert.equal(h.calls.filter((c) => c[0] === "wake").length, 2);
+    await wakeIn(h);
+    assert.equal(h.calls.filter((c) => c[0] === "wake").length, 2, "reloaded once, then reused");
+  });
+}
+
+test("context does not retry a failed wake on every tool turn", async () => {
+  const h = harness({ flags: { memory: true }, memoExists: false });
   await start(h);
   await prompt(h);
+  await wakeIn(h);
+  await wakeIn(h);
+  assert.match(await wakeIn(h), /status="missing"/);
+  assert.deepEqual(h.calls, []);
+});
+
+test("context stays empty when memory is off", async () => {
+  const h = harness();
+  await start(h);
   await h.emit("session_compact", {});
   assert.equal(await wakeIn(h), undefined);
-  await prompt(h);
-  assert.equal(h.calls.filter((c) => c[0] === "wake").length, 2);
+  assert.deepEqual(h.calls, []);
 });
 
 // Finding 3: /reload re-applied CLI flags over a later /memory switch.

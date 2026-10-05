@@ -279,6 +279,10 @@ export function registerOptMem(pi: ExtensionAPI, deps: OptMemDeps = {}): void {
   // Drop every persisted wake message, then add the current view at the front.
   pi.on("context", async (event) => {
     const messages = event.messages.filter((message) => !isWakeMessage(message));
+    // Compaction can run mid-run (threshold or overflow) and continue without a
+    // new prompt, so before_agent_start never fires. Reload a cleared view here.
+    // Failed views stay as they are and retry on the next prompt.
+    if (mode !== "off" && (!view || view.mode !== mode)) await loadView();
     if (mode !== "off" && view && view.mode === mode) {
       messages.unshift({
         role: "custom",
