@@ -184,7 +184,7 @@ export function describeJob(job: Job | undefined, running: boolean): string {
     `job: ${job.id} (${job.kind})`,
     `phase: ${job.phase}${running ? " (running)" : job.phase === "distil" || job.phase === "naps" || job.phase === "importing" ? " (stopped; run it again to resume)" : ""}`,
     `sessions: ${job.processed}/${job.total}`,
-    `draft lines: ${job.lines} (privacy filter dropped ${job.dropped})`,
+    `draft lines: ${job.lines} (filter dropped ${job.dropped})`,
     `model: ${job.modelUsed ?? job.model}${job.modelUsed && job.modelUsed !== job.model ? ` (fallback from ${job.model})` : ""}, calls: ${job.modelCalls}`,
     `naps written: ${job.napsDone}${job.napsPending !== undefined ? `, pending: ${job.napsPending}` : ""}`,
     `started: ${job.startedAt}, updated: ${job.updatedAt}`,

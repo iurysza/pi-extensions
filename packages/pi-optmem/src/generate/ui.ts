@@ -58,7 +58,7 @@ export function reviewText(job: Job, draft: readonly { date: string; text: strin
   const span = draft.length ? `${draft[0]!.date} to ${draft.at(-1)!.date}` : "no lines";
   const head = [
     `${draft.length} memory lines from ${job.processed} sessions (${span}).`,
-    `Privacy filter dropped ${job.dropped} lines.${job.kind === "rebuild" ? " Import moves the current memory to memory.bak-<date> first; open sessions keep their wake view until /memory on." : ""}`,
+    `Filter dropped ${job.dropped} lines.${job.kind === "rebuild" ? " Import moves the current memory to memory.bak-<date> first; open sessions keep their wake view until /memory on." : ""}`,
     "",
     ...sample(draft).map((l) => `${l.date} ${l.text}`),
   ];

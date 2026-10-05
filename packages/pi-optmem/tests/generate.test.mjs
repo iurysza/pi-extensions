@@ -70,7 +70,7 @@ test("transcript cap keeps every user message", () => {
   for (const i of [0, 1, 40, 78, 79]) assert.match(text, new RegExp(`question ${i} `));
 });
 
-test("privacy filter drops IDs, emails, IBANs, tokens, money and phones; dedupes; sorts", () => {
+test("privacy rules (off by default) drop IDs, emails, IBANs, tokens, money and phones", () => {
   for (const bad of [
     "2025-01-01 Passport X12345678",
     "2025-01-01 Card 4111 1111 1111 1111",
@@ -82,15 +82,16 @@ test("privacy filter drops IDs, emails, IBANs, tokens, money and phones; dedupes
     "2025-01-01 Paid 300 EUR",
     "2025-01-01 Call +49 151 2345 6789",
   ]) {
-    assert.ok("drop" in parseLine(bad), bad);
+    assert.ok("drop" in parseLine(bad, true), bad);
+    assert.ok(!("drop" in parseLine(bad)), `kept while disabled: ${bad}`);
   }
   assert.deepEqual(parseLine("- 2025-01-01 Prefers Kotlin for Android"), { date: "2025-01-01", text: "Prefers Kotlin for Android" });
   assert.deepEqual(parseLine("2025-02-30 bad date"), { drop: "format" });
   assert.deepEqual(parseLine(`2025-01-01 ${"a".repeat(281)}`), { drop: "too-long" });
   assert.equal(parseLine("NONE"), undefined);
   const result = filterLines(["2025-03-01 B", "2025-01-01 A", "2025-02-01 a!", "2025-01-01 mail x@y.io", "garbage"]);
-  assert.deepEqual(result.lines.map((l) => l.text), ["A", "B"]);
-  assert.deepEqual(result.dropped, { duplicate: 1, email: 1, format: 1 });
+  assert.deepEqual(result.lines.map((l) => l.text), ["A", "mail x@y.io", "B"]);
+  assert.deepEqual(result.dropped, { duplicate: 1, format: 1 });
 });
 
 test("batches, distil line dates and nap parsing", () => {
@@ -168,10 +169,10 @@ test("generate --dry-run writes a filtered draft and imports nothing", async () 
     const r = await f.run("generate", "--dry-run");
     assert.equal(r.code, 0, r.out);
     const draft = readFileSync(f.paths.draft, "utf8").trim().split("\n");
-    assert.equal(draft.length, 12);
-    assert.ok(draft.every((l) => /^2025-01-\d\d Session \d in \/p\d: topic \d+/.test(l)));
+    assert.equal(draft.length, 14);
+    assert.equal(draft.filter((l) => /^2025-01-\d\d Session \d in \/p\d: topic \d+/.test(l)).length, 12);
     assert.equal(readJob(f.paths).phase, "awaiting-confirm");
-    assert.equal(readJob(f.paths).dropped, 2, "passport and email lines dropped");
+    assert.equal(readJob(f.paths).dropped, 0, "privacy filter is off");
     assert.equal(existsSync(f.memoryDir), false);
     assert.equal(existsSync(f.paths.lock), false, "lock released");
   } finally {
@@ -233,7 +234,7 @@ test("e2e with real memo: import, naps, catchup, rebuild backup", { skip: !MEMO 
   try {
     let r = await f.run("generate", "--yes");
     assert.equal(r.code, 0, r.out);
-    assert.equal(logLength(f.memoryDir), 12);
+    assert.equal(logLength(f.memoryDir), 14, "12 sessions plus 2 extra lines from the SECRET session (privacy filter off)");
     assert.deepEqual(pendingBlocks(f.memoryDir), [], "all naps written");
     assert.equal(readJob(f.paths).phase, "done");
     assert.equal(readState(f.paths).lastSessionTime, "2025-01-12T09:02:00Z");
@@ -248,7 +249,7 @@ test("e2e with real memo: import, naps, catchup, rebuild backup", { skip: !MEMO 
     writeFileSync(join(sessions, "--Users-p0--", "0.jsonl"), `${readFileSync(join(sessions, "--Users-p0--", "0.jsonl"), "utf8")}${msg("user", "late follow up", "2025-01-21T09:00:00Z")}\n`);
     r = await f.run("catchup", "--yes");
     assert.equal(r.code, 0, r.out);
-    const texts = readMemories(f.memoryDir, 12, logLength(f.memoryDir)).map((m) => m.text);
+    const texts = readMemories(f.memoryDir, 14, logLength(f.memoryDir)).map((m) => m.text);
     assert.equal(texts.length, 2);
     assert.match(texts.join("|"), /fresh topic/);
     assert.match(texts.join("|"), /late follow up/);
@@ -259,7 +260,7 @@ test("e2e with real memo: import, naps, catchup, rebuild backup", { skip: !MEMO 
     assert.equal(r.code, 0, r.out);
     const job = readJob(f.paths);
     assert.match(job.backup, /memory\.bak-\d{8}-\d{4}$/);
-    assert.equal(logLength(job.backup), 14);
+    assert.equal(logLength(job.backup), 16);
     assert.equal(logLength(f.memoryDir), 2);
   } finally {
     rmSync(f.root, { recursive: true, force: true });
@@ -330,7 +331,7 @@ test("generate launches detached work and the review dialog imports only on Impo
     await GENERATE_HANDLERS.generate("", cancelled.c);
     assert.equal(cancelled.launches.length, 0);
     assert.match(cancelled.notes[0], /2 memory lines from 3 sessions \(2025-01-01 to 2025-02-01\)/);
-    assert.match(cancelled.notes[0], /dropped 1 lines/);
+    assert.match(cancelled.notes[0], /Filter dropped 1 lines/);
 
     const accepted = uiEnv(root, { select: () => "Import" });
     await GENERATE_HANDLERS.generate("", accepted.c);

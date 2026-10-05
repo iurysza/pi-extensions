@@ -110,7 +110,7 @@ Sessions are the source of truth; memory is derived from them. Leader â†’ `b` â†
 1. **Discover** top-level session files in `<agent dir>/sessions/<cwd-slug>/`. Skips `/tmp`, `/private/tmp` and `review-pr-*` folders, and files deeper than one folder (subagent runs). A forked session (`parentSession` in its header) keeps only entries newer than its own start, so copied parent history is not distilled twice.
 2. **Extract**, no model: user messages plus the assistant's last text per turn, capped at about 12,000 characters per session. Every user message is kept; middle assistant replies go first.
 3. **Distil** with the configured `model`: about 8 sessions per call, 4 calls at a time, retry with backoff. If the model is unknown or unauthorised on the first call, the job falls back to Pi's default model once and records it.
-4. **Filter**: dates, 280 bytes, de-duplication, ascending dates, and a privacy regex that drops long digit runs, emails, IBAN-like strings, tokens, money amounts and phone numbers. The drop count is logged.
+4. **Filter**: dates, 280 bytes, de-duplication and ascending dates. The drop count is logged. A regex privacy filter (digit runs, emails, IBANs, tokens, money, phones) exists but is off (`PRIVACY_FILTER` in `src/generate/filter.ts`) because it dropped too many useful lines; the distil prompt still forbids secrets.
 5. **Confirm**: one dialog with the line count, date span, 12 sample lines, and Import / Open draft / Cancel. Only Import writes memory.
 6. **Import** with `memo import`, then **naps**: pending summaries are batched 24 per model call and written in memo's order with `memo nap`.
 

@@ -30,8 +30,14 @@ function realDate(date: string): boolean {
   return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === date;
 }
 
+/**
+ * Regex privacy drops are off for now: they over-dropped useful lines. The
+ * distil prompt still forbids secrets. Flip this to turn them back on.
+ */
+export const PRIVACY_FILTER = false;
+
 /** One model output line to a dated line, or a reason it was dropped. Bullets and quotes are tolerated. */
-export function parseLine(raw: string): DatedLine | { drop: DropReason } | undefined {
+export function parseLine(raw: string, privacy = PRIVACY_FILTER): DatedLine | { drop: DropReason } | undefined {
   const line = raw.trim().replace(/^[-*•]\s+/, "").replace(/^`(.*)`$/, "$1").trim();
   if (!line || /^(none|nothing|no durable|n\/a)\b/i.test(line) || line.startsWith("===")) return undefined;
   const match = DATED.exec(line);
@@ -39,7 +45,7 @@ export function parseLine(raw: string): DatedLine | { drop: DropReason } | undef
   const text = match[2]!.replace(/\s+/g, " ").trim();
   if (!text) return { drop: "format" };
   if (Buffer.byteLength(text, "utf8") > LINE_BYTES) return { drop: "too-long" };
-  const reason = dropReason(text);
+  const reason = privacy ? dropReason(text) : undefined;
   return reason ? { drop: reason } : { date: match[1]!, text };
 }
 
