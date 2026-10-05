@@ -5,7 +5,8 @@ import {
   DEFAULT_CONFIG,
   MODE_ENTRY,
   detectSubagent,
-  findMemoInvocations,
+  isReadOnlyMemoCommand,
+  mentionsMemo,
   guardBash,
   modeFromRules,
   nextActiveTools,
@@ -118,32 +119,56 @@ test("prompt sections per mode", () => {
   assert.match(on, /You are a subagent\. Don't run memo\./);
 });
 
-test("bash guard: off blocks every memo call", () => {
-  for (const command of ["memo wake", "~/.local/share/optmem/memo recall x", "python3 /x/memo note hi", "cd /x && memo zoom 0-1"]) {
+test("bash guard: off blocks every mention of memo", () => {
+  for (const command of ["memo wake", "~/.local/share/optmem/memo recall x", "python3 /x/memo note hi", "cd /x && memo zoom 0-1", "grep memo notes.md", "cat /x/memo.py"]) {
     assert.equal(guardBash(command, "off").allow, false, command);
   }
   assert.equal(guardBash("ls -la", "off").allow, true);
-  assert.equal(guardBash("grep memo notes.md", "off").allow, true);
   assert.equal(guardBash("cat memo.txt", "off").allow, true);
+  assert.equal(guardBash("echo memorandum", "off").allow, true);
 });
 
-test("bash guard: read allows wake, zoom and recall only", () => {
-  for (const command of ["memo wake", "memo wake 2 300", "memo zoom 0-1", "MEMORY_DIR=/x memo recall foo", "memo"]) {
+test("bash guard: read allows simple wake, zoom and recall only", () => {
+  for (const command of ["memo wake", "memo wake 2 300", "memo zoom 0-1", "MEMORY_DIR=/x memo recall foo", "python3 /tmp/memo.py recall 'tea|coffee'", "~/.local/share/optmem/memo wake"]) {
     assert.equal(guardBash(command, "read").allow, true, command);
   }
-  for (const command of ["memo note hi", "memo nap 0-1 x", "memo forget 0-1", "memo init", "memo config WAKE_LINES=3", "memo import f", "memo wake; memo note x", "env memo note x"]) {
+  for (const command of ["memo", "memo note hi", "memo nap 0-1 x", "memo forget 0-1", "memo init", "memo config WAKE_LINES=3", "memo import f", "memo wake; memo note x", "env memo note x", "memo wake && memo note x", "memo recall x | tee y", "memo wake > /tmp/out", "echo $(memo note x)"]) {
     assert.equal(guardBash(command, "read").allow, false, command);
   }
+});
+
+// Finding 1: conditionals and loops hid the memo call from the old parser.
+test("bash guard fails closed on conditionals, loops and other shell forms", () => {
+  const sneaky = [
+    'if true; then python3 /tmp/memo.py note "example"; fi',
+    'while false; do memo note x; done',
+    'for i in 1; do memo nap 0-1 x; done',
+    '{ memo note x; }',
+    'bash -c "memo note x"',
+    'sh -c \'memo note x\'',
+    'eval "memo note x"',
+    'xargs memo note < f',
+    'M=memo; $M note x',
+    'case a in a) memo note x;; esac',
+    '"/opt/Opt Mem/memo" note x',
+  ];
+  for (const command of sneaky) {
+    assert.equal(guardBash(command, "read").allow, false, `read: ${command}`);
+    assert.equal(guardBash(command, "off").allow, false, `off: ${command}`);
+  }
+});
+
+test("bash guard matches the configured memo path and memory dir", () => {
+  assert.equal(mentionsMemo("/opt/x/tool note hi", "/opt/x/tool"), true);
+  assert.equal(guardBash("/opt/x/tool note hi", "read", "/opt/x/tool").allow, false);
+  assert.equal(guardBash("/opt/x/tool wake", "read", "/opt/x/tool").allow, true);
+  assert.equal(guardBash("cat /m/LOG.txt", "off", undefined, "/m").allow, false);
+  assert.equal(isReadOnlyMemoCommand('"/opt/Opt Mem/memo" wake'), true);
 });
 
 test("bash guard: on allows everything", () => {
   assert.equal(guardBash("memo note hi", "on").allow, true);
   assert.equal(guardBash("memo forget 0-1", "on").allow, true);
-});
-
-test("memo invocations are found in command positions only", () => {
-  assert.deepEqual(findMemoInvocations("echo memo && memo wake | head"), [{ subcommand: "wake" }]);
-  assert.deepEqual(findMemoInvocations("x=$(memo recall a)"), [{ subcommand: "recall" }]);
 });
 
 test("nap requests become memo_nap instructions", () => {
@@ -157,7 +182,7 @@ const PART1 = "Your memory, part 1 of 2, oldest first (300 memories).\n#0-127 ol
 const PART2 = "Your memory, part 2 of 2, oldest first (300 memories).\n#299 2026-10-05 newest\nYou are awake.\n\nCompress memories #298-299 into one line of at most 280 bytes.\nRun: /x/memo nap 298-299 \"<your line>\"\n";
 
 test("wake part parsing", () => {
-  assert.deepEqual(parseWakePart(PART1), { lines: ["#0-127 old stuff", "#128-191 more"], next: ["2", "300"], tail: "" });
+  assert.deepEqual(parseWakePart(PART1), { lines: ["#0-127 old stuff", "#128-191 more"], next: ["2", "300"], awake: false, tail: "" });
   const last = parseWakePart(PART2);
   assert.deepEqual(last.lines, ["#299 2026-10-05 newest"]);
   assert.equal(last.next, undefined);
@@ -192,6 +217,21 @@ test("wake handles empty memory, blocked wakes and errors", async () => {
 
   const failed = await wakeAll(async () => ({ code: 1, stdout: "", stderr: "No memory at /x." }));
   assert.deepEqual(failed, { kind: "error", message: "No memory at /x." });
+});
+
+// Finding 6: a memo path with spaces hid the continuation footer.
+test("wake follows continuations and nap requests under a spaced path", async () => {
+  const spaced = PART1.replace("/x/memo", "/Users/me/Opt Mem/memo");
+  assert.deepEqual(parseWakePart(spaced).next, ["2", "300"]);
+  const result = await wakeAll(async (args) => ({ code: 0, stdout: args.length === 1 ? spaced : PART2.replace("/x/memo", "/a b/memo"), stderr: "" }));
+  assert.equal(result.kind, "awake");
+  assert.equal(result.lines.length, 3);
+  assert.match(rewriteForTools('Run: /a b/memo nap 0-1 "<your line>"'), /Call memo_nap with range "0-1"/);
+});
+
+test("wake without an awake marker or a next part is an error", async () => {
+  const result = await wakeAll(async () => ({ code: 0, stdout: "#0 x\nNot awake yet. Run: ???\n", stderr: "" }));
+  assert.equal(result.kind, "error");
 });
 
 test("wake stops after a bounded number of parts", async () => {

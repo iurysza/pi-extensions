@@ -15,8 +15,8 @@ import {
   TOOL_ZOOM,
   WAKE_MESSAGE,
   detectSubagent,
-  findMemoInvocations,
   guardBash,
+  mentionsMemo,
   isInside,
   isMode,
   missingMemoHint,
@@ -84,6 +84,22 @@ export type OptMemDeps = {
   readonly runner?: (memoPath: string, memoryDir: string) => MemoRun;
 };
 
+function isWakeMessage(message: unknown): boolean {
+  const m = message as { role?: string; customType?: string } | undefined;
+  return m?.role === "custom" && m.customType === WAKE_MESSAGE;
+}
+
+function isWakeEntry(entry: unknown): boolean {
+  const e = entry as { type?: string; customType?: string } | undefined;
+  return e?.type === "custom_message" && e.customType === WAKE_MESSAGE;
+}
+
+/** Remove matching items in place: Pi keeps references to these arrays. */
+export function spliceWhere<T>(items: T[] | undefined, drop: (item: T) => boolean): void {
+  if (!items) return;
+  for (let i = items.length - 1; i >= 0; i--) if (drop(items[i]!)) items.splice(i, 1);
+}
+
 function text(value: string) {
   return { content: [{ type: "text" as const, text: value }], details: undefined };
 }
@@ -98,8 +114,12 @@ export function registerOptMem(pi: ExtensionAPI, deps: OptMemDeps = {}): void {
   let mode: MemoryMode = "off";
   let source: ModeSource = "default";
   let isSubagent = false;
-  let wakeLoaded = false;
-  let lastWakeLines = 0;
+  /**
+   * The wake view lives only in memory and is injected per request by the
+   * `context` hook. It is never persisted, so compaction and branch summaries
+   * cannot see it. `ok` views are reused; failed attempts retry next prompt.
+   */
+  let view: { mode: MemoryMode; ok: boolean; content: string; lines: number } | undefined;
 
   const paths = () => resolvePaths(config, env);
   const run: MemoRun = (args) => {
@@ -117,55 +137,69 @@ export function registerOptMem(pi: ExtensionAPI, deps: OptMemDeps = {}): void {
     ctx.ui.setStatus(STATUS_KEY, `mem:${mode}${missing ? " (no memo)" : ""}`);
   }
 
-  function applyMode(next: MemoryMode, ctx: ExtensionContext): void {
-    if (next !== mode && next !== "off") wakeLoaded = false;
+  function setMode(next: MemoryMode, ctx: ExtensionContext): void {
+    if (next !== mode) view = undefined;
     mode = next;
     pi.setActiveTools(nextActiveTools(pi.getActiveTools(), mode));
     updateStatus(ctx);
   }
 
-  function wakeOnBranch(ctx: ExtensionContext): boolean {
-    const branch = ctx.sessionManager.getBranch();
-    let lastCompaction = -1;
-    branch.forEach((entry, index) => {
-      if (entry.type === "compaction") lastCompaction = index;
-    });
-    return branch.some(
-      (entry, index) => index > lastCompaction && entry.type === "custom_message" && entry.customType === WAKE_MESSAGE,
-    );
-  }
-
-  pi.on("session_start", async (_event, ctx) => {
-    const loaded = await readConfig();
-    config = loaded.config;
-    if (loaded.error && ctx.hasUI) ctx.ui.notify(`pi-optmem: ${loaded.error}. Using defaults.`, "warning");
-
-    isSubagent = detectSubagent(ctx.mode, env);
+  /** Mode for the current branch. CLI flags count only for the process's first session. */
+  function resolveForBranch(ctx: ExtensionContext, useFlags: boolean) {
     const persisted = persistedMode(ctx.sessionManager.getBranch());
     const resolution = resolveMode({
-      flags: {
-        memory: pi.getFlag("memory"),
-        memoryRead: pi.getFlag("memory-read"),
-        noMemory: pi.getFlag("no-memory"),
-      },
+      flags: useFlags
+        ? { memory: pi.getFlag("memory"), memoryRead: pi.getFlag("memory-read"), noMemory: pi.getFlag("no-memory") }
+        : {},
       persisted,
       config,
       cwd: ctx.cwd,
       isSubagent,
     });
+    return { resolution, persisted };
+  }
+
+  pi.on("session_start", async (event, ctx) => {
+    const loaded = await readConfig();
+    config = loaded.config;
+    if (loaded.error && ctx.hasUI) ctx.ui.notify(`pi-optmem: ${loaded.error}. Using defaults.`, "warning");
+
+    isSubagent = detectSubagent(ctx.mode, env);
+    view = undefined;
+    // Reload keeps flag values, so applying them again would undo a /memory switch.
+    const { resolution, persisted } = resolveForBranch(ctx, event.reason === "startup");
     source = resolution.source;
-    mode = resolution.mode;
-    wakeLoaded = mode !== "off" && wakeOnBranch(ctx);
+    mode = "off";
+    setMode(resolution.mode, ctx);
     if (!isSubagent && resolution.mode !== persisted) pi.appendEntry(MODE_ENTRY, { mode });
-    pi.setActiveTools(nextActiveTools(pi.getActiveTools(), mode));
-    updateStatus(ctx);
     if (mode !== "off" && ctx.hasUI && !memoExists(paths().memoPath)) {
       ctx.ui.notify(missingMemoHint(paths().memoPath), "warning");
     }
   });
 
-  pi.on("session_compact", () => {
-    wakeLoaded = false;
+  // Branch navigation changes which mode entry is current; follow it.
+  pi.on("session_tree", async (_event, ctx) => {
+    const { resolution } = resolveForBranch(ctx, false);
+    source = resolution.source;
+    setMode(resolution.mode, ctx);
+  });
+
+  // Refresh the view after compaction so it picks up notes from the compacted turns.
+  pi.on("session_compact", async () => {
+    view = undefined;
+  });
+
+  // Legacy sessions persisted the wake view; keep it out of summaries.
+  pi.on("session_before_compact", async (event) => {
+    const prep = event.preparation;
+    spliceWhere(prep.messagesToSummarize, isWakeMessage);
+    spliceWhere(prep.turnPrefixMessages, isWakeMessage);
+    return undefined;
+  });
+
+  pi.on("session_before_tree", async (event) => {
+    spliceWhere(event.preparation.entriesToSummarize, isWakeEntry);
+    return undefined;
   });
 
   pi.registerCommand("memory", {
@@ -176,12 +210,18 @@ export function registerOptMem(pi: ExtensionAPI, deps: OptMemDeps = {}): void {
       const requested = args.trim();
       const { memoPath, memoryDir } = paths();
       if (!requested) {
+        const wake =
+          mode === "off"
+            ? "not loaded"
+            : view?.ok && view.mode === mode
+              ? `loaded (${view.lines} lines)`
+              : "loads on next turn";
         const lines = [
           `mode: ${mode} (${source}${isSubagent ? ", subagent" : ""})`,
           `memo: ${memoPath}${memoExists(memoPath) ? "" : " (missing)"}`,
           `memory: ${memoryDir}`,
           `config: ${configPath(env)}`,
-          `wake: ${wakeLoaded ? `loaded (${lastWakeLines} lines this run)` : mode === "off" ? "not loaded" : "loads on next turn"}`,
+          `wake: ${wake}`,
         ];
         if (!memoExists(memoPath)) lines.push(missingMemoHint(memoPath));
         ctx.ui.notify(lines.join("\n"), "info");
@@ -195,7 +235,9 @@ export function registerOptMem(pi: ExtensionAPI, deps: OptMemDeps = {}): void {
         ctx.ui.notify(`Subagent sessions cannot go above mem:${config.subagentMode}.`, "warning");
         return;
       }
-      applyMode(requested, ctx);
+      setMode(requested, ctx);
+      // An explicit switch also retries a failed or stale wake.
+      view = undefined;
       source = "session";
       pi.appendEntry(MODE_ENTRY, { mode });
       const note =
@@ -207,55 +249,59 @@ export function registerOptMem(pi: ExtensionAPI, deps: OptMemDeps = {}): void {
     },
   });
 
-  pi.on("before_agent_start", async (event) => {
-    if (mode === "off") return undefined;
-    const { memoPath, memoryDir } = paths();
-    const section = systemSection(mode, memoryDir);
-    const systemPrompt = section ? `${event.systemPrompt}\n\n${section}` : undefined;
-    if (wakeLoaded) return { systemPrompt };
-
+  async function loadView(): Promise<void> {
+    const { memoPath } = paths();
     if (!memoExists(memoPath)) {
-      wakeLoaded = true;
-      return {
-        systemPrompt,
-        message: {
-          customType: WAKE_MESSAGE,
-          content: `<optmem-wake status="missing">\n${missingMemoHint(memoPath)}\n</optmem-wake>`,
-          display: false,
-        },
+      view = {
+        mode,
+        ok: false,
+        lines: 0,
+        content: `<optmem-wake status="missing">\n${missingMemoHint(memoPath)}\n</optmem-wake>`,
       };
+      return;
     }
     const result = await wakeAll(run);
-    // A blocked wake in "on" mode retries next turn, after the agent naps.
-    wakeLoaded = !(result.kind === "blocked" && mode === "on");
-    lastWakeLines = result.kind === "awake" ? result.lines.length : 0;
-    return {
-      systemPrompt,
-      message: { customType: WAKE_MESSAGE, content: wakeMessage(mode, result), display: false },
+    view = {
+      mode,
+      ok: result.kind === "awake",
+      lines: result.kind === "awake" ? result.lines.length : 0,
+      content: wakeMessage(mode, result),
     };
+  }
+
+  pi.on("before_agent_start", async (event) => {
+    if (mode === "off") return undefined;
+    if (!view || !view.ok || view.mode !== mode) await loadView();
+    const section = systemSection(mode, paths().memoryDir);
+    return section ? { systemPrompt: `${event.systemPrompt}\n\n${section}` } : undefined;
   });
 
-  // Keep only the newest wake view, and none while memory is off.
+  // Drop every persisted wake message, then add the current view at the front.
   pi.on("context", async (event) => {
-    const isWake = (message: (typeof event.messages)[number]) =>
-      message.role === "custom" && (message as { customType?: string }).customType === WAKE_MESSAGE;
-    let last = -1;
-    event.messages.forEach((message, index) => {
-      if (isWake(message)) last = index;
-    });
-    if (last === -1) return undefined;
-    const messages = event.messages.filter((message, index) => !isWake(message) || (mode !== "off" && index === last));
-    return messages.length === event.messages.length ? undefined : { messages };
+    const messages = event.messages.filter((message) => !isWakeMessage(message));
+    if (mode !== "off" && view && view.mode === mode) {
+      messages.unshift({
+        role: "custom",
+        customType: WAKE_MESSAGE,
+        content: view.content,
+        display: false,
+        timestamp: 0,
+      } as (typeof event.messages)[number]);
+    }
+    return messages.length === event.messages.length && messages.every((m, i) => m === event.messages[i])
+      ? undefined
+      : { messages };
   });
 
   pi.on("tool_call", async (event, ctx) => {
     if (event.toolName === "bash") {
       const input = event.input as { command?: unknown };
       if (typeof input.command !== "string") return undefined;
-      const decision = guardBash(input.command, mode);
+      const { memoPath, memoryDir } = paths();
+      const decision = guardBash(input.command, mode, memoPath, memoryDir);
       if (!decision.allow) return { block: true, reason: decision.reason };
-      if (findMemoInvocations(input.command).length > 0) {
-        input.command = withMemoryDir(input.command, paths().memoryDir);
+      if (mentionsMemo(input.command, memoPath, memoryDir)) {
+        input.command = withMemoryDir(input.command, memoryDir);
       }
       return undefined;
     }

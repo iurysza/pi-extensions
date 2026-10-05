@@ -206,68 +206,103 @@ export function nextActiveTools(active: readonly string[], mode: MemoryMode): st
 // ---------------------------------------------------------------- bash guard
 
 const READ_COMMANDS = new Set(["wake", "zoom", "recall"]);
-const WRAPPERS = new Set(["env", "command", "exec", "nohup", "time", "sudo", "python", "python3", "uv", "run"]);
-
-function stripQuotes(word: string): string {
-  return word.replace(/^['"]|['"]$/g, "");
-}
+const INTERPRETERS = new Set(["python", "python3"]);
 
 function basename(word: string): string {
   const parts = word.split("/");
   return parts[parts.length - 1] ?? word;
 }
 
-export function isMemoWord(word: string): boolean {
-  const name = basename(stripQuotes(word));
-  return name === "memo" || name === "memo.py";
+/** A word that names memo: `memo`, `memo.py`, any path ending in them, or the configured path. */
+export function isMemoWord(word: string, memoPath?: string): boolean {
+  const name = basename(word);
+  return name === "memo" || name === "memo.py" || (memoPath !== undefined && word === memoPath);
 }
 
-export type MemoInvocation = { readonly subcommand: string | undefined };
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+const MEMO_MENTION = /(^|[\s/'"`=;&|()<>{}$])memo(\.py)?(?=$|[\s'"`;&|()<>{}])/;
+
+/** True when the command mentions memo anywhere, in any form. Deliberately over-matches. */
+export function mentionsMemo(command: string, memoPath?: string, memoryDir?: string): boolean {
+  if (MEMO_MENTION.test(command)) return true;
+  for (const path of [memoPath, memoryDir]) {
+    if (path && new RegExp(escapeRegExp(path)).test(command)) return true;
+  }
+  return false;
+}
 
 /**
- * Find `memo` invocations in a shell command. Only command positions count:
- * the first word of each segment, after env assignments and wrappers such as
- * `env` or `python3`. `grep memo notes.md` is not an invocation.
+ * Split a simple command into words. Returns undefined for anything that is
+ * not a simple command: unquoted operators, redirections, grouping,
+ * substitutions anywhere, or unbalanced quotes.
  */
-export function findMemoInvocations(command: string): MemoInvocation[] {
-  const segments = command.split(/\|\||&&|[;|&\n`]|\$\(|\(|\)/);
-  const found: MemoInvocation[] = [];
-  for (const segment of segments) {
-    const words = segment.trim().split(/\s+/).filter(Boolean);
-    let i = 0;
-    while (i < words.length) {
-      const word = stripQuotes(words[i]!);
-      if (/^[A-Za-z_][A-Za-z0-9_]*=/.test(word) || WRAPPERS.has(word) || (word.startsWith("-") && i > 0)) {
-        i++;
-        continue;
-      }
-      break;
+export function simpleWords(command: string): string[] | undefined {
+  if (/[`$\\\n\r]/.test(command)) return undefined;
+  const words: string[] = [];
+  let current = "";
+  let started = false;
+  let quote: "'" | '"' | undefined;
+  for (const char of command) {
+    if (quote) {
+      if (char === quote) quote = undefined;
+      else current += char;
+      continue;
     }
-    const head = words[i];
-    if (head !== undefined && isMemoWord(head)) {
-      const next = words[i + 1];
-      found.push({ subcommand: next === undefined ? undefined : stripQuotes(next) });
+    if (char === "'" || char === '"') {
+      quote = char;
+      started = true;
+      continue;
     }
+    if (/\s/.test(char)) {
+      if (started) words.push(current);
+      current = "";
+      started = false;
+      continue;
+    }
+    if (";&|<>(){}!#*?[]".includes(char)) return undefined;
+    current += char;
+    started = true;
   }
-  return found;
+  if (quote) return undefined;
+  if (started) words.push(current);
+  return words;
+}
+
+/** `[VAR=x ...] [python3] memo wake|zoom|recall args...`, and nothing else. */
+export function isReadOnlyMemoCommand(command: string, memoPath?: string): boolean {
+  const words = simpleWords(command.trim());
+  if (!words || words.length === 0) return false;
+  let i = 0;
+  while (i < words.length && /^[A-Za-z_][A-Za-z0-9_]*=/.test(words[i]!)) i++;
+  if (words[i] !== undefined && INTERPRETERS.has(words[i]!)) i++;
+  const head = words[i];
+  const sub = words[i + 1];
+  return head !== undefined && isMemoWord(head, memoPath) && sub !== undefined && READ_COMMANDS.has(sub);
 }
 
 export type GuardDecision = { readonly allow: true } | { readonly allow: false; readonly reason: string };
 
-export function guardBash(command: string, mode: MemoryMode): GuardDecision {
-  const calls = findMemoInvocations(command);
-  if (calls.length === 0 || mode === "on") return { allow: true };
+/**
+ * Fail closed. In off mode any mention of memo is blocked. In read mode only a
+ * simple read-only memo command passes; every other mention is blocked.
+ */
+export function guardBash(command: string, mode: MemoryMode, memoPath?: string, memoryDir?: string): GuardDecision {
+  if (mode === "on" || !mentionsMemo(command, memoPath, memoryDir)) return { allow: true };
   if (mode === "off") {
-    return { allow: false, reason: "Memory is off in this session. Do not run memo. The user can enable it with /memory on." };
-  }
-  const blocked = calls.find((call) => call.subcommand !== undefined && !READ_COMMANDS.has(call.subcommand));
-  if (blocked) {
     return {
       allow: false,
-      reason: `Memory is read-only in this session: memo ${blocked.subcommand} is not allowed. Only wake, zoom and recall are.`,
+      reason: "Memory is off in this session, so commands that mention memo are blocked. The user can enable it with /memory on.",
     };
   }
-  return { allow: true };
+  if (isReadOnlyMemoCommand(command, memoPath)) return { allow: true };
+  return {
+    allow: false,
+    reason:
+      "Memory is read-only in this session. Only a simple `memo wake`, `memo zoom` or `memo recall` command may mention memo; use memo_zoom or memo_recall instead.",
+  };
 }
 
 export function shellQuote(value: string): string {
@@ -292,25 +327,28 @@ export function resolveToolPath(path: string, cwd: string, home = homedir()): st
 
 // ---------------------------------------------------------------- memo output
 
-/** Turn the `Run: <memo> nap a-b "<your line>"` lines memo prints into tool calls. */
+/** Turn the `Run: <memo> nap a-b "<your line>"` lines memo prints into tool calls. Paths may contain spaces. */
 export function rewriteForTools(text: string): string {
   return text
-    .replace(/Run: \S+ nap (\d+-\d+) "<your line>"/g, 'Call memo_nap with range "$1" and line "<your line>" before your next action.')
-    .replace(/Run: \S+ nap\b/g, "Call memo_nap with the range and line it asks for.")
-    .replace(/Run: \S+ wake[^\n]*/g, "The memory view reloads on the next turn.")
-    .replace(/Record the first with: \S+ note "<one line>"/g, "Record the first with memo_note.");
+    .replace(/^Run: .+ nap (\d+-\d+) "<your line>"$/gm, 'Call memo_nap with range "$1" and line "<your line>" before your next action.')
+    .replace(/Run: .+ nap$/gm, "Call memo_nap with the range and line it asks for.")
+    .replace(/Run: .+ wake( \d+)*$/gm, "The memory view reloads on the next turn.")
+    .replace(/Record the first with: .+ note "<one line>"$/gm, "Record the first with memo_note.");
 }
 
 export type WakePart = {
   readonly lines: string[];
   /** Arguments for the next part, when memo says it is not awake yet. */
   readonly next: readonly [string, string] | undefined;
+  /** True only when memo printed "You are awake.". */
+  readonly awake: boolean;
   /** Anything printed after "You are awake.", such as a pending compression. */
   readonly tail: string;
 };
 
 const PART_HEADER = /^Your memory, part \d+ of \d+, oldest first \(.*\)\.$/;
-const NOT_AWAKE = /^Not awake yet\. Run: \S+ wake (\d+) (\d+)$/;
+// Anchored on the suffix: the memo path before ` wake` may contain spaces.
+const NOT_AWAKE = /^Not awake yet\. Run: .+ wake (\d+) (\d+)$/;
 
 export function parseWakePart(output: string): WakePart {
   const lines: string[] = [];
@@ -318,14 +356,14 @@ export function parseWakePart(output: string): WakePart {
   for (let i = 0; i < all.length; i++) {
     const line = all[i]!;
     const notAwake = NOT_AWAKE.exec(line.trim());
-    if (notAwake) return { lines, next: [notAwake[1]!, notAwake[2]!], tail: "" };
+    if (notAwake) return { lines, next: [notAwake[1]!, notAwake[2]!], awake: false, tail: "" };
     if (line.trim() === "You are awake.") {
-      return { lines, next: undefined, tail: all.slice(i + 1).join("\n").trim() };
+      return { lines, next: undefined, awake: true, tail: all.slice(i + 1).join("\n").trim() };
     }
     if (PART_HEADER.test(line.trim())) continue;
     if (line.trim() !== "") lines.push(line);
   }
-  return { lines, next: undefined, tail: "" };
+  return { lines, next: undefined, awake: false, tail: "" };
 }
 
 export type WakeResult =
@@ -349,7 +387,8 @@ export async function wakeAll(run: MemoRun): Promise<WakeResult> {
     }
     const part = parseWakePart(result.stdout);
     lines.push(...part.lines);
-    if (!part.next) return { kind: "awake", lines, nap: part.tail };
+    if (part.awake) return { kind: "awake", lines, nap: part.tail };
+    if (!part.next) return { kind: "error", message: "memo wake ended without \"You are awake.\" or a next part" };
     args = ["wake", part.next[0], part.next[1]];
   }
   return { kind: "error", message: `memo wake asked for more than ${MAX_WAKE_PARTS} parts` };

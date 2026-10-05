@@ -29,7 +29,9 @@ If `memo` is missing, Pi still starts. The extension tells you how to install it
 | Memory instructions in the system prompt | no | read-only variant | full |
 | Wake view injected | no | yes | yes |
 | Tools | none | `memo_zoom`, `memo_recall` | `memo_note`, `memo_zoom`, `memo_recall`, `memo_nap` |
-| `memo` through bash | blocked | `wake`, `zoom` and `recall` only | allowed |
+| Bash commands that mention memo | blocked | a simple `memo wake`, `zoom` or `recall` only | allowed |
+
+The bash guard fails closed. In `off` it blocks any command that mentions `memo`, `memo.py`, the configured memo path or the memory directory. In `read` the only exception is a simple command: optional `VAR=value` prefixes, optional `python3`, then memo and `wake`, `zoom` or `recall`. Pipes, `;`, `&&`, conditionals, loops, redirections and substitutions are all blocked. This can block harmless commands such as `grep memo notes.md`.
 
 The extension also blocks `edit` and `write` calls inside the memory directory.
 
@@ -41,13 +43,15 @@ The footer shows `mem:on`, `mem:read` or `mem:off`.
 - `/memory on|read|off` switches the current session and saves the choice in the session.
 - `--memory`, `--memory-read` and `--no-memory` set the starting mode. If you pass more than one, the most restrictive wins.
 
-The starting mode is resolved in this order: flag, then the mode saved in the session, then a cwd rule, then `defaultMode`. A resumed session keeps its mode.
+The starting mode is resolved in this order: flag, then the mode saved in the session, then a cwd rule, then `defaultMode`. Flags apply only to the first session of the process. `/reload`, `/new`, `/resume`, `/fork` and `/tree` navigation use the mode saved on the current branch, so a `/memory` switch survives them.
 
 Switching mid-session:
 
-- **On or read**: the wake view loads on the next turn.
+- **On or read**: the wake view loads on the next turn. An explicit `/memory on` or `/memory read` also reloads it, for example after installing memo or finishing a compression.
 - **Off**: memo tools are removed and bash calls to `memo` are blocked straight away. The next request has no memory instructions, and the wake view is filtered out of the context.
 - Each switch costs one prompt-cache miss.
+
+The wake view is never saved in the session. It is held in memory and added to each request, so compaction and branch summaries never see it. Wake messages saved by older versions are removed from requests, compaction input and branch-summary input. A successful wake is reused until compaction, a mode change or `/memory on|read`. A missing memo, an error or a pending compression is retried on the next prompt.
 
 ## Config
 
@@ -93,7 +97,7 @@ Known gaps:
 
 - A top-level `pi -p` or `pi --mode json` run that you start yourself also counts as a subagent.
 - A child that runs in `tui` or `rpc` mode without `PI_OPTMEM_SUBAGENT=1` is not detected.
-- The bash guard matches `memo` and `memo.py` when they run as commands. It does not parse every shell form, such as `eval`, aliases or a renamed copy.
+- The bash guard matches names, not files. A renamed copy of memo, or an alias, that is not the configured path gets past it. The memo tools check the mode themselves either way.
 
 ## Development
 
