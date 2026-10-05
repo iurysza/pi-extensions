@@ -221,7 +221,7 @@ test("wake handles empty memory, blocked wakes and errors", async () => {
 
 // Finding 6: a memo path with spaces hid the continuation footer.
 test("wake follows continuations and nap requests under a spaced path", async () => {
-  const spaced = PART1.replace("/x/memo", "/Users/me/Opt Mem/memo");
+  const spaced = PART1.replace("/x/memo", "/home/me/Opt Mem/memo");
   assert.deepEqual(parseWakePart(spaced).next, ["2", "300"]);
   const result = await wakeAll(async (args) => ({ code: 0, stdout: args.length === 1 ? spaced : PART2.replace("/x/memo", "/a b/memo"), stderr: "" }));
   assert.equal(result.kind, "awake");

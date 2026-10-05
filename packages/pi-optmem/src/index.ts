@@ -4,6 +4,7 @@ import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-a
 import { configPath, loadLayeredConfig } from "./config-file.ts";
 import { HANDLERS, type CommandEnv } from "./commands.ts";
 import { subscribeMenu } from "./menu.ts";
+import { GENERATE_HANDLERS, generationFooter, jobWatcher, maybeOnboard, type Launch } from "./generate/ui.ts";
 import { Type } from "typebox";
 import {
   DEFAULT_CONFIG,
@@ -65,6 +66,9 @@ export type OptMemDeps = {
   /** Extra `/memory` subcommands (generation lives in its own module). */
   readonly extraHandlers?: Record<string, (args: string, c: CommandEnv) => Promise<void>>;
   readonly open?: (path: string) => Promise<string | undefined>;
+  readonly launch?: Launch;
+  /** Footer refresh interval for job progress; 0 disables polling. */
+  readonly pollMs?: number;
 };
 
 function isWakeMessage(message: unknown): boolean {
@@ -119,8 +123,37 @@ export function registerOptMem(pi: ExtensionAPI, deps: OptMemDeps = {}): void {
   function updateStatus(ctx: ExtensionContext): void {
     if (!ctx.hasUI) return;
     const missing = mode !== "off" && !memoExists(paths().memoPath);
-    ctx.ui.setStatus(STATUS_KEY, `mem:${mode}${missing ? " (no memo)" : ""}`);
+    let job: string | undefined;
+    try {
+      job = generationFooter(paths().memoryDir);
+    } catch {
+      job = undefined;
+    }
+    ctx.ui.setStatus(STATUS_KEY, `mem:${mode}${missing ? " (no memo)" : ""}${job ? ` · ${job}` : ""}`);
   }
+
+  // Background jobs run in another process: poll their job file for the footer.
+  let poll: ReturnType<typeof setInterval> | undefined;
+  function startPolling(ctx: ExtensionContext): void {
+    if (poll) clearInterval(poll);
+    poll = undefined;
+    const every = deps.pollMs ?? 5_000;
+    if (!ctx.hasUI || isSubagent || every <= 0) return;
+    const watch = jobWatcher(paths().memoryDir, (message) => ctx.ui.notify(message, "info"));
+    poll = setInterval(() => {
+      try {
+        watch();
+        updateStatus(ctx);
+      } catch {
+        // the job file can be mid-rename; next tick
+      }
+    }, every);
+    poll.unref?.();
+  }
+  pi.on("session_shutdown", async () => {
+    if (poll) clearInterval(poll);
+    poll = undefined;
+  });
 
   function setMode(next: MemoryMode, ctx: ExtensionContext): void {
     if (next !== mode) view = undefined;
@@ -159,7 +192,14 @@ export function registerOptMem(pi: ExtensionAPI, deps: OptMemDeps = {}): void {
     if (!isSubagent && resolution.mode !== persisted) pi.appendEntry(MODE_ENTRY, { mode });
     if (mode !== "off" && ctx.hasUI && !memoExists(paths().memoPath)) {
       ctx.ui.notify(missingMemoHint(paths().memoPath), "warning");
+    } else if (ctx.hasUI && !isSubagent && event.reason === "startup" && memoExists(paths().memoPath)) {
+      try {
+        maybeOnboard(ctx, paths().memoryDir, env);
+      } catch {
+        // onboarding is best effort
+      }
     }
+    startPolling(ctx);
   });
 
   // Branch navigation changes which mode entry is current; follow it.
@@ -221,7 +261,7 @@ export function registerOptMem(pi: ExtensionAPI, deps: OptMemDeps = {}): void {
     if (mode !== "off" && !memoExists(memoPath)) ctx.ui.notify(missingMemoHint(memoPath), "warning");
   }
 
-  const handlers = { ...HANDLERS, ...deps.extraHandlers };
+  const handlers = { ...HANDLERS, ...GENERATE_HANDLERS, ...deps.extraHandlers };
   const SUBCOMMANDS = [...MODES, "status", ...Object.keys(handlers)];
   const USAGE = `Usage: /memory [${SUBCOMMANDS.join("|")}]`;
 
@@ -247,6 +287,7 @@ export function registerOptMem(pi: ExtensionAPI, deps: OptMemDeps = {}): void {
         env,
         memoExists,
         open: deps.open,
+        launch: deps.launch,
         reloadConfig: async () => {
           const loaded = await readConfig();
           config = loaded.config;

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { chmodSync, copyFileSync, existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -8,7 +8,14 @@ import test from "node:test";
 import { DEFAULT_CONFIG, MODE_ENTRY, WAKE_MESSAGE, guardBash } from "../src/core.js";
 import { memoRunner, registerOptMem } from "../src/index.js";
 
-function harness({ flags = {}, branch = [], mode = "tui", config = DEFAULT_CONFIG, memoExists = true, runner, env = {} } = {}) {
+// Never let a test default to the real memory dir: onboarding writes a marker next to it.
+const SAFE_ROOT = mkdtempSync(join(tmpdir(), "optmem-ext-"));
+mkdirSync(join(SAFE_ROOT, "memory"));
+process.on("exit", () => rmSync(SAFE_ROOT, { recursive: true, force: true }));
+
+function harness({ flags = {}, branch = [], mode = "tui", config = DEFAULT_CONFIG, memoExists = true, runner, env: givenEnv = {}, pollMs = 0 } = {}) {
+  const safeDir = config.memoryDir === DEFAULT_CONFIG.memoryDir ? { MEMORY_DIR: join(SAFE_ROOT, "memory") } : {};
+  const env = { ...safeDir, PI_CODING_AGENT_DIR: join(SAFE_ROOT, "agent"), ...givenEnv };
   const handlers = new Map();
   const commands = new Map();
   const tools = new Map();
@@ -44,6 +51,7 @@ function harness({ flags = {}, branch = [], mode = "tui", config = DEFAULT_CONFI
   const h = { branch };
   registerOptMem(pi, {
     env,
+    pollMs,
     loadConfig: async () => ({ config }),
     memoExists: typeof memoExists === "function" ? memoExists : () => memoExists,
     runner:

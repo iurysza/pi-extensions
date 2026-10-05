@@ -23,6 +23,8 @@ export type CommandEnv = {
   readonly reloadConfig: () => Promise<void>;
   /** Open a path with the OS (Finder on macOS). */
   readonly open?: (path: string) => Promise<string | undefined>;
+  /** Start generate.mjs in the background. Tests replace it. */
+  readonly launch?: (args: string[], memoryDir: string, env: NodeJS.ProcessEnv) => void;
 };
 
 export type Handler = (args: string, c: CommandEnv) => Promise<void>;

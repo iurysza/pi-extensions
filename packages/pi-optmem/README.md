@@ -103,6 +103,37 @@ Keep the memory directory outside the Obsidian vault. Syncthing creates conflict
 
 The extension exports `MEMORY_DIR` for every `memo` call: its own tools and bash commands that run `memo`. All sessions use the same store.
 
+## Generate memory from sessions
+
+Sessions are the source of truth; memory is derived from them. Leader → `b` → `g` → Generate builds memory from past Pi sessions in a background process that outlives Pi:
+
+1. **Discover** top-level session files in `<agent dir>/sessions/<cwd-slug>/`. Skips `/tmp`, `/private/tmp` and `review-pr-*` folders, and files deeper than one folder (subagent runs). A forked session (`parentSession` in its header) keeps only entries newer than its own start, so copied parent history is not distilled twice.
+2. **Extract**, no model: user messages plus the assistant's last text per turn, capped at about 12,000 characters per session. Every user message is kept; middle assistant replies go first.
+3. **Distil** with the configured `model`: about 8 sessions per call, 4 calls at a time, retry with backoff. If the model is unknown or unauthorised on the first call, the job falls back to Pi's default model once and records it.
+4. **Filter**: dates, 280 bytes, de-duplication, ascending dates, and a privacy regex that drops long digit runs, emails, IBAN-like strings, tokens, money amounts and phone numbers. The drop count is logged.
+5. **Confirm**: one dialog with the line count, date span, 12 sample lines, and Import / Open draft / Cancel. Only Import writes memory.
+6. **Import** with `memo import`, then **naps**: pending summaries are batched 24 per model call and written in memo's order with `memo nap`.
+
+Generate on a non-empty memory offers **Catch up** (only session entries newer than the last generated one, imported with their own dates) or **Rebuild** (confirm; on import the old dir moves to `memory.bak-YYYYMMDD-HHMM` under memo's lock, and a busy store refuses the move).
+
+State lives in `<memoryDir>/../generate/`: `job.json`, `job.log`, `draft.txt`, `lines.jsonl`, `state.json` (last generated session time), `lock` (one job at a time) and `onboarding-shown`. A killed job resumes: run the same command again. The footer shows `mem:on · gen 120/1840` while a job runs and `gen ready` when a draft waits.
+
+The model runs as `pi -p --model <id> --no-extensions --no-tools --no-session --no-skills --no-context-files` with `PI_OPTMEM_SUBAGENT=1`, so a child never wakes or writes memory. `PI_OPTMEM_MODEL_CMD` swaps in any command (model id as argument, prompt on stdin) for tests.
+
+The same work from a terminal (Node 22.18+):
+
+```sh
+node packages/pi-optmem/scripts/generate.mjs --help
+node packages/pi-optmem/scripts/generate.mjs generate --limit 40 --memory-dir /tmp/mem-pilot/memory
+node packages/pi-optmem/scripts/generate.mjs import --memory-dir /tmp/mem-pilot/memory
+```
+
+Without `--yes`, `generate`, `rebuild` and `catchup` stop at the draft.
+
+On the first interactive session with an empty memory and memo installed, a one-time notification points at Generate.
+
+Known gaps: abandoned branches inside a session file are distilled too; Rebuild does not merge live notes written since the last generation, but they exist in sessions and Rebuild re-derives them.
+
 ## Privacy
 
 Memory is plain text and permanent. Store pointers, not payloads. For example, write "Berlin flat lease terms: see vault `Housing/Lease.md`" instead of copying the details. Never store IDs, account numbers, credentials, tokens or other secrets. The "on" prompt tells the model this.
