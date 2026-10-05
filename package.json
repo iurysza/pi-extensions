@@ -54,7 +54,8 @@
       "./packages/pi-herdr-attention/src/index.ts",
       "./packages/pi-secret-env/src/index.ts",
       "./packages/pi-ghost-in-the-machine/src/index.ts",
-      "./packages/artifact-explorer/index.ts"
+      "./packages/artifact-explorer/index.ts",
+      "./packages/pi-optmem/src/index.ts"
     ],
     "skills": [
       "./packages/pi-ext/skills/commit",

@@ -1,0 +1,56 @@
+{
+  "name": "@iurysza/pi-optmem",
+  "version": "0.1.0",
+  "description": "Per-session OptMem memory for Pi: on, read-only or off.",
+  "author": "Iury Souza",
+  "license": "MIT",
+  "type": "module",
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "memory",
+    "optmem"
+  ],
+  "files": [
+    "src",
+    "scripts",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iurysza/pi-extensions.git",
+    "directory": "packages/pi-optmem"
+  },
+  "bugs": {
+    "url": "https://github.com/iurysza/pi-extensions/issues"
+  },
+  "homepage": "https://github.com/iurysza/pi-extensions/tree/main/packages/pi-optmem#readme",
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "typebox": "*"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "^0.80.10",
+    "@types/node": "^24.12.0",
+    "typebox": "^1.0.67",
+    "typescript": "^5.9.3"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "npm run build && node --test dist/tests/*.test.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "check": "npm run typecheck && npm test"
+  },
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ]
+  }
+}
