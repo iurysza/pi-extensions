@@ -20,7 +20,7 @@ import {
 } from "./job.ts";
 import { blockInput, logLength, readMemories, readyBlocks, pendingBlocks, type Block } from "../memstore.ts";
 import { ModelClient, distilLines, distilPrompt, fallbackSummary, makeBatches, napPrompt, parseNaps, type ModelCall } from "./model.ts";
-import { discoverSessions, readAndExtract, type Extracted, type SessionHeader } from "./sessions.ts";
+import { discoverSessions, localDate, readAndExtract, type Extracted, type SessionHeader } from "./sessions.ts";
 
 export type PipelineDeps = {
   readonly memoPath: string;
@@ -54,7 +54,19 @@ export function spread<T>(items: readonly T[], limit: number | undefined): T[] {
   return Array.from({ length: limit }, (_, i) => items[Math.round((i * (items.length - 1)) / (limit - 1))]!);
 }
 
-export type DistilOptions = { readonly limit?: number; readonly dryRun?: boolean; readonly fresh?: boolean };
+/** Scope for distilling: sessions whose cwd contains any project string, started on or after `from` (local YYYY-MM-DD). */
+export type SessionScope = { readonly projects?: readonly string[]; readonly from?: string };
+
+export function selectSessions(sessions: readonly SessionHeader[], scope: SessionScope = {}): SessionHeader[] {
+  const projects = (scope.projects ?? []).map((p) => p.toLowerCase());
+  return sessions.filter(
+    (s) =>
+      (!projects.length || projects.some((p) => s.cwd.toLowerCase().includes(p))) &&
+      (!scope.from || localDate(s.timestamp) >= scope.from),
+  );
+}
+
+export type DistilOptions = { readonly limit?: number; readonly dryRun?: boolean; readonly fresh?: boolean; readonly scope?: SessionScope; readonly minTurns?: number };
 
 type Context = { deps: PipelineDeps; paths: GenPaths; job: Job; client: ModelClient; log: (message: string) => void };
 
@@ -151,7 +163,7 @@ export async function distil(deps: PipelineDeps, kind: "generate" | "rebuild" | 
   const job = startJob(deps, kind, options.fresh ?? false);
   const c = context(deps, job);
   if (job.phase !== "distil") return job;
-  const all = discoverSessions(deps.sessionsDir);
+  const all = selectSessions(discoverSessions(deps.sessionsDir), options.scope);
   const candidates = spread(kind === "catchup" ? catchupSessions(all, job.since) : all, options.limit);
   const done = new Set(job.processedSessions);
   job.total = candidates.length;
@@ -167,7 +179,7 @@ export async function distil(deps: PipelineDeps, kind: "generate" | "rebuild" | 
     } catch (error) {
       c.log(`skip ${session.path}: ${(error as Error).message}`);
     }
-    if (item) extracted.push(item);
+    if (item && item.turns.length >= (options.minTurns ?? 1)) extracted.push(item);
     else markDone(c, [session]);
   }
   save(c);

@@ -8,9 +8,9 @@ import { fileURLToPath } from "node:url";
 import { filterLines, parseLine } from "../src/generate/filter.js";
 import { genPaths, readJob, readState } from "../src/generate/job.js";
 import { ModelClient, distilLines, makeBatches, parseNaps } from "../src/generate/model.js";
-import { main } from "../src/generate/cli.js";
+import { main, sinceDate } from "../src/generate/cli.js";
 import { capTranscript, discoverSessions, extractSession } from "../src/generate/sessions.js";
-import { spread } from "../src/generate/pipeline.js";
+import { selectSessions, spread } from "../src/generate/pipeline.js";
 import { logLength, pendingBlocks, readMemories } from "../src/memstore.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -123,12 +123,31 @@ test("model client retries, then falls back to Pi's default once", async () => {
   assert.equal(n, 3);
 });
 
+test("selectSessions filters by project substring and start date", () => {
+  const s = (cwd, timestamp) => ({ path: cwd + timestamp, id: cwd, timestamp, cwd });
+  const all = [s("/dev/agents2", "2025-01-01T12:00:00Z"), s("/dev/Thoughtbox", "2025-01-05T12:00:00Z"), s("/dev/agents2", "2025-01-09T12:00:00Z")];
+  assert.equal(selectSessions(all).length, 3);
+  assert.deepEqual(selectSessions(all, { projects: ["agents2"] }).map((x) => x.timestamp.slice(0, 10)), ["2025-01-01", "2025-01-09"]);
+  assert.deepEqual(selectSessions(all, { projects: ["thoughtbox", "nope"] }).map((x) => x.cwd), ["/dev/Thoughtbox"]);
+  assert.deepEqual(selectSessions(all, { from: "2025-01-05" }).map((x) => x.cwd), ["/dev/Thoughtbox", "/dev/agents2"]);
+  assert.deepEqual(selectSessions(all, { projects: ["agents2"], from: "2025-01-05" }).length, 1);
+});
+
+test("sinceDate accepts YYYY-MM-DD and Nd", () => {
+  assert.equal(sinceDate("2025-03-04", new Date()), "2025-03-04");
+  assert.equal(sinceDate("7d", new Date(2025, 0, 10, 12)), "2025-01-03");
+  assert.throws(() => sinceDate("last week", new Date()), /--since needs/);
+  assert.throws(() => sinceDate("2025-13-40", new Date()), /--since needs/);
+});
+
 test("cli: usage and argument errors", async () => {
   const out = [];
   assert.equal(await main(["--help"], {}, (m) => out.push(m)), 0);
   assert.match(out[0], /Usage: generate\.mjs/);
   assert.equal(await main(["generate", "--limit", "0"], {}, (m) => out.push(m)), 2);
   assert.equal(await main(["generate", "--dry-run", "--yes"], {}, (m) => out.push(m)), 2);
+  assert.equal(await main(["generate", "--since", "soon"], {}, (m) => out.push(m)), 2);
+  assert.equal(await main(["generate", "--project"], {}, (m) => out.push(m)), 2);
   assert.equal(await main(["bogus"], {}, (m) => out.push(m)), 2);
 });
 
@@ -175,6 +194,39 @@ test("generate --dry-run writes a filtered draft and imports nothing", async () 
     assert.equal(readJob(f.paths).dropped, 0, "privacy filter is off");
     assert.equal(existsSync(f.memoryDir), false);
     assert.equal(existsSync(f.paths.lock), false, "lock released");
+  } finally {
+    rmSync(f.root, { recursive: true, force: true });
+  }
+});
+
+test("--project and --since narrow the distilled sessions", async () => {
+  const f = fixture();
+  try {
+    const r = await f.run("generate", "--project", "/p1", "--since", "2025-01-05");
+    assert.equal(r.code, 0, r.out);
+    const sessionLines = readFileSync(f.paths.draft, "utf8").trim().split("\n").filter((l) => / Session \d in /.test(l));
+    assert.ok(sessionLines.every((l) => l.includes(" in /p1:")), sessionLines.join("\n"));
+    const dates = sessionLines.map((l) => l.slice(0, 10));
+    // p1 sessions start on days 2, 5, 8 and 11; the date drops day 2.
+    assert.deepEqual(dates, ["2025-01-05", "2025-01-08", "2025-01-11"]);
+  } finally {
+    rmSync(f.root, { recursive: true, force: true });
+  }
+});
+
+test("--min-turns skips short sessions", async () => {
+  const f = fixture();
+  try {
+    // Give session 3 a second user turn; every other fixture session has one.
+    const sessions = join(f.root, "sessions");
+    const path = join(sessions, "--Users-p0--", "3.jsonl");
+    writeFileSync(path, readFileSync(path, "utf8") + msg("user", "follow up", "2025-01-04T09:03:00Z") + "\n");
+    const r = await f.run("generate", "--min-turns", "2");
+    assert.equal(r.code, 0, r.out);
+    const sessionLines = readFileSync(f.paths.draft, "utf8").trim().split("\n").filter((l) => / Session \d in /.test(l));
+    assert.equal(sessionLines.length, 1, sessionLines.join("\n"));
+    assert.match(sessionLines[0], /^2025-01-04 .*topic 3/);
+    assert.equal(await main(["generate", "--min-turns", "0"], {}, () => {}), 2);
   } finally {
     rmSync(f.root, { recursive: true, force: true });
   }

@@ -6,6 +6,7 @@ import { expandHome, resolvePaths } from "../core.ts";
 import { logLength, readMemories } from "../memstore.ts";
 import { describeJob, genPaths, jobRunning, lockOwner, logLine, readJob, readState, writeJob } from "./job.ts";
 import { modelCall } from "./model.ts";
+import { localDate } from "./sessions.ts";
 import { distil, importDraft, naps, withLock, type PipelineDeps } from "./pipeline.ts";
 
 export const USAGE = `Usage: generate.mjs <command> [options]
@@ -21,6 +22,9 @@ Commands:
 
 Options:
   --limit N            only N sessions, spread evenly across history
+  --project TEXT       only sessions whose working folder contains TEXT (repeatable)
+  --min-turns N        skip sessions with fewer than N user messages (applied after --limit)
+  --since WHEN         only sessions started on or after WHEN: YYYY-MM-DD or Nd (e.g. 7d)
   --dry-run            stop after the draft (the default for generate/rebuild/catchup)
   --yes                import the draft without asking, then run naps
   --fresh              start a new job instead of resuming a stopped one
@@ -32,6 +36,9 @@ Options:
 export type CliOptions = {
   command: string;
   limit?: number;
+  projects: string[];
+  since?: string;
+  minTurns?: number;
   dryRun: boolean;
   yes: boolean;
   fresh: boolean;
@@ -45,7 +52,7 @@ export function parseArgs(argv: readonly string[]): CliOptions | string {
   const [command, ...rest] = argv;
   if (!command || command === "-h" || command === "--help") return USAGE;
   if (!["generate", "rebuild", "catchup", "import", "naps", "status", "cancel"].includes(command)) return `Unknown command: ${command}\n\n${USAGE}`;
-  const options: CliOptions = { command, dryRun: false, yes: false, fresh: false };
+  const options: CliOptions = { command, projects: [], dryRun: false, yes: false, fresh: false };
   for (let i = 0; i < rest.length; i++) {
     const arg = rest[i]!;
     const value = () => {
@@ -64,6 +71,9 @@ export function parseArgs(argv: readonly string[]): CliOptions | string {
       else if (arg === "--fresh") options.fresh = true;
       else if (arg === "--limit") options.limit = number();
       else if (arg === "--concurrency") options.concurrency = number();
+      else if (arg === "--min-turns") options.minTurns = number();
+      else if (arg === "--project") options.projects.push(value());
+      else if (arg === "--since") options.since = sinceDate(value(), new Date());
       else if (arg === "--sessions-dir") options.sessionsDir = value();
       else if (arg === "--memory-dir") options.memoryDir = value();
       else if (arg === "--model") options.model = value();
@@ -74,6 +84,18 @@ export function parseArgs(argv: readonly string[]): CliOptions | string {
   }
   if (options.dryRun && options.yes) return "--dry-run and --yes cannot be combined";
   return options;
+}
+
+/** `YYYY-MM-DD` as is, or `Nd` as the local date N days before `now`. */
+export function sinceDate(text: string, now: Date): string {
+  const days = /^(\d+)d$/.exec(text);
+  if (days) {
+    const date = new Date(now);
+    date.setDate(date.getDate() - Number(days[1]));
+    return localDate(date.toISOString());
+  }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text) && !Number.isNaN(Date.parse(`${text}T00:00:00`))) return text;
+  throw new Error(`--since needs YYYY-MM-DD or a day count like 7d, got: ${text}`);
 }
 
 export function cliDeps(options: CliOptions, env: NodeJS.ProcessEnv, print: (m: string) => void): PipelineDeps & { configError?: string } {
@@ -178,7 +200,7 @@ export async function main(argv: readonly string[], env: NodeJS.ProcessEnv = pro
         print(`Memory is not empty (${summary(deps.memoryDir)}). Use rebuild or catchup.`);
         return 1;
       }
-      const job = await distil(deps, kind, { limit: parsed.limit, dryRun: !parsed.yes, fresh: parsed.fresh });
+      const job = await distil(deps, kind, { limit: parsed.limit, dryRun: !parsed.yes, fresh: parsed.fresh, scope: { projects: parsed.projects, from: parsed.since }, minTurns: parsed.minTurns });
       if (job.phase !== "awaiting-confirm") {
         print(describeJob(job, false));
         return 1;
