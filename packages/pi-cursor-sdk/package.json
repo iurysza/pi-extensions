@@ -157,7 +157,8 @@
   },
   "dependencies": {
     "@cursor/sdk": "1.0.23",
-    "@modelcontextprotocol/sdk": "^1.29.0"
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@iurysza/pi-ext": "0.2.0"
   },
   "peerDependencies": {
     "@earendil-works/pi-ai": "*",

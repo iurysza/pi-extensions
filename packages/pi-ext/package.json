@@ -3,6 +3,10 @@
   "version": "0.2.0",
   "description": "An attributed fork of tomsej/pi-ext with additional Pi workflows and integrations.",
   "type": "module",
+  "exports": {
+    "./tool-cards": "./extensions/tool-presentation/card/index.ts",
+    "./*": "./*"
+  },
   "keywords": [
     "pi-package",
     "pi-extension"

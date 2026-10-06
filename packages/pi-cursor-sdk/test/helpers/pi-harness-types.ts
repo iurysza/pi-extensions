@@ -135,7 +135,7 @@ export type HarnessEventInvokeResult<E extends HarnessEventName> = E extends key
 	: void;
 
 export interface EventHarness {
-	on: MockFn<HarnessOn>;
+	on: MockFn<HarnessOn> & HarnessOn;
 	invokeEvent: <E extends HarnessEventName>(
 		event: E,
 		payload: HarnessEventMap[E],

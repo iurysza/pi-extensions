@@ -1,3 +1,4 @@
+import { ownedCard, cardSpecs } from "../tool-presentation/card/index.js";
 /**
  * Custom tools exposed to the LLM for controlling cmux programmatically.
  *
@@ -544,6 +545,7 @@ export function wireTools(pi: ExtensionAPI, client: CmuxClient): void {
           return errorResult(`Unknown action: ${params.action}`);
       }
     },
+    ...ownedCard(pi, cardSpecs.cmux_browser),
   });
 
   // --- cmux_workspace ---
@@ -626,6 +628,7 @@ export function wireTools(pi: ExtensionAPI, client: CmuxClient): void {
           return errorResult(`Unknown action: ${params.action}`);
       }
     },
+    ...ownedCard(pi, cardSpecs.cmux_workspace),
   });
 
   // --- cmux_notify ---
@@ -658,5 +661,6 @@ export function wireTools(pi: ExtensionAPI, client: CmuxClient): void {
       });
       return formatResult(result ?? "Notification sent");
     },
+    ...ownedCard(pi, cardSpecs.cmux_notify),
   });
 }

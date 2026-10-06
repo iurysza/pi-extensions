@@ -1,3 +1,4 @@
+import { ownedCard, cardSpecs } from "../tool-presentation/card/index.js";
 /**
  * Session Query Extension - Query previous pi sessions
  *
@@ -248,5 +249,6 @@ export default function (pi: ExtensionAPI) {
 				return errorResult(`Error querying session: ${err}`);
 			}
 		},
+	  ...ownedCard(pi, cardSpecs.session_query),
 	});
 }

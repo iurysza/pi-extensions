@@ -1,0 +1,44 @@
+
+ Warning: tool cards: @tintinweb/pi-subagents not adopted: getAllTools is unavailable during extension loading. Keep the original
+ enabled.
+
+ Warning: tool cards: builtin:mcp not adopted: getAllTools is unavailable during extension loading. Keep the original enabled.
+
+ Spike: 1 Agent registration; 1 workflow registration. MCP factory export: function. No adopted tools.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+/private/tmp
+0.0%/272k (auto)                                                                                         (openai) gpt-5.5 • medium

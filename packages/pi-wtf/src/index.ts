@@ -1,3 +1,4 @@
+import { ownedCard, cardSpecs } from "@iurysza/pi-ext/tool-cards";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { appendFile, readFile } from "node:fs/promises";
 import path from "node:path";
@@ -61,5 +62,6 @@ export default function piWtf(pi: ExtensionAPI): void {
         };
       }
     },
+    ...ownedCard(pi, cardSpecs.wtf),
   });
 }

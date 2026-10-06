@@ -1,0 +1,149 @@
+[
+  {
+    "name": "cmux_browser",
+    "state": "success",
+    "source": {
+      "constructor": "cmux/tools.ts:wireTools",
+      "transport": "local stub, not a live socket"
+    },
+    "args": {
+      "action": "back"
+    },
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Example response"
+        }
+      ],
+      "details": {}
+    }
+  },
+  {
+    "name": "cmux_workspace",
+    "state": "success",
+    "source": {
+      "constructor": "cmux/tools.ts:wireTools",
+      "transport": "local stub, not a live socket"
+    },
+    "args": {
+      "action": "list"
+    },
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Example response"
+        }
+      ],
+      "details": {}
+    }
+  },
+  {
+    "name": "cmux_notify",
+    "state": "success",
+    "source": {
+      "constructor": "cmux/tools.ts:wireTools",
+      "transport": "local stub, not a live socket"
+    },
+    "args": {
+      "title": "Example"
+    },
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Example response"
+        }
+      ],
+      "details": {}
+    }
+  },
+  {
+    "name": "list_mcp_resources",
+    "state": "success",
+    "source": {
+      "constructor": "Pi 1.0.0 resources.js:createMcpResourceToolDefinitions",
+      "transport": "local stub, not a live MCP server"
+    },
+    "args": {},
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"resources\":[]}"
+        }
+      ],
+      "details": {
+        "server": "",
+        "tool": "list_mcp_resources"
+      }
+    }
+  },
+  {
+    "name": "list_mcp_resource_templates",
+    "state": "success",
+    "source": {
+      "constructor": "Pi 1.0.0 resources.js:createMcpResourceToolDefinitions",
+      "transport": "local stub, not a live MCP server"
+    },
+    "args": {},
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"resourceTemplates\":[]}"
+        }
+      ],
+      "details": {
+        "server": "",
+        "tool": "list_mcp_resource_templates"
+      }
+    }
+  },
+  {
+    "name": "read_mcp_resource",
+    "state": "success",
+    "source": {
+      "constructor": "Pi 1.0.0 resources.js:createMcpResourceToolDefinitions",
+      "transport": "local stub, not a live MCP server"
+    },
+    "args": {
+      "server": "example",
+      "uri": "example://resource"
+    },
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Example resource"
+        }
+      ],
+      "details": {
+        "server": "example",
+        "tool": "read_mcp_resource"
+      }
+    }
+  },
+  {
+    "name": "plannotator_mark_done",
+    "state": "error",
+    "source": {
+      "returnContract": "@plannotator/pi-extension 0.27.25 index.ts:1202-1206, no approved plan branch; copied, not executed"
+    },
+    "args": {
+      "step": 1
+    },
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Error: No approved plan is executing."
+        }
+      ],
+      "details": {
+        "completed": false
+      }
+    }
+  }
+]

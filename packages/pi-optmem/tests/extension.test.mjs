@@ -33,7 +33,7 @@ function harness({ flags = {}, branch = [], mode = "tui", config = DEFAULT_CONFI
     getFlag: (name) => flags[name],
     registerCommand: (name, options) => commands.set(name, options),
     registerTool: (tool) => tools.set(tool.name, tool),
-    on: (event, handler) => handlers.set(event, handler),
+    on: (event, handler) => handlers.set(event, [...handlers.get(event) ?? [], handler]),
     appendEntry: (customType, data) => entries.push({ customType, data }),
     getActiveTools: () => active,
     setActiveTools: (names) => {
@@ -74,7 +74,14 @@ function harness({ flags = {}, branch = [], mode = "tui", config = DEFAULT_CONFI
     status,
     calls,
     active: () => active,
-    emit: (event, payload = {}) => handlers.get(event)?.({ type: event, ...payload }, ctx),
+    emit: async (event, payload = {}) => {
+      let result;
+      for (const handler of handlers.get(event) ?? []) {
+        const next = await handler({ type: event, ...payload }, ctx);
+        if (next !== undefined) result = next;
+      }
+      return result;
+    },
     command: (args) => commands.get("memory").handler(args, ctx),
   });
 }
