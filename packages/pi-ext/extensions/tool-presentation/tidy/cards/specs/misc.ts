@@ -25,9 +25,15 @@ export const miscSpecs: Record<string, CardSpec> = {
     summary: (r) => (r.details?.answers ?? []).map((a: any) => a.answer ?? "cancelled").join("; ") },
   // Replay-only activity card the Cursor SDK package emits for work Pi has no tool for. Args and details are duck-typed.
   cursor: { ...base, icon: "󰳽", color: BLUE, label: "cursor", headline: (a) => oneLine(a.activityTitle) || "Cursor activity",
-    target: (a, r) => oneLine(r?.details?.summary ?? a.activitySummary ?? ""),
+    // The activity summary is already the whole story, so there is no separate target.
+    target: () => "",
     running: () => "running", failed: (r) => detailsError(r) || !!r.isError,
-    summary: (r) => oneLine(r.details?.summary) || firstLine(r) || "completed",
+    summary: (r, a) => {
+      const d = r.details ?? {};
+      const lines = typeof d.linesAdded === "number" || typeof d.linesRemoved === "number" ? `+${d.linesAdded ?? 0}/-${d.linesRemoved ?? 0}` : "";
+      return joinFacts(oneLine(d.summary ?? a.activitySummary) || firstLine(r), lines) || "completed";
+    },
+    errorSummary: (r) => resultText(r).split("\n").find((l) => /^error\s*:/i.test(l.trim()))?.trim() ?? (typeof r.details?.error === "string" ? r.details.error : firstLine(r)),
     expanded: (r) => (r.details?.diffString ?? r.details?.diff ?? r.details?.expandedText ?? resultText(r)).split("\n") },
   cursor_activate_skill: { ...base, icon: "󱐋", color: MAGENTA, label: "skill", headline: () => "activate skill", target: (a) => a.name,
     summary: (r) => count(r.details?.resources?.length, "resources") },

@@ -153,3 +153,12 @@ test("card replay restores recorded timing but never invents missing duration", 
   }
   assert.equal(JSON.stringify(messages), before);
 });
+
+test("cursor activity cards keep the old one-line facts without repeating them", () => {
+  const strip = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, "");
+  const spec = specForTool({ name: "cursor" })!;
+  const card = (args: any, result: any, isError = false) => renderCard({ spec, args, result }, { icons: false, isError }).map(strip);
+  assert.deepEqual(card({ activityTitle: "Cursor MCP", activitySummary: "search_issues · 2 issues" }, { content: [{ type: "text", text: "2 issues" }], details: { variant: "activity", summary: "search_issues · 2 issues" } }), ["cursor Cursor MCP", "search_issues · 2 issues"]);
+  assert.deepEqual(card({ activityTitle: "Cursor edit" }, { content: [{ type: "text", text: "ok" }], details: { variant: "activity", summary: "a.ts", linesAdded: 2, linesRemoved: 1 } }), ["cursor Cursor edit", "a.ts · +2/-1"]);
+  assert.deepEqual(card({ activityTitle: "Cursor web search" }, { content: [{ type: "text", text: "web search x\n\nError: rate limited" }], details: { variant: "activity" }, isError: true }, true), ["cursor Cursor web search", "Error: rate limited"]);
+});
