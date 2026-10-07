@@ -16,7 +16,7 @@
  *
  * Line 1: {running mark?} {icon or name} {reasoning headline}
  * Line 2: {dim arg/command detail} → {colored summary} · {duration}
- * A dim clock divider precedes the first execution in each new minute.
+ * A dim clock divider precedes the first execution after 10 minutes without one.
  *
  * Why this beats the spacer floor: pi bakes a Spacer(1) inside every tool's
  * ToolExecutionComponent, so N default cards = N blank lines. BUT in
