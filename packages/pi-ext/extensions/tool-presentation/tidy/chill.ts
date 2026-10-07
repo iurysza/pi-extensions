@@ -51,8 +51,9 @@ export class ChillState {
     const running = call.group.calls.some((item) => !item.done);
     const failures = finished.filter((item) => item.failed).length;
     const duration = finished.every((item) => item.elapsedMs !== undefined)
-      ? formatElapsed(finished.reduce((total, item) => total + item.elapsedMs!, 0)) : "unknown duration";
-    return [`${DIM}${running ? "Working" : "Worked"} · ${finished.length} tools · ${duration}${RESET}${failures ? ` ${RED}· ${failures} failed${RESET}` : ""}`];
+      ? ` · ${formatElapsed(finished.reduce((total, item) => total + item.elapsedMs!, 0))}` : "";
+    const tools = `${finished.length} ${finished.length === 1 ? "tool" : "tools"}`;
+    return [`${DIM}${running ? "Working" : "Worked"} · ${tools}${duration}${RESET}${failures ? ` ${RED}· ${failures} failed${RESET}` : ""}`];
   }
 
   restore(entries: readonly { type: string; message?: any }[]): void {

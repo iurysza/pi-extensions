@@ -52,9 +52,9 @@ test("finished cards fold into one summary with recorded duration and red failur
     const b = context("b", { line: "Second" });
     await start(h, "a"); await finish(h, "a");
     const first = renderers.renderResult!(output("Saved as #1."), { expanded: false, isPartial: false }, theme, a);
-    assert.match(plain(first.render(80).join("\n")), /Worked · 1 tools · 1s/);
+    assert.match(plain(first.render(80).join("\n")), /Worked · 1 tool · 1s/);
     await start(h, "b");
-    assert.match(plain(first.render(80).join("\n")), /Working · 1 tools · 1s/);
+    assert.match(plain(first.render(80).join("\n")), /Working · 1 tool · 1s/);
     assert.equal(renderers.renderResult!(output("streaming"), { expanded: false, isPartial: true }, theme, b).render(80).length, 2);
     await finish(h, "b", "memo_note", output("Too long: 284 bytes, limit 280.", { piTidyElapsedMs: 2000 }));
     assert.deepEqual(first.render(80), []);
@@ -94,11 +94,11 @@ test("user and assistant text break groups, while thinking and nested calls do n
     await h.emit("message_update", { message: { role: "assistant", content: [{ type: "text", text: "Next step" }] } });
     await start(h, "c"); await finish(h, "c");
     assert.match(render("b"), /2 tools/);
-    assert.match(render("c"), /1 tools/);
+    assert.match(render("c"), /1 tool/);
     await h.emit("message_start", { message: { role: "user", content: "Continue" } });
     await start(h, "d"); await finish(h, "d");
-    assert.match(render("c"), /1 tools/);
-    assert.match(render("d"), /1 tools/);
+    assert.match(render("c"), /1 tool/);
+    assert.match(render("d"), /1 tool/);
   } finally { await h.emit("session_shutdown"); }
 });
 
@@ -109,7 +109,7 @@ test("parallel calls keep pending cards visible and summary ownership follows ca
     await finish(h, "b", "memo_note", output("error", { piTidyElapsedMs: 0 }), true);
     const renderers = h.resolvers[0]("memo_note", () => undefined)!;
     const later = renderers.renderResult!(output("result"), { expanded: false, isPartial: false }, theme, context("b"));
-    assert.match(plain(later.render(80).join("\n")), /Working · 1 tools · <1s · 1 failed/);
+    assert.match(plain(later.render(80).join("\n")), /Working · 1 tool · <1s · 1 failed/);
     const pending = plain(renderers.renderResult!(output("partial"), { expanded: false, isPartial: true }, theme, context("a")).render(80).join("\n"));
     assert.match(pending, /\n· /);
     assert.doesNotMatch(pending, /Working|Worked/);
@@ -133,7 +133,7 @@ test("replay groups restore per branch without modifying messages or inventing d
       await h.emit(event, {}, { sessionManager: { getBranch: () => branch } });
       const renderers = h.resolvers[0]("memo_note", () => undefined)!;
       const lines = renderers.renderResult!(output("Saved"), { expanded: false, isPartial: false }, theme, context("b")).render(80).join("\n");
-      assert.match(plain(lines), /Worked · 2 tools · unknown duration/);
+      assert.match(plain(lines), /Worked · 2 tools(?! ·)/);
     }
     assert.equal(JSON.stringify(branch), before);
     await h.emit("session_tree", {}, { sessionManager: { getBranch: () => [] } });

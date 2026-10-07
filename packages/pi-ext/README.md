@@ -41,7 +41,7 @@ Omit a resource type to load all of it. Use an empty array to load none.
 | [Pi Telescope](extensions/pi-telescope) | Native fuzzy finder for sessions, files, commands, and other providers. |
 | [Custom Footer](extensions/custom-footer) | Core session line plus one bounded prioritized extension-status line. |
 | [Startup Screen](extensions/startup-screen) | Centred PI wordmark coloured by the active theme, with a responsive compact fallback. |
-| [Tool Presentation](extensions/tool-presentation) | Tidy compact built-in cards with lazy highlighted edit/write details. |
+| [Tool Presentation](extensions/tool-presentation) | Tidy compact cards for built-in and extension tools, with lazy highlighted edit/write details and `/chill` mode. |
 | [Permissions](extensions/permissions) | Switchable `yolo`, `safe`, and `read-only` command policies. |
 | [Session Query](extensions/session-query) | Ask focused questions about previous Pi session files. |
 | [Session Store](extensions/session-store) | Search indexed session history with `/search`. |
@@ -112,6 +112,17 @@ Tool Presentation is the sole owner of Pi's `read`, `bash`, `edit`, `write`,
 expanded edit/write results lazily render highlighted diffs. `/tidy` controls
 layout, icons, and optional pi-fff integration. Remove any separately installed
 `@mobrienv/pi-tidy-tools` package to avoid ownership conflicts.
+
+On Pi 1.0.4 or newer, Tidy also registers one `registerToolRenderer` resolver.
+It draws cards for tools from other extensions (memory, session, cmux, web,
+subagents, MCP and others). Unknown tools and a disabled Tidy fall through to
+their own renderers. Other packages carry no card code. See
+[the spec](../../ai-artifacts/specs/tool-cards.md).
+
+`/chill` toggles chill mode for the current session. Set `"chill": true` in
+`~/.pi/agent/pi-tidy-tools.json` to start with it on (default `false`). Finished
+calls fold into one `Worked · <count> tools · <duration>` line, and only the
+running call keeps its card. `Ctrl+O` shows everything.
 
 When `@iurysza/pi-cursor-sdk` is also installed, built-in-equivalent Cursor
 activity uses these same cards. Recorded results are consumed once through a
