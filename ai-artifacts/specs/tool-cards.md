@@ -1,64 +1,37 @@
 # Tool cards implementation
 
-The shared renderer is `@iurysza/pi-ext/tool-cards`. Builtins and first-party tools use the same card anatomy. Foreign-tool specs are previews, not active replacements.
+Tidy owns tool presentation through Pi 1.0.4's `registerToolRenderer`. Other packages register their tools without card imports or a pi-ext dependency.
 
 ## Rendering
 
-`extensions/tool-presentation/card/` contains pure `CardSpec` functions, the builtin card builder, width handling, and first-party renderer hooks. `tidy/index.ts` still exports `buildToolBlock`, `fitToolLine`, and `formatElapsed`.
+`packages/pi-ext/extensions/tool-presentation/tidy/cards/` contains the specs, card builder, width handling, and shared runtime. `tidy/index.ts` retains its `buildToolBlock`, `fitToolLine`, and `formatElapsed` exports. The former `@iurysza/pi-ext/tool-cards` export and factory adopter are removed.
 
-Cards use two lines in default mode, with a Nerd Font icon, a headline, a target, and a result summary. Reasoning and result modes keep the existing single-line behavior. Expanded cards show the body beneath those lines. New-card bodies stop at 200 lines and include `fullOutputPath` when supplied.
+One resolver calls `next()` for every tool. Exact names select the specs in `cards/index.ts`. Names matching `mcp__<server>__<tool>` select the MCP spec. Unknown names and disabled tidy pass through unchanged. Pi also resolves cards for unregistered tools in resumed sessions.
 
-The renderer uses the existing icon preference and `toolPendingBg`, `toolSuccessBg`, and `toolErrorBg` theme tokens. Semantic failures change presentation even when Pi reports `isError: false`. Neither the renderer nor its timing hooks change `execute`, result `content`, or result `details`.
+The builtin `decorate(source)` registrations remain. They still inject reasoning, capture write diffs, and integrate pi-fff. The resolver retains their existing renderers. The original builtin rendering and composition tests remain unchanged.
 
-First-party registrations select their renderer using the existing tidy preference. They read mode and icon settings during registration, so preference changes require reloading those extensions.
+Cards use the existing tidy mode, icon preference, and pending, success, and error theme backgrounds. Collapsed cards use two lines in default mode and one line in reasoning or result mode. Semantic failures change presentation without changing Pi's `isError` or tool results.
 
-The clock shares `pi.events` with builtin presentation. It observes `tool_call` and `tool_result`, restores recorded durations from session branches, and stops invalidation timers at result, turn end, session navigation, or shutdown. It never invents durations for old results. The public boundary uses only the fields needed by the clock because Cursor and pi-ext use different Pi patch versions.
+Expanded cards use the spec body when provided. Questions, plan review, Agent progress, and image results retain the renderers returned by `next()`. Their state and `lastComponent` values remain separate from the card wrapper. Without native renderers, expanded views use the raw result. Codemode keeps its script and nested calls in the expanded body.
 
-## Coverage
+The shared `cardRuntime` observes tool calls and results, restores recorded timing, and stops timers on results, turn end, session navigation, and shutdown. Nested calls and synthetic Cursor replay do not start visible clock entries. Missing historical timing stays missing. The resolver never executes tools or changes arguments, schemas, `content`, or `details`. Existing builtin execution hooks still persist tidy timing as before.
 
-| Tool family | Normal loading |
-| --- | --- |
-| read, write, edit, bash, grep, find, ls | Existing builtin renderer, extracted without changing its tests |
-| session_query, search_sessions, handoff | Shared cards in first-party registrations |
-| memo_note, memo_nap, memo_zoom, memo_recall | Shared cards in pi-optmem |
-| wtf | Shared card in pi-wtf |
-| cursor_ask_question, cursor_activate_skill | Shared cards in pi-cursor-sdk |
-| cmux_browser, cmux_workspace, cmux_notify | Shared cards in first-party registrations |
-| Agent, SubagentWorkflow, get_subagent_result, steer_subagent | Spec preview only |
-| ask_user, choose_visual_artifact_direction | Spec preview only |
-| web_search, fetch_content, get_search_content, source_check, web_enable | Spec preview only |
-| add_directory, search_external_files | Spec preview only |
-| create_visual_artifact | Spec preview only |
-| plannotator_submit_plan, plannotator_mark_done | Spec preview only |
-| codemode | Spec preview only, script and nested calls expanded only |
-| Dynamic MCP tools and MCP resource tools | Spec preview only |
+## Chill mode
 
-pi-optmem, pi-wtf, and pi-cursor-sdk depend on pi-ext 0.2.0 for the shared source module. The Pi resource manifests are unchanged, so the root catalog needs no new entry.
+`loadTidyChill` reads `chill` from `~/.pi/agent/pi-tidy-tools.json`. Only the boolean `true` enables it. The default is `false`. `/chill` toggles the current extension session without saving settings or reloading.
 
-## Foreign factory spike
+`tidy/chill.ts` groups builtin and spec'd calls between user or assistant text. Thinking and nested calls do not break a group. Running calls keep their cards. Completed calls fold into one `Worked · <count> tools · <duration>` line. It says `Working` when another call in that group is running. Failures add a red count. Duration totals the recorded tool durations. An untimed result makes the duration unknown.
 
-`card/adopter.ts` is not exported by the package entry and has no registered extension. The helper compares the candidate version with its explicit tested-version pin, preserves `execute` identity, and skips duplicate tool names.
+The wrapper reads state at render time and requests redraws when calls finish or the setting changes. Ctrl+O reveals every folded card and its full body. Branch navigation rebuilds groups from the active branch without changing stored entries.
 
-The isolated Pi 1.0.0 spike tested `@tintinweb/pi-subagents` 0.19.0 and builtin MCP's `createMcpExtension`. `getAllTools()` throws during extension loading. Both attempts therefore refuse adoption before calling the factory. The original subagents extension registers exactly one `Agent` and one `SubagentWorkflow`.
+Unknown tools retain `next()` unchanged, including in chill mode. Pi-managed image attachments render outside the resolver's components, so folding the card does not hide those attachments. These boundaries need review if chill must hide every possible tool display.
 
-[Spike evidence](tool-cards-spike.txt) records the warnings and registration counts. There is no working foreign adapter to enable in a profile. Normal foreign extensions remain unchanged. Moving factory execution after initialization would change extension lifecycle semantics and was not attempted.
+## Coverage and evidence
 
-## Fixtures and checks
+All existing spec families now work through the resolver: memory, session tools, cmux, Cursor questions and skills, delegation, web tools, directories, visual artifacts, plan review, codemode, MCP tools, and MCP resources.
 
-`tests/tool-presentation/card-fixtures.json` has 39 scrubbed captures covering 26 tool names. Each records session-file provenance and retains real result fields and parser headers. Private strings, queries, paths, and identifiers are replaced with example values. Arrays may be shortened where their contents do not affect a summary.
+The fixtures contain 39 scrubbed historical captures and 7 constructor-backed cases. `card-renderer-baseline.json` records the step 2 output for all 46 fixtures, collapsed and expanded, at widths 20, 80, and 120. The chill-off test compares these bytes unchanged and also compares builtin result rendering.
 
-`card-contract-fixtures.json` adds seven constructor-backed cases for cmux, MCP resources, and plan mark-done. Those are separately labelled and generated by [capture-card-contracts.mjs](capture-card-contracts.mjs). They are not historical session evidence. `memo_zoom` has conservative parser tests only because no session capture was found.
+`npm ci && npm run check` passes catalog validation, workspace typechecks, tests, and pack checks for all 13 packages. Presentation has 351 passing tests. Cursor SDK has 1,408 passing tests and 2 skipped tests. OptMem has 82 passing tests and one skipped test. WTF has 3 passing tests.
 
-`cards.test.ts` checks fixture summaries, widths, modes, icon preferences, semantic errors, expanded-body limits, clock cleanup, replay, and adoption guards. The original builtin presentation test files are unchanged.
-
-The complete verification command is `npm ci && npm run check`. It passes catalog validation, workspace typechecks, workspace tests, and all 13 package checks. Presentation has 338 passing tests, including the 248 unchanged builtin tests. Cursor has 1,408 passing tests and two skipped tests. OptMem has 82 passing tests and one skipped test. WTF has three passing tests. `git diff --check` also passes.
-
-## Offline gallery evidence
-
-The requested agents2 gallery contains `make-session-real.mjs` and `after-collapsed-1.png` through `after-collapsed-5.png`, with corresponding expanded PNGs and text snapshots. `after-expanded-2-top.png` and `after-expanded-4-top.png` include the beginning of the longer delegation and codemode pages.
-
-The generator uses committed fixtures from this worktree. Its replay-only extension throws if a tool executes. Foreign previews use that shim, never the factory adopter. Pi runs with `PI_OFFLINE=1`, isolated agent settings and session directories, and automatic resource loading disabled. No prompts or model calls are sent.
-
-All captured PNGs were opened and inspected with `IoskeleyMonoTerm Nerd Font Mono`. The cards show the expected icons, short collapsed summaries, indented expanded bodies, and red semantic failures. Long expanded pages can scroll beyond one screenshot. Every terminal created for the capture was stopped.
-
-The gallery covers replayed results, not live-running tool execution. Web providers, remote MCP servers, dialogs, background-agent widgets, memo_zoom output, and a deployed cross-package install remain unverified. The source-contract page does not establish real session behavior for its tools.
+The [implementation report](../workflows/tidy-tool-cards/report.md) lists changed files, versions, screenshot paths, and verification gaps. The offline gallery uses an isolated Pi 1.0.4 with real subagents, web-access, ask-user, and visual-artifact extensions. It never loads the old replay renderer shim, submits a model prompt, or executes a tool.
