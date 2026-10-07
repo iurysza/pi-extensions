@@ -392,7 +392,9 @@ export function createTidyExtension(dependencies: TidyExtensionDependencies = {}
 
 		const sourceTools: Record<string, SourceToolDefinition> = {
 			read: createReadTool(cwd) as SourceToolDefinition, write: createDiffingWriteTool(cwd) as SourceToolDefinition,
-			edit: createEditTool(cwd) as SourceToolDefinition, bash: createBashTool(cwd) as SourceToolDefinition,
+			edit: createEditTool(cwd) as SourceToolDefinition,
+			// Keep tidy's existing prompt contract, without Pi 1's extra bash guideline.
+			bash: { ...createBashTool(cwd), promptGuidelines: [] } as SourceToolDefinition,
 			grep: createGrepTool(cwd) as SourceToolDefinition, find: createFindTool(cwd) as SourceToolDefinition, ls: createLsTool(cwd) as SourceToolDefinition,
 		};
 		for (const [name, source] of Object.entries(sourceTools)) {

@@ -98,7 +98,7 @@ test("real Pi lifecycle persists ordered clock markers and one final total witho
     const entries = manager.getBranch();
     const meaningful = entries.filter((entry) => entry.type === "message" || entry.type === "custom");
     assert.deepEqual(meaningful.map((entry: any) => entry.type === "custom" ? entry.data.kind : entry.message.role), [
-      "minute", "user", "minute", "assistant", "toolResult", "minute", "assistant", "run-end",
+      "system", "minute", "user", "minute", "assistant", "toolResult", "minute", "assistant", "run-end",
     ]);
     const markers = entries.filter((entry: any) => entry.customType === CONVERSATION_TIMELINE_ENTRY).map((entry: any) => entry.data);
     assert.deepEqual(markers.slice(0, 3).map((entry) => entry.at), [initial, initial + 60_000, initial + 120_000]);
@@ -106,7 +106,7 @@ test("real Pi lifecycle persists ordered clock markers and one final total witho
     assert.ok(publicEvents.indexOf("minute") < publicEvents.indexOf("message_start:user"));
     assert.ok(publicEvents.indexOf("minute", 1) < publicEvents.indexOf("message_update:assistant"));
     for (const context of contexts) {
-      assert.ok(JSON.parse(context).every((message: any) => ["user", "assistant", "toolResult"].includes(message.role)));
+      assert.ok(JSON.parse(context).every((message: any) => ["system", "user", "assistant", "toolResult"].includes(message.role)));
       assert.doesNotMatch(context, /"customType":"pi-conversation-timeline"|"kind":"run-end"|Completed in|"kind":"minute"/);
     }
     const result = entries.find((entry: any) => entry.message?.role === "toolResult") as any;

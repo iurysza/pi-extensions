@@ -541,7 +541,7 @@ test("running Pi Jiti aliases legacy peers and shared TypeBox to one identity", 
 		assert.equal(evidence.VERSION, runningVersion);
 		assert.equal(typeof evidence.Text, "function");
 		assert.equal(evidence.sameType, true);
-		assert.match(runningVersion, /^0\.80\./);
+		assert.equal(runningVersion, "1.0.4");
 		assert.throws(() => readPackageVersionForEntry(join(root, "missing", "entry.js")), /running Pi package root is unavailable/);
 	} finally {
 		process.argv[1] = previousArgv;
