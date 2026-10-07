@@ -1,5 +1,5 @@
 import { highlightCode } from "@earendil-works/pi-coding-agent";
-import { MAGENTA, DIM, RESET, style } from "../../tidy/render.js";
+import { MAGENTA, DIM, RESET, style } from "../../render.js";
 import { formatElapsed } from "../card.js";
 import { count, firstLine, joinFacts, resultText, type CardSpec } from "../spec.js";
 const output = (r: any) => resultText(r).replace(/^Script (?:completed|failed)\r?\nWall time [^\n]*\r?\nOutput:\r?\n?/i, "").replace(/^Script completed[^\n]*\n?\s*/i, "").trimEnd();

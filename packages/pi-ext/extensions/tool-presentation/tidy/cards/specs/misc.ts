@@ -1,5 +1,5 @@
-import { CYAN, YELLOW, MAGENTA, DIM, RESET } from "../../tidy/render.js";
-import { shortPath } from "../../tidy/render.js";
+import { CYAN, YELLOW, MAGENTA, DIM, RESET } from "../../render.js";
+import { shortPath } from "../../render.js";
 import { basename, count, detailsError, firstLine, joinFacts, rawExpanded, resultText, shortUrl, type CardSpec } from "../spec.js";
 const BLUE = "\x1b[34m";
 const base = { failed: detailsError, expanded: rawExpanded };

@@ -1,4 +1,4 @@
-import { CYAN } from "../../tidy/render.js";
+import { CYAN } from "../../render.js";
 import { compactNumber, count, detailsError, joinFacts, rawExpanded, resultText, shortUrl, type CardSpec } from "../spec.js";
 const queries = (a: any): string[] => a.queries ?? (a.query ? [a.query] : []);
 const urls = (a: any): string[] => a.urls ?? (a.url ? [a.url] : []);

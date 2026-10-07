@@ -34,8 +34,8 @@
  * Collapsed shows the 2-line block; expanded appends the tool's real output —
  * a colored line-numbered diff for code edits (details.diff), else raw content.
  *
- * First-party tools import the shared card module. Foreign factory adoption is
- * an isolated, unregistered spike; existing foreign definitions stay untouched.
+ * One renderer resolver supplies cards for known third-party and MCP tools.
+ * Built-in registrations retain their behavior and historical presentation.
  *
  * Usage:  pi -e ./index.ts     (or install as a pi package)
  */
@@ -84,8 +84,9 @@ import type { PiFffLifecyclePreview } from "./pi-fff/integration.js";
 import { renderRichDiff } from "../rich-diff.js";
 import { readToolTiming, ToolTimeline } from "./timeline.js";
 
-import { buildToolBlock, WidthAwareLines, TimelineTool, colorizeDiff } from "../card/card.js";
-export { buildToolBlock, fitToolLine, formatElapsed } from "../card/card.js";
+import { buildToolBlock, WidthAwareLines, TimelineTool, colorizeDiff } from "./cards/card.js";
+import { cardRenderers, cardRuntime, specForTool } from "./cards/index.js";
+export { buildToolBlock, fitToolLine, formatElapsed } from "./cards/card.js";
 
 export { withReasoning } from "./tool-composition.js";
 
@@ -294,11 +295,21 @@ export function createTidyExtension(dependencies: TidyExtensionDependencies = {}
 			const notice = startupPlan.notice;
 			pi.on("session_start", (_event: unknown, ctx: any) => ctx.ui.notify(notice.message, notice.level));
 		}
+		const timeline = dependencies.timeline ?? new ToolTimeline();
+		// Older Pi hosts retain the built-in registrations, but cannot resolve foreign tools.
+		if (pi.registerToolRenderer) {
+			const runtime = tidyState.enabled ? cardRuntime(pi, timeline, dependencies.isReplayCall) : undefined;
+			pi.registerToolRenderer((name, next) => {
+				const original = next();
+				if (!tidyState.enabled) return original;
+				const spec = specForTool({ name });
+				return spec ? cardRenderers(spec, runtime, original, { mode: tidyMode, icons: tidyIcons }) : original;
+			});
+		}
 		if (!tidyState.enabled) return;
 
 		let currentTurn: TurnDiff[] = [], lastTurn: TurnDiff[] = [];
 		const pathByCallId = new Map<string, string>();
-		const timeline = dependencies.timeline ?? new ToolTimeline();
 		const elapsedTimerByCallId = new Map<string, ReturnType<typeof setInterval>>();
 		const ownedTools = new Set<string>();
 

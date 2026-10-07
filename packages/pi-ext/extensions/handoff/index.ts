@@ -1,4 +1,4 @@
-import { ownedCard, cardSpecs } from "../tool-presentation/card/index.js";
+import { ownedCard, cardSpecs } from "../tool-presentation/tidy/cards/index.js";
 /**
  * Handoff extension — transfer context to a new pi session in a split or tab.
  *

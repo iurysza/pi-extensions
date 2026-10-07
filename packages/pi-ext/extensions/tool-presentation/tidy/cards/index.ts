@@ -9,6 +9,9 @@ export { cardRenderers, cardRuntime, ownedCard, type CardAPI } from "./renderers
 export { renderCard, WidthAwareLines, fitToolLine, formatElapsed } from "./card.js";
 export type { CardSpec, CardArgs, CardResult } from "./spec.js";
 export const cardSpecs: Record<string, CardSpec> = { ...memorySpecs, ...miscSpecs, ...webSpecs, ...subagentSpecs, ...resourceSpecs, codemode: codemodeSpec };
+const nativeExpanded = new Set(["ask_user", "cursor_ask_question", "choose_visual_artifact_direction", "plannotator_submit_plan", "plannotator_mark_done", "Agent", "SubagentWorkflow", "get_subagent_result"]);
 export function specForTool(tool: { name: string; label?: string; title?: string; annotations?: { readOnlyHint?: boolean } }): CardSpec | undefined {
-  return cardSpecs[tool.name] ?? (tool.name.startsWith("mcp__") ? mcpSpec(tool) : undefined);
+  const spec = Object.hasOwn(cardSpecs, tool.name) ? cardSpecs[tool.name] : undefined;
+  if (spec) return nativeExpanded.has(tool.name) ? { ...spec, expanded: undefined } : spec;
+  return /^mcp__.+__.+$/.test(tool.name) ? mcpSpec(tool) : undefined;
 }

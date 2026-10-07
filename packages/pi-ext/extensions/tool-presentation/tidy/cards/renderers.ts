@@ -1,8 +1,9 @@
-import { Container } from "@earendil-works/pi-tui";
-import { loadTidyIcons, loadTidyMode, loadTidyState } from "../tidy/config.js";
-import { readToolTiming, ToolTimeline } from "../tidy/timeline.js";
+import type { ToolRenderers } from "@earendil-works/pi-coding-agent";
+import { Box, Container } from "@earendil-works/pi-tui";
+import { loadTidyIcons, loadTidyMode, loadTidyState, type TidyMode } from "../config.js";
+import { readToolTiming, ToolTimeline } from "../timeline.js";
 import { renderCard, TimelineTool, WidthAwareLines } from "./card.js";
-import type { CardSpec } from "./spec.js";
+import { rawExpanded, type CardSpec } from "./spec.js";
 
 interface CardReplayContext {
   sessionManager: { getBranch(): { type: string; message?: unknown }[] };
@@ -47,8 +48,9 @@ export function cardRuntime(pi: CardAPI, timeline = new ToolTimeline(), isReplay
   pi.on("session_shutdown", clear);
   return runtime;
 }
-export function cardRenderers(spec: CardSpec, runtime?: ReturnType<typeof cardRuntime>) {
-  const mode = loadTidyMode(); const icons = loadTidyIcons();
+export function cardRenderers(spec: CardSpec, runtime?: ReturnType<typeof cardRuntime>, original?: ToolRenderers,
+  settings: { mode: TidyMode; icons: boolean } = { mode: loadTidyMode(), icons: loadTidyIcons() }) {
+  const { mode, icons } = settings;
   return {
     renderShell: "self" as const,
     renderCall(args: any, theme: any, context: any) {
@@ -73,11 +75,34 @@ export function cardRenderers(spec: CardSpec, runtime?: ReturnType<typeof cardRu
       const timer = runtime?.timers.get(id);
       if (!partial && timer) { clearInterval(timer); runtime?.timers.delete(id); }
       const failed = context?.isError || result?.isError || spec.failed?.(result);
-      const content = new WidthAwareLines(() => renderCard({ spec, args: context?.args ?? {}, result }, {
-        mode, icons, isPartial: partial, expanded: options?.expanded, isError: context?.isError,
+      const hasImages = result.content?.some((block: { type: string }) => block.type === "image");
+      const useOriginal = options?.expanded && original && (!spec.expanded || hasImages);
+      const bg = (text: string) => theme.bg(partial ? "toolPendingBg" : failed ? "toolErrorBg" : "toolSuccessBg", text);
+      const content = new WidthAwareLines(() => renderCard({ spec: spec.expanded ? spec : { ...spec, expanded: rawExpanded }, args: context?.args ?? {}, result }, {
+        mode, icons, isPartial: partial, expanded: options?.expanded && !useOriginal, isError: context?.isError,
         elapsedMs: timing()?.elapsedMs ?? (timing()?.startedAt === undefined ? undefined : Math.max(0, Date.now() - timing()!.startedAt!)),
-      }), (text) => theme.bg(partial ? "toolPendingBg" : failed ? "toolErrorBg" : "toolSuccessBg", text));
-      return new TimelineTool(content, timing, theme);
+      }), bg);
+      if (!useOriginal) return new TimelineTool(content, timing, theme);
+
+      // Keep native renderer state and lastComponent separate from the card wrapper.
+      const state = context?.state ?? {};
+      const nativeState = state.tidyOriginalState ??= {};
+      const nativeContext = { ...context, state: nativeState };
+      const body = original.renderShell === "self" ? new Container() : new Box(1, 1, bg);
+      if (original.renderCall) {
+        state.tidyOriginalCall = original.renderCall(context?.args ?? {}, theme, { ...nativeContext, lastComponent: state.tidyOriginalCall });
+        body.addChild(state.tidyOriginalCall);
+      }
+      if (original.renderResult) {
+        state.tidyOriginalResult = original.renderResult(result, options, theme, { ...nativeContext, lastComponent: state.tidyOriginalResult });
+        body.addChild(state.tidyOriginalResult);
+      } else {
+        body.addChild(new WidthAwareLines(rawExpanded(result), bg));
+      }
+      const expanded = new Container();
+      expanded.addChild(content);
+      expanded.addChild(body);
+      return new TimelineTool(expanded, timing, theme);
     },
   };
 }

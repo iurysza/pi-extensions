@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
-import { cardSpecs, specForTool, renderCard, WidthAwareLines, cardRenderers, cardRuntime } from "../../extensions/tool-presentation/card/index.js";
-import { mcpSummary } from "../../extensions/tool-presentation/card/specs/mcp.js";
-import { adoptFactory } from "../../extensions/tool-presentation/card/adopter.js";
+import { cardSpecs, specForTool, renderCard, WidthAwareLines, cardRenderers, cardRuntime } from "../../extensions/tool-presentation/tidy/cards/index.js";
+import { mcpSummary } from "../../extensions/tool-presentation/tidy/cards/specs/mcp.js";
+import { adoptFactory } from "../../extensions/tool-presentation/tidy/cards/adopter.js";
 import { visibleWidth } from "@earendil-works/pi-tui";
 
 const fixtures = [

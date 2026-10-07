@@ -1,4 +1,4 @@
-import { CYAN, MAGENTA } from "../../tidy/render.js";
+import { CYAN, MAGENTA } from "../../render.js";
 import { basename, count, firstLine, joinFacts, rawExpanded, resultText, type CardSpec, type CardResult } from "../spec.js";
 const shortId = (id: unknown): string => String(id ?? "").replace(/^([0-9a-f]{8})-[0-9a-f-]+$/i, "$1");
 const status = (r: CardResult): string => r.details?.status ?? resultText(r).match(/Status:\s*([\w-]+)/i)?.[1]?.toLowerCase() ?? "";

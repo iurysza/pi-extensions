@@ -1,4 +1,4 @@
-import { style } from "../../tidy/render.js";
+import { style } from "../../render.js";
 import { argDetail, summarize, expandedLines } from "../card.js";
 import type { CardSpec } from "../spec.js";
 export function builtinSpec(name: string): CardSpec {

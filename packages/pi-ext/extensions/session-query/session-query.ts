@@ -1,4 +1,4 @@
-import { ownedCard, cardSpecs } from "../tool-presentation/card/index.js";
+import { ownedCard, cardSpecs } from "../tool-presentation/tidy/cards/index.js";
 /**
  * Session Query Extension - Query previous pi sessions
  *

@@ -2,7 +2,7 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { createCursorReplayBroker } from "./cursor-replay-broker.js";
 import { registerConversationTimeline } from "./conversation-timeline.js";
 import { ToolTimeline } from "./tidy/timeline.js";
-import { cardRuntime } from "./card/renderers.js";
+import { cardRuntime } from "./tidy/cards/renderers.js";
 import {
   createTidyExtension,
   type TidyExtensionDependencies,

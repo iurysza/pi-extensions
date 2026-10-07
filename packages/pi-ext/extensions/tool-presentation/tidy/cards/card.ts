@@ -1,11 +1,11 @@
 import type { Theme } from "@earendil-works/pi-coding-agent";
 import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
-import type { TidyMode } from "../tidy/config.js";
-import { BOLD, CYAN, DIM, GREEN, MAGENTA, RED, RESET, grepResultCounts, nonEmptyLineCount, shortPath, style } from "../tidy/render.js";
-import { stripReasoning } from "../tidy/tool-composition.js";
+import type { TidyMode } from "../config.js";
+import { BOLD, CYAN, DIM, GREEN, MAGENTA, RED, RESET, grepResultCounts, nonEmptyLineCount, shortPath, style } from "../render.js";
+import { stripReasoning } from "../tool-composition.js";
 import { builtinSpec } from "./specs/builtins.js";
 import { errorText, oneLine as singleLine, type CardArgs, type CardResult, type CardSpec } from "./spec.js";
-import { timeDivider, type ToolTiming } from "../tidy/timeline.js";
+import { timeDivider, type ToolTiming } from "../timeline.js";
 /** Hanging indent for expanded output only. Compact pills stay flush left. */
 const INDENT = "  ";
 const BUILT_INS = new Set(["read", "write", "edit", "bash", "grep", "find", "ls"]);

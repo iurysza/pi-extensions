@@ -1,4 +1,4 @@
-import { ownedCard, cardSpecs } from "../tool-presentation/card/index.js";
+import { ownedCard, cardSpecs } from "../tool-presentation/tidy/cards/index.js";
 /**
  * Custom tools exposed to the LLM for controlling cmux programmatically.
  *

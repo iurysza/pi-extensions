@@ -1,4 +1,4 @@
-import { ownedCard, cardSpecs } from "../tool-presentation/card/index.js";
+import { ownedCard, cardSpecs } from "../tool-presentation/tidy/cards/index.js";
 /**
  * session-store — Full-text search across all pi sessions via SQLite FTS5 + BM25
  *

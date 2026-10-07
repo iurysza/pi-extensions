@@ -1,4 +1,4 @@
-import { CYAN, YELLOW } from "../../tidy/render.js";
+import { CYAN, YELLOW } from "../../render.js";
 import { firstLine, resultText, rawExpanded, type CardSpec } from "../spec.js";
 const failed = (r: Parameters<typeof resultText>[0]) => /^(?:Too long:|Error:|memo_\w+ is not available|.*ENOENT)/i.test(resultText(r));
 const base = { failed, expanded: rawExpanded };

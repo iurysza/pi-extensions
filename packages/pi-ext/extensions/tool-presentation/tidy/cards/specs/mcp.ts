@@ -1,4 +1,4 @@
-import { CYAN, YELLOW } from "../../tidy/render.js";
+import { CYAN, YELLOW } from "../../render.js";
 import { count, detailsError, firstLine, joinFacts, rawExpanded, resultText, shortUrl, type CardArgs, type CardResult, type CardSpec } from "../spec.js";
 function parsed(r: CardResult): any { try { return JSON.parse(resultText(r)); } catch { return undefined; } }
 export function mcpSummary(r: CardResult): string {
