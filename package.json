@@ -55,6 +55,8 @@
       "./packages/pi-secret-env/src/index.ts",
       "./packages/pi-ghost-in-the-machine/src/index.ts",
       "./packages/artifact-explorer/index.ts",
+      "./packages/pi-topology/index.ts",
+      "./packages/pi-topology-studio/index.ts",
       "./packages/pi-optmem/src/index.ts"
     ],
     "skills": [
