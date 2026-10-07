@@ -3,8 +3,9 @@ import {
 	type AssistantMessage,
 	type AssistantMessageEventStream,
 	type Context,
+	type JsonObject,
 	type Model,
-} from "@earendil-works/pi-ai/compat";
+} from "@earendil-works/pi-ai";
 import { scheduler } from "node:timers/promises";
 import {
 	CursorLiveRunAbortError,
@@ -181,7 +182,7 @@ function emitCursorNativeToolUseTurn(
 			type: "toolCall",
 			id: tool.id,
 			name: tool.toolName,
-			arguments: tool.args,
+			arguments: tool.args as JsonObject,
 		});
 		stream.push({ type: "toolcall_start", contentIndex, partial });
 		stream.push({ type: "toolcall_delta", contentIndex, delta: JSON.stringify(tool.args), partial });
@@ -197,6 +198,7 @@ function emitCursorNativeToolUseTurn(
 		}
 	}
 	applyCursorUsage(partial, model, context, cursorLiveRuns.takeTurnInputTokens(run, toolResultInputTokens), {
+		runtime: "local",
 		turn: cursorLiveRuns.takeSdkTurnUsage(run),
 	});
 	partial.stopReason = "toolUse";
@@ -236,7 +238,7 @@ function emitCursorBridgeToolUseTurn(
 			type: "toolCall",
 			id: request.piToolCallId,
 			name: request.piToolName,
-			arguments: request.args,
+			arguments: request.args as JsonObject,
 		});
 		stream.push({ type: "toolcall_start", contentIndex, partial });
 		stream.push({ type: "toolcall_delta", contentIndex, delta: JSON.stringify(request.args), partial });
@@ -244,6 +246,7 @@ function emitCursorBridgeToolUseTurn(
 		if (block.type === "toolCall") stream.push({ type: "toolcall_end", contentIndex, toolCall: block, partial });
 	}
 	applyCursorUsage(partial, model, context, cursorLiveRuns.takeTurnInputTokens(run, toolResultInputTokens), {
+		runtime: "local",
 		turn: cursorLiveRuns.takeSdkTurnUsage(run),
 	});
 	partial.stopReason = "toolUse";
@@ -379,6 +382,7 @@ export async function drainCursorLiveRunTurn(
 					await emitTextDeltas(stream, partial, splitTextIntoReplayDeltas(finalText));
 				}
 				applyCursorUsage(partial, model, context, cursorLiveRuns.takeTurnInputTokens(run, toolResultInputTokens), {
+					runtime: "local",
 					turn: cursorLiveRuns.takeSdkTurnUsage(run),
 				});
 				if (run.resumeNotice) {

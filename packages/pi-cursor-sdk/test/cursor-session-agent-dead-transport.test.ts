@@ -53,7 +53,7 @@ describe("cursor-session-agent dead transport", () => {
 		};
 		process.once("uncaughtException", idleListener);
 		try {
-			process.emit("uncaughtException", epipe, "uncaughtException");
+			(process as unknown as LooseEmitter).emit("uncaughtException", epipe, "uncaughtException");
 			expect(idleListenerCalled).toBe(true);
 		} finally {
 			process.removeListener("uncaughtException", idleListener);
@@ -72,7 +72,7 @@ describe("cursor-session-agent dead transport", () => {
 		};
 		process.once("uncaughtException", containedListener);
 		try {
-			const emitted = process.emit("uncaughtException", epipe, "uncaughtException");
+			const emitted = (process as unknown as LooseEmitter).emit("uncaughtException", epipe, "uncaughtException");
 			expect(emitted).toBe(true);
 			expect(containedListenerCalled).toBe(false);
 		} finally {
@@ -124,3 +124,7 @@ describe("cursor-session-agent dead transport", () => {
 		}
 	});
 });
+
+
+/** @types/node (Pi 1.0 toolchain) narrows process.emit overloads; tests emit synthetic events. */
+type LooseEmitter = { emit(event: string, ...args: unknown[]): boolean };

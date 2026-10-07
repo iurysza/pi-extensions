@@ -7,6 +7,8 @@ const resourceKinds = ["extensions", "skills", "themes"];
 const sourceExtensions = new Set([".cjs", ".js", ".mjs", ".ts", ".tsx"]);
 const failures = [];
 const machineHomeMarker = `/${["Us", "ers"].join("")}/`;
+// Captured third-party prompts (pi-cursor-sdk evidence) use this generic placeholder, not a real home.
+const placeholderHome = `${machineHomeMarker}me`;
 
 async function exists(path) {
   try {
@@ -233,7 +235,7 @@ for (const file of await walk(root)) {
   if (buffer.includes(0)) continue;
   const text = buffer.toString("utf8");
   const displayPath = relative(root, file);
-  if (text.includes(machineHomeMarker)) {
+  if (text.replaceAll(placeholderHome, "").includes(machineHomeMarker)) {
     failures.push(`hard-coded machine home path in ${displayPath}`);
   }
   const extension = `.${file.split(".").at(-1)}`;

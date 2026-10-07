@@ -39,7 +39,7 @@ import { registerCursorRuntimeControls } from "../src/cursor-state.js";
 import { __testUtils as sessionAgentTestUtils } from "../src/cursor-session-agent.js";
 import { __testUtils as cursorPiToolBridgeTestUtils } from "../src/cursor-pi-tool-bridge.js";
 import { __testUtils as nativeToolDisplayTestUtils } from "../src/cursor-native-tool-display-state.js";
-import type { Context } from "@earendil-works/pi-ai/compat";
+import type { Context } from "@earendil-works/pi-ai";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

@@ -1,4 +1,4 @@
-import type { AssistantMessage, AssistantMessageEventStream } from "@earendil-works/pi-ai/compat";
+import type { AssistantMessage, AssistantMessageEventStream } from "@earendil-works/pi-ai";
 
 function withDisplayOnlyThinking(partial: AssistantMessage, thinking: string): AssistantMessage {
 	return { ...partial, content: [...partial.content, { type: "thinking", thinking }] };

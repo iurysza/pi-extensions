@@ -11,6 +11,7 @@ import {
 	type CursorModelFallbackIssue,
 } from "../src/model-discovery.js";
 import { saveCachedContextWindow, __testUtils as contextWindowCacheTestUtils } from "../src/context-window-cache.js";
+import { FALLBACK_MODEL_ITEMS } from "../src/cursor-fallback-models.generated.js";
 
 vi.mock("@cursor/sdk", () => ({
 	Cursor: {
@@ -324,18 +325,18 @@ describe("discoverModels", () => {
 		process.env.CURSOR_API_KEY = "test-key-123";
 		mockedList.mockResolvedValueOnce([
 			{
-				id: "gpt-5-mini",
-				displayName: "GPT-5 Mini",
-				aliases: ["gpt-mini-latest"],
-				variants: [{ params: [], displayName: "GPT-5 Mini", isDefault: true }],
+				id: "gpt-5.4-mini",
+				displayName: "GPT-5.4 Mini",
+				aliases: ["gpt-5.4-mini-latest"],
+				variants: [{ params: [], displayName: "GPT-5.4 Mini", isDefault: true }],
 			},
 		]);
 
 		const models = await discoverModels();
 
 		expect(models.map((model) => [model.id, model.contextWindow])).toEqual([
-			["gpt-5-mini", 272000],
-			["gpt-mini-latest", 272000],
+			["gpt-5.4-mini", 272000],
+			["gpt-5.4-mini-latest", 272000],
 		]);
 	});
 
@@ -535,6 +536,43 @@ describe("discoverModels", () => {
 		} finally {
 			rmSync(tmpAgentDir, { recursive: true, force: true });
 		}
+	});
+
+	it("uses base context evidence for aliases unless an exact alias observation exists", () => {
+		const opus = FALLBACK_MODEL_ITEMS.find(({ id }) => id === "claude-opus-4-8");
+		if (!opus) throw new Error("claude-opus-4-8 fallback fixture missing");
+		saveCachedContextWindow("opus-4-8@300k", 310000);
+
+		const windowsById = Object.fromEntries(register([opus]).map(({ id, contextWindow }) => [id, contextWindow]));
+
+		expect(windowsById["claude-opus-4-8@300k"]).toBe(300000);
+		expect(windowsById["opus-4.8@300k"]).toBe(300000);
+		expect(windowsById["opus-4-8@300k"]).toBe(310000);
+	});
+
+	it("inherits base context and fast evidence for aliases without exact observations", () => {
+		saveCachedContextWindow("base-context-model@1m", 300000);
+		saveCachedContextWindow("base-context-model@1m:fast", 320000);
+		saveCachedContextWindow("observed-alias@1m", 310000);
+		const windowsById = Object.fromEntries(register([{
+			id: "base-context-model",
+			displayName: "Base Context Model",
+			aliases: ["observed-alias", "unobserved-alias"],
+			parameters: [
+				{ id: "context", displayName: "Context", values: [{ value: "1m" }] },
+				{ id: "fast", displayName: "Fast", values: [{ value: "false" }, { value: "true" }] },
+			],
+			variants: [{
+				displayName: "Default",
+				isDefault: true,
+				params: [{ id: "context", value: "1m" }, { id: "fast", value: "false" }],
+			}],
+		}]).map(({ id, contextWindow }) => [id, contextWindow]));
+
+		expect(windowsById["observed-alias@1m"]).toBe(310000);
+		expect(windowsById["unobserved-alias@1m"]).toBe(300000);
+		expect(windowsById["unobserved-alias@1m:slow"]).toBe(300000);
+		expect(windowsById["unobserved-alias@1m:fast"]).toBe(320000);
 	});
 
 	it("lets user cache override bundled context windows", async () => {

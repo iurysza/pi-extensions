@@ -655,6 +655,7 @@ describe("extension native Cursor tool replay", () => {
 				name: "read",
 				description: "hashline read",
 				parameters: Type.Object({}),
+				exposure: "direct",
 				sourceInfo: {
 					source: "package",
 					path: "/opt/homebrew/lib/node_modules/pi-hashline-edit/index.ts",
@@ -711,6 +712,7 @@ describe("extension native Cursor tool replay", () => {
 				name: "read",
 				description: "hashline read",
 				parameters: Type.Object({}),
+				exposure: "direct",
 				sourceInfo: {
 					source: "package",
 					path: "/opt/homebrew/lib/node_modules/pi-hashline-edit/index.ts",

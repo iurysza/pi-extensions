@@ -1,5 +1,5 @@
 import type { McpServerConfig } from "@cursor/sdk";
-import type { Context, ToolResultMessage } from "@earendil-works/pi-ai/compat";
+import type { Context, ToolResultMessage } from "@earendil-works/pi-ai";
 import type { CursorSdkEventDebugRecorder } from "./cursor-sdk-event-debug.js";
 import type {
 	ExtensionAPI,

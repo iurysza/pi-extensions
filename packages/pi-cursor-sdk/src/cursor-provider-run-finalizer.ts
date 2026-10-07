@@ -1,4 +1,4 @@
-import type { AssistantMessage } from "@earendil-works/pi-ai/compat";
+import type { AssistantMessage } from "@earendil-works/pi-ai";
 import { cursorLiveRuns } from "./cursor-provider-live-run-drain.js";
 import {
 	classifyCursorRunEmission,
@@ -184,6 +184,7 @@ export class CursorRunFinalizer {
 					outcome.kind === "finished" && hasUsableText(outcome.finalText) ? [outcome.finalText] : [],
 				);
 				applyCursorUsage(partial, model, context, prepared.meta.promptInputTokens, {
+					runtime: prepared.runtimeTarget,
 					turn: prepared.runtime.turnCoordinator.lastSdkTurnUsage,
 				});
 				if (prepared.meta.resumeNotice) emitDisplayOnlyTraceBlock(stream, partial, prepared.meta.resumeNotice);

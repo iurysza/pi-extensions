@@ -4,8 +4,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
+import { parseArgs as parsePiArgs } from "../node_modules/@earendil-works/pi-coding-agent/dist/cli/args.js";
+import { buildInitialMessage } from "../node_modules/@earendil-works/pi-coding-agent/dist/cli/initial-message.js";
 import { CURSOR_TOOL_PRESENTATION_SPECS } from "../src/cursor-tool-presentation-registry.js";
-import { getScenario } from "../scripts/platform-smoke/scenarios.mjs";
+import { getScenario, renderPrompt, SCENARIOS } from "../scripts/platform-smoke/scenarios.mjs";
 
 function run(command: string, args: string[], env = process.env, cwd = process.cwd()) {
 	return spawnSync(command, args, { cwd, encoding: "utf8", env, shell: process.platform === "win32" && command === "npm" });
@@ -193,6 +195,62 @@ try {
 		}
 	});
 
+	it("allows Windows VM tests more scheduling headroom without weakening normal npm tests", () => {
+		const windowsBuild = readFileSync("scripts/platform-smoke/platform-build-windows.ps1", "utf8");
+		expect(windowsBuild).toContain("npm.cmd run check:platform-smoke -- --testTimeout=15000");
+		expect(windowsBuild).toContain("npm.cmd test -- --testTimeout=15000");
+		expect(readFileSync("package.json", "utf8")).toContain('"test": "node scripts/test.mjs"');
+	});
+
+	it("runs and documents required platform targets sequentially to avoid shared host and API contention", () => {
+		const platformSmoke = readFileSync("scripts/platform-smoke.mjs", "utf8");
+		expect(platformSmoke).toContain("for (const targetName of targets)");
+		expect(platformSmoke).not.toContain("Promise.all(targetRuns)");
+		expect(platformSmoke).toContain("Run one or more comma-separated targets sequentially");
+		const docs = readFileSync("docs/platform-smoke.md", "utf8");
+		expect(docs).toContain("release-gate entrypoint runs required targets sequentially");
+		expect(docs).toContain("Total wall time is therefore additive across required targets");
+	});
+
+	it("passes live prompts through Pi's interactive initial-message contract", () => {
+		const liveRunner = readFileSync("scripts/platform-smoke/live-suite-runner.mjs", "utf8");
+		expect(liveRunner).toContain("`platform-${args.suite}-${Date.now()}`, prompt]");
+		expect(liveRunner).toContain('PI_OFFLINE: "1"');
+		expect(liveRunner).toContain("file: process.execPath, args: [cliEntry, ...args]");
+		expect(liveRunner).toContain("const ptyCommand = ptySpawnCommand(piArgs)");
+		expect(liveRunner).toContain("...ptyCommand");
+		expect(liveRunner).not.toContain("pty-spawn-command.json");
+		expect(liveRunner).not.toContain("child.write(`\\x1b[200~${prompt}");
+		const artifacts = readFileSync("scripts/platform-smoke/artifacts.mjs", "utf8");
+		expect(artifacts).toContain("pi-command\\.json");
+
+		const prompt = "first line\nsecond line: ' \\\" & | ; $() <> `";
+		const parsed = parsePiArgs([
+			"--approve", "--cursor-no-fast", "--cursor-mode", "agent", "--model", "cursor/composer-2-5",
+			"--session-dir", "C:\\smoke sessions", "--session-id", "platform-test", prompt,
+		]);
+		expect(parsed.unknownFlags.get("cursor-no-fast")).toBe(true);
+		expect(parsed.unknownFlags.get("cursor-mode")).toBe("agent");
+		expect(buildInitialMessage({ parsed }).initialMessage).toBe(prompt);
+		expect(parsed.messages).toEqual([]);
+
+		const piArgs = readFileSync("node_modules/@earendil-works/pi-coding-agent/dist/cli/args.js", "utf8");
+		expect(piArgs).toContain("# Interactive mode with initial prompt");
+		expect(piArgs).toContain('${APP_NAME} "List all .ts files in src/"');
+		expect(piArgs).toContain("PI_OFFLINE");
+		expect(piArgs).toContain("Disable startup network operations");
+	});
+
+	it("keeps assistant final markers out of rendered live prompts", () => {
+		for (const scenario of Object.values(SCENARIOS)) {
+			if (!(scenario.finalMarker && scenario.promptTemplate)) continue;
+			const promptScenario = { ...scenario, promptTemplate: scenario.promptTemplate };
+			for (const platform of ["posix", "powershell"] as const) {
+				expect(renderPrompt(promptScenario, platform)).not.toContain(scenario.finalMarker);
+			}
+		}
+	});
+
 	it("keeps the required HTTP/1.1 live lane explicit", () => {
 		const scenario = getScenario("cursor-http1-live");
 		expect(scenario).toMatchObject({
@@ -223,24 +281,28 @@ const promptOnly = detectCards("1. call pi__read on ./package.json\n2. grep ./RE
 const rendered = detectCards("read /workspace/pi-cursor-sdk/package.json\ngrep /pi-cursor-sdk/ in C:/workspace/README.md\nbridge visual smoke\nENOENT: no such file or directory\ncursor:local · fast:off · http1\ncomposer-2-5\n");
 const wrapped = detectCards("read /workspace/very-long-test-workspace/package.js\non\n");
 const wrappedMidToken = detectCards("read /workspace/very-long-test-workspace/package.j\nson\n");
+const localPreview = detectCards("read package.json · local file preview\n");
 const checks = assertRequiredCards(".", rendered, ["bridge-read-success", "grep", "bridge-shell-success", "bridge-read-failure", "http1-status", "footer-status"]);
 const wrappedChecks = assertRequiredCards(".", wrapped, ["bridge-read-success"]);
 const wrappedMidTokenChecks = assertRequiredCards(".", wrappedMidToken, ["bridge-read-success"]);
+const localPreviewChecks = assertRequiredCards(".", localPreview, ["read"]);
 const result = {
   promptCardCount: promptOnly.length,
   renderedOk: checks.every((check) => check.ok),
   wrappedOk: wrappedChecks.every((check) => check.ok) && wrappedMidTokenChecks.every((check) => check.ok),
+  localPreviewOk: localPreviewChecks.every((check) => check.ok),
   traversalRejected: !isSafeBundlePath("/tmp/platform-smoke-suite", "../outside.txt"),
   absoluteRejected: !isSafeBundlePath("/tmp/platform-smoke-suite", "/tmp/outside.txt"),
   normalAccepted: isSafeBundlePath("/tmp/platform-smoke-suite", "artifacts/terminal.txt"),
 };
 console.log(JSON.stringify(result));
-if (result.promptCardCount !== 0 || !result.renderedOk || !result.wrappedOk || !result.traversalRejected || !result.absoluteRejected || !result.normalAccepted) process.exit(1);
+if (result.promptCardCount !== 0 || !result.renderedOk || !result.wrappedOk || !result.localPreviewOk || !result.traversalRejected || !result.absoluteRejected || !result.normalAccepted) process.exit(1);
 `;
 		const result = run(process.execPath, ["--input-type=module", "-e", code]);
 		expect(result.status).toBe(0);
 		expect(result.stdout).toContain('"promptCardCount":0');
 		expect(result.stdout).toContain('"renderedOk":true');
+		expect(result.stdout).toContain('"localPreviewOk":true');
 		expect(result.stdout).toContain('"traversalRejected":true');
 	});
 
@@ -427,6 +489,7 @@ if (!result.allTextIncludesMarker || result.finalText !== "actual final report" 
 
 	it("asserts rendered visual evidence patterns from output lines rather than prompt text", () => {
 		const code = String.raw`
+import { getScenario } from "./scripts/platform-smoke/scenarios.mjs";
 import { findVisualEvidenceItems } from "./scripts/platform-smoke/visual-evidence.mjs";
 const positive = findVisualEvidenceItems([
   "read ./package.json",
@@ -446,14 +509,17 @@ const wrapped = findVisualEvidenceItems([
 ], [
   { id: "read", pattern: "^\\s*read \\./package\\.json", wrappedPattern: "^\\s*read\\s+.*[\\\\/]package\\.(?:json|js\\s+on|j\\s*son)\\s*$" },
 ]);
+const nativeReadSpec = getScenario("cursor-native-visual-matrix").visualEvidence.find((item) => item.id === "native-read-package");
+const localPreview = findVisualEvidenceItems(["read package.json · local file preview"], [nativeReadSpec]);
 const positiveItemsOk = positive.every((item) => item.ok === true);
-console.log(JSON.stringify({ positiveItemsOk, promptOnlyItemOk: promptOnly[0]?.ok ?? null, wrappedItemOk: wrapped[0]?.ok ?? null }));
-if (!positiveItemsOk || promptOnly[0]?.ok !== false || wrapped[0]?.ok !== true) process.exit(1);
+console.log(JSON.stringify({ positiveItemsOk, promptOnlyItemOk: promptOnly[0]?.ok ?? null, wrappedItemOk: wrapped[0]?.ok ?? null, localPreviewItemOk: localPreview[0]?.ok ?? null }));
+if (!positiveItemsOk || promptOnly[0]?.ok !== false || wrapped[0]?.ok !== true || localPreview[0]?.ok !== true) process.exit(1);
 `;
 		const result = run(process.execPath, ["--input-type=module", "-e", code]);
 		expect(result.status).toBe(0);
 		expect(result.stdout).toContain('"positiveItemsOk":true');
 		expect(result.stdout).toContain('"promptOnlyItemOk":false');
+		expect(result.stdout).toContain('"localPreviewItemOk":true');
 	});
 
 	it("classifies every Cursor tool presentation surface for platform visual coverage", () => {

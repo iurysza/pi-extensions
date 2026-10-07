@@ -1,5 +1,5 @@
 import type { SDKAgent } from "@cursor/sdk";
-import { createAssistantMessageEventStream } from "@earendil-works/pi-ai/compat";
+import { createAssistantMessageEventStream } from "@earendil-works/pi-ai";
 import { makeAssistantMessage, makeContext, makeModel } from "./helpers/pi-harness.js";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
@@ -317,7 +317,7 @@ describe("cursor live run coordinator", () => {
 		const run = startRun(coordinator, { scopeKey: "scope-abort" });
 		const sdkCancelError = makeCursorSdkAbortConnectError();
 		const sdkCancel = vi.fn().mockImplementation(async () => {
-			process.emit("uncaughtException", sdkCancelError, "uncaughtException");
+			(process as unknown as LooseEmitter).emit("uncaughtException", sdkCancelError, "uncaughtException");
 			throw sdkCancelError;
 		});
 		coordinator.attachSdkRun(run, { cancel: sdkCancel });
@@ -351,3 +351,7 @@ describe("cursor live run coordinator", () => {
 		expect(coordinator.getPendingFromContext(context, replayIdFromToolCallId)).toBe(run);
 	});
 });
+
+
+/** @types/node (Pi 1.0 toolchain) narrows process.emit overloads; tests emit synthetic events. */
+type LooseEmitter = { emit(event: string, ...args: unknown[]): boolean };

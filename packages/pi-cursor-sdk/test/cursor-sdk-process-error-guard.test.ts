@@ -342,7 +342,7 @@ describe("Cursor SDK process error guard", () => {
 			expect(process.emit).toBe(laterPatch);
 
 			const callsBeforeEvent = laterPatchCalls;
-			process.emit("cursor-sdk-emit-interoperability" as never);
+			(process as unknown as LooseEmitter).emit("cursor-sdk-emit-interoperability" as never);
 			expect(laterPatchCalls).toBe(callsBeforeEvent + 1);
 
 			process.emit = cursorEmit;
@@ -469,7 +469,7 @@ setTimeout(() => console.log("survived"), 20);
 		};
 		process.once("unhandledRejection", listener);
 		try {
-			const emitted = process.emit("unhandledRejection", makeCursorSdkWriteIterableClosedError(), Promise.resolve());
+			const emitted = (process as unknown as LooseEmitter).emit("unhandledRejection", makeCursorSdkWriteIterableClosedError(), Promise.resolve());
 			expect(emitted).toBe(true);
 			expect(listenerCalled).toBe(false);
 		} finally {
@@ -488,7 +488,7 @@ setTimeout(() => console.log("survived"), 20);
 		};
 		process.once("uncaughtException", listener);
 		try {
-			const emitted = process.emit("uncaughtException", error, "uncaughtException");
+			const emitted = (process as unknown as LooseEmitter).emit("uncaughtException", error, "uncaughtException");
 			expect(emitted).toBe(true);
 			expect(listenerCalled).toBe(true);
 		} finally {
@@ -507,7 +507,7 @@ setTimeout(() => console.log("survived"), 20);
 		};
 		process.once("uncaughtException", listener);
 		try {
-			const emitted = process.emit("uncaughtException", makeNodeClosedPipeWriteError(), "uncaughtException");
+			const emitted = (process as unknown as LooseEmitter).emit("uncaughtException", makeNodeClosedPipeWriteError(), "uncaughtException");
 			expect(emitted).toBe(true);
 			expect(listenerCalled).toBe(false);
 			expect(onClosedPipe).toHaveBeenCalledTimes(1);
@@ -526,7 +526,7 @@ setTimeout(() => console.log("survived"), 20);
 		};
 		process.once("uncaughtException", listener);
 		try {
-			const emitted = process.emit("uncaughtException", makeNodeClosedPipeWriteError(), "uncaughtException");
+			const emitted = (process as unknown as LooseEmitter).emit("uncaughtException", makeNodeClosedPipeWriteError(), "uncaughtException");
 			expect(emitted).toBe(true);
 			expect(listenerCalled).toBe(true);
 		} finally {
@@ -547,7 +547,7 @@ setTimeout(() => console.log("survived"), 20);
 		};
 		process.once("uncaughtException", listener);
 		try {
-			const emitted = process.emit("uncaughtException", makeNodeClosedPipeWriteError(), "uncaughtException");
+			const emitted = (process as unknown as LooseEmitter).emit("uncaughtException", makeNodeClosedPipeWriteError(), "uncaughtException");
 			expect(emitted).toBe(true);
 			expect(listenerCalled).toBe(true);
 			expect(onClosedPipe).not.toHaveBeenCalled();
@@ -604,7 +604,7 @@ setTimeout(() => console.log("survived"), 20);
 		};
 		process.once("uncaughtException", listener);
 		try {
-			const emitted = process.emit("uncaughtException", error, "uncaughtException");
+			const emitted = (process as unknown as LooseEmitter).emit("uncaughtException", error, "uncaughtException");
 			expect(emitted).toBe(true);
 			expect(listenerCalled).toBe(true);
 			expect(onClosedPipe).not.toHaveBeenCalled();
@@ -719,7 +719,7 @@ setTimeout(() => {
 		};
 		process.once("uncaughtException", listener);
 		try {
-			const unsuppressed = process.emit("uncaughtException", makeCursorSdkAbortConnectError(), "uncaughtException");
+			const unsuppressed = (process as unknown as LooseEmitter).emit("uncaughtException", makeCursorSdkAbortConnectError(), "uncaughtException");
 			expect(unsuppressed).toBe(true);
 			expect(listenerCalled).toBe(true);
 		} finally {
@@ -730,7 +730,7 @@ setTimeout(() => {
 		process.once("uncaughtException", listener);
 		try {
 			suppression.suppressAbortErrors();
-			const emitted = process.emit("uncaughtException", makeCursorSdkAbortConnectError(), "uncaughtException");
+			const emitted = (process as unknown as LooseEmitter).emit("uncaughtException", makeCursorSdkAbortConnectError(), "uncaughtException");
 			expect(emitted).toBe(true);
 			expect(listenerCalled).toBe(false);
 		} finally {
@@ -750,7 +750,7 @@ setTimeout(() => {
 		};
 		process.once("uncaughtException", listener);
 		try {
-			const emitted = process.emit("uncaughtException", makeError(), "uncaughtException");
+			const emitted = (process as unknown as LooseEmitter).emit("uncaughtException", makeError(), "uncaughtException");
 			expect(emitted).toBe(true);
 			expect(listenerCalled).toBe(false);
 		} finally {
@@ -767,7 +767,7 @@ setTimeout(() => {
 		};
 		process.once("uncaughtException", listener);
 		try {
-			const emitted = process.emit("uncaughtException", makeNonCursorUnauthenticatedConnectError(), "uncaughtException");
+			const emitted = (process as unknown as LooseEmitter).emit("uncaughtException", makeNonCursorUnauthenticatedConnectError(), "uncaughtException");
 			expect(emitted).toBe(true);
 			expect(listenerCalled).toBe(true);
 		} finally {
@@ -789,7 +789,7 @@ setTimeout(() => {
 		};
 		process.once("uncaughtException", listener);
 		try {
-			const emitted = process.emit("uncaughtException", makeError(), "uncaughtException");
+			const emitted = (process as unknown as LooseEmitter).emit("uncaughtException", makeError(), "uncaughtException");
 			expect(emitted).toBe(true);
 			expect(listenerCalled).toBe(false);
 		} finally {
@@ -806,7 +806,7 @@ setTimeout(() => {
 		};
 		process.once("uncaughtException", listener);
 		try {
-			const emitted = process.emit(
+			const emitted = (process as unknown as LooseEmitter).emit(
 				"uncaughtException",
 				makeCursorSdkHttp2EnhanceYourCalmConnectError(),
 				"uncaughtException",
@@ -827,7 +827,7 @@ setTimeout(() => {
 		};
 		process.once("uncaughtException", listener);
 		try {
-			const emitted = process.emit("uncaughtException", makeCursorSdkStallAbortWrapperConnectError(), "uncaughtException");
+			const emitted = (process as unknown as LooseEmitter).emit("uncaughtException", makeCursorSdkStallAbortWrapperConnectError(), "uncaughtException");
 			expect(emitted).toBe(true);
 			expect(listenerCalled).toBe(false);
 		} finally {
@@ -844,7 +844,7 @@ setTimeout(() => {
 		};
 		process.once("unhandledRejection", listener);
 		try {
-			const emitted = process.emit("unhandledRejection", makeCursorSdkNetworkConnectError(), Promise.resolve());
+			const emitted = (process as unknown as LooseEmitter).emit("unhandledRejection", makeCursorSdkNetworkConnectError(), Promise.resolve());
 			expect(emitted).toBe(true);
 			expect(listenerCalled).toBe(false);
 		} finally {
@@ -861,7 +861,7 @@ setTimeout(() => {
 		};
 		process.once("uncaughtException", listener);
 		try {
-			const emitted = process.emit("uncaughtException", makeGenericConnectNodeNetworkConnectError(), "uncaughtException");
+			const emitted = (process as unknown as LooseEmitter).emit("uncaughtException", makeGenericConnectNodeNetworkConnectError(), "uncaughtException");
 			expect(emitted).toBe(true);
 			expect(listenerCalled).toBe(false);
 		} finally {
@@ -878,7 +878,7 @@ setTimeout(() => {
 		};
 		process.once("uncaughtException", listener);
 		try {
-			const emitted = process.emit("uncaughtException", makeProvenanceFreeNetworkConnectError(), "uncaughtException");
+			const emitted = (process as unknown as LooseEmitter).emit("uncaughtException", makeProvenanceFreeNetworkConnectError(), "uncaughtException");
 			expect(emitted).toBe(true);
 			expect(listenerCalled).toBe(true);
 		} finally {
@@ -902,7 +902,7 @@ setTimeout(() => {
 		};
 		process.once("uncaughtException", listener);
 		try {
-			const emitted = process.emit("uncaughtException", makeError(), "uncaughtException");
+			const emitted = (process as unknown as LooseEmitter).emit("uncaughtException", makeError(), "uncaughtException");
 			expect(emitted).toBe(true);
 			expect(listenerCalled).toBe(true);
 		} finally {
@@ -910,3 +910,7 @@ setTimeout(() => {
 		}
 	});
 });
+
+
+/** @types/node (Pi 1.0 toolchain) narrows process.emit overloads; tests emit synthetic events. */
+type LooseEmitter = { emit(event: string, ...args: unknown[]): boolean };

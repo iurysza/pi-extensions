@@ -4,9 +4,10 @@ import {
 	type AssistantMessage,
 	type AssistantMessageEventStream,
 	type Context,
+	type TranscriptContext,
 	type Model,
 	type SimpleStreamOptions,
-} from "@earendil-works/pi-ai/compat";
+} from "@earendil-works/pi-ai";
 
 function makeProviderLoadErrorMessage(model: Model<Api>, error: unknown): AssistantMessage {
 	return {
@@ -31,7 +32,7 @@ function makeProviderLoadErrorMessage(model: Model<Api>, error: unknown): Assist
 
 export function streamCursorLazy(
 	model: Model<Api>,
-	context: Context,
+	context: Context | TranscriptContext,
 	options?: SimpleStreamOptions,
 ): AssistantMessageEventStream {
 	const outer = createAssistantMessageEventStream();

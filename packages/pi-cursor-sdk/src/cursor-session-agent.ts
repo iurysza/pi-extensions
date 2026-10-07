@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import type { AgentModeOption, LocalAgentOptions, LocalAgentStore, ModelSelection, SDKAgent, SettingSource } from "@cursor/sdk";
-import type { Context } from "@earendil-works/pi-ai/compat";
+import type { Context } from "@earendil-works/pi-ai";
 import {
 	getRegisteredCursorPiToolBridge,
 	type CursorPiBridgeToolRequest,

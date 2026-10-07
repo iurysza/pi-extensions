@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createAssistantMessageEventStream } from "@earendil-works/pi-ai/compat";
+import { createAssistantMessageEventStream } from "@earendil-works/pi-ai";
 import type { LocalAgentStore, SDKAgent } from "@cursor/sdk";
 import { buildIncompleteCursorToolRunOutcome } from "../src/cursor-incomplete-tool-visibility.js";
 import { CursorRunFinalizer } from "../src/cursor-provider-run-finalizer.js";

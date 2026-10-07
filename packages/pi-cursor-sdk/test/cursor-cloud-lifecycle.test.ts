@@ -182,7 +182,7 @@ describe("Cursor cloud lifecycle ledger", () => {
 		const sessionId = "first-turn-cloud-recovery";
 		try {
 			const firstManager = SessionManager.create(tempDir, tempDir, { id: sessionId });
-			firstManager.appendMessage({ role: "user", content: "start cloud work", timestamp: 1 });
+			// Pi 1.0 writes the session file on the first user message; keep the first turn conversation-free so the file stays absent.
 			const firstSessionFile = firstManager.getSessionFile()!;
 			const firstSessionManager = {
 				getBranch: () => firstManager.getBranch(),

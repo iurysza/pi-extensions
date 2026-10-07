@@ -1,0 +1,63 @@
+{
+  "provenance": {
+    "sdkPackage": "@cursor/sdk",
+    "sdkVersion": "1.0.23",
+    "verified": "2026-07-29",
+    "issue": "https://github.com/fitchmultz/pi-cursor-sdk/issues/196",
+    "capture": "Local PI_CURSOR_SDK_EVENT_DEBUG onDelta turn-ended samples (fable@300k; same flat-input/cache-shift shape on composer-2.5)",
+    "notes": [
+      "Official TypeScript SDK docs and installed usage-types toTokenUsage treat TokenUsage.totalTokens as inputTokens+outputTokens+cacheReadTokens+cacheWriteTokens (additive fields).",
+      "Observed raw local turn-ended.usage keeps inputTokens as the full prompt (nearly flat across turns) while cacheReadTokens/cacheWriteTokens partition that prompt.",
+      "pi-cursor-sdk maps raw turn-ended.usage, not SDK toTokenUsage: input = inputTokens-cacheRead-cacheWrite and totalTokens = inputTokens+outputTokens."
+    ]
+  },
+  "installedSdkPublishedTransform": {
+    "declaration": "node_modules/@cursor/sdk/dist/esm/usage-types.d.ts",
+    "implementationModule": "./src/agent/usage-types.ts (bundled in dist/esm/index.js)",
+    "totalTokensFormula": "inputTokens + outputTokens + cacheReadTokens + cacheWriteTokens",
+    "docsUrl": "https://cursor.com/docs/sdk/typescript"
+  },
+  "observedRawTurnEnded": [
+    {
+      "label": "turn-001",
+      "model": "cursor/fable@300k",
+      "usage": {
+        "inputTokens": 46946,
+        "outputTokens": 3,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 46944
+      }
+    },
+    {
+      "label": "turn-002",
+      "model": "cursor/fable@300k",
+      "usage": {
+        "inputTokens": 46965,
+        "outputTokens": 3,
+        "cacheReadTokens": 42036,
+        "cacheWriteTokens": 4927
+      }
+    }
+  ],
+  "expectedPiMappingFromRawTurnEnded": [
+    {
+      "input": 2,
+      "output": 3,
+      "cacheRead": 0,
+      "cacheWrite": 46944,
+      "totalTokens": 46949
+    },
+    {
+      "input": 2,
+      "output": 3,
+      "cacheRead": 42036,
+      "cacheWrite": 4927,
+      "totalTokens": 46968
+    }
+  ],
+  "runtimeDivergenceEvidence": {
+    "inputTokensDeltaTurn1ToTurn2": 19,
+    "cacheReadDeltaTurn1ToTurn2": 42036,
+    "interpretation": "If raw fields were additive/disjoint, turn-002 inputTokens would drop toward the uncached remainder (~4.9k). Observed inputTokens stayed nearly flat while cacheRead absorbed prior cacheWrite, proving partition/full-prompt semantics for raw turn-ended.usage."
+  }
+}

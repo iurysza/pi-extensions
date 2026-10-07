@@ -1,6 +1,6 @@
 import { canRenderCursorToolNatively } from "./cursor-native-tool-display-state.js";
 import { getActiveContextToolNames } from "./cursor-context-tools.js";
-import type { Context } from "@earendil-works/pi-ai/compat";
+import type { Context } from "@earendil-works/pi-ai";
 
 export type NativeReplayDisposition = "queue_replay" | "inactive_trace" | "transcript_trace";
 

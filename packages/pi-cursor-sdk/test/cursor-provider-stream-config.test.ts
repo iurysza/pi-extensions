@@ -26,7 +26,7 @@ import { registerCursorRuntimeControls } from "../src/cursor-state.js";
 import { __testUtils as contextWindowCacheTestUtils } from "../src/context-window-cache.js";
 import { __testUtils as modelDiscoveryTestUtils } from "../src/model-discovery.js";
 import { __testUtils as cursorSessionScopeTestUtils } from "../src/cursor-session-scope.js";
-import type { Context } from "@earendil-works/pi-ai/compat";
+import type { Context } from "@earendil-works/pi-ai";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { isAbsolute, join } from "node:path";

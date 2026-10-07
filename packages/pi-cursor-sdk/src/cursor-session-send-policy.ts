@@ -1,4 +1,4 @@
-import type { Context } from "@earendil-works/pi-ai/compat";
+import type { Context } from "@earendil-works/pi-ai";
 import {
 	buildCursorIncrementalPrompt,
 	buildCursorPrompt,
