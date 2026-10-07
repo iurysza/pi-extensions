@@ -119,7 +119,7 @@ test("parallel calls keep pending cards visible and summary ownership follows ca
   } finally { await h.emit("session_shutdown"); }
 });
 
-test("replay groups restore per branch without modifying messages or inventing durations", async () => {
+test("replay groups restore per branch without modifying messages and sum known durations", async () => {
   const h = await rendererHarness({ chill: true });
   const branch = [
     { type: "message", message: { role: "user", content: "Start" } },
@@ -133,7 +133,7 @@ test("replay groups restore per branch without modifying messages or inventing d
       await h.emit(event, {}, { sessionManager: { getBranch: () => branch } });
       const renderers = h.resolvers[0]("memo_note", () => undefined)!;
       const lines = renderers.renderResult!(output("Saved"), { expanded: false, isPartial: false }, theme, context("b")).render(80).join("\n");
-      assert.match(plain(lines), /Worked · 2 tools(?! ·)/);
+      assert.match(plain(lines), /Worked · 2 tools · 1s/);
     }
     assert.equal(JSON.stringify(branch), before);
     await h.emit("session_tree", {}, { sessionManager: { getBranch: () => [] } });
@@ -193,5 +193,44 @@ test("newest finished card stays visible until the next tool starts or the grace
     await new Promise((resolve) => setTimeout(resolve, 80));
     assert.deepEqual(first.render(80), []);
     assert.match(plain(second.render(80).join("\n")), /Worked · 2 tools · 2s/, "folds after the grace period");
+  } finally { await h.emit("session_shutdown"); }
+});
+
+test("tool result messages do not split a group", async () => {
+  const h = await rendererHarness({ chill: true });
+  try {
+    const renderers = h.resolvers[0]("memo_note", () => undefined)!;
+    const toolResult = { role: "toolResult", content: [{ type: "text", text: "Saved as #1." }] };
+    await h.emit("message_start", { message: { role: "assistant", content: [] } });
+    await start(h, "a"); await finish(h, "a");
+    await h.emit("message_end", { message: toolResult });
+    await h.emit("message_start", { message: { role: "assistant", content: [] } });
+    await start(h, "b"); await finish(h, "b");
+    await h.emit("message_end", { message: toolResult });
+    const second = renderers.renderResult!(output("Saved as #2."), { expanded: false, isPartial: false }, theme, context("b"));
+    assert.match(plain(second.render(80).join("\n")), /Worked · 2 tools/);
+  } finally { await h.emit("session_shutdown"); }
+});
+
+test("clicking the summary opens the group and clicking its header folds it", async () => {
+  const h = await rendererHarness({ chill: true });
+  const click = { type: "click", button: "left", x: 0, y: 0, screenX: 0, screenY: 0 } as any;
+  try {
+    const renderers = h.resolvers[0]("memo_note", () => undefined)!;
+    await start(h, "a"); await finish(h, "a");
+    await start(h, "b"); await finish(h, "b", "memo_note", output("Saved as #2.", { piTidyElapsedMs: 2000 }));
+    const firstCall = renderers.renderCall!({ line: "First" }, theme, context("a", { line: "First" }));
+    const first = renderers.renderResult!(output("Saved as #1."), { expanded: false, isPartial: false }, theme, context("a"));
+    const owner = renderers.renderResult!(output("Saved as #2."), { expanded: false, isPartial: false }, theme, context("b"));
+    assert.deepEqual(first.render(80), []);
+    assert.match(plain(owner.render(80).join("\n")), / Worked · 2 tools · 3s/);
+    assert.deepEqual(owner.handleMouse!(click), { handled: true });
+    const header = plain(firstCall.render(80)[0]);
+    assert.match(header, / Worked · 2 tools · 3s/, "open group shows a header");
+    assert.notDeepEqual(first.render(80), [], "sibling card shows");
+    assert.doesNotMatch(plain(owner.render(80).join("\n")), /Worked/);
+    assert.deepEqual(firstCall.handleMouse!(click), { handled: true });
+    assert.match(plain(owner.render(80).join("\n")), / Worked · 2 tools · 3s/, "header click folds the group");
+    assert.deepEqual(first.render(80), []);
   } finally { await h.emit("session_shutdown"); }
 });

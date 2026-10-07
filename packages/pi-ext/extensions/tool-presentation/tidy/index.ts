@@ -52,11 +52,13 @@ import {
 import { Container, truncateToWidth } from "@earendil-works/pi-tui";
 import {
 	CONFIG_PATH,
+	loadTidyExpandedMaxLines,
 	loadTidyIcons,
 	loadTidyChill,
 	loadTidyMode,
 	loadTidyState,
 	saveTidyEnabled,
+	saveTidyExpandedMaxLines,
 	saveTidyIcons,
 	saveTidyMode,
 	type TidyMode,
@@ -85,7 +87,8 @@ import type { PiFffLifecyclePreview } from "./pi-fff/integration.js";
 import { renderRichDiff } from "../rich-diff.js";
 import { readToolTiming, ToolTimeline } from "./timeline.js";
 
-import { buildToolBlock, WidthAwareLines, TimelineTool, colorizeDiff } from "./cards/card.js";
+import { buildToolBlock, cardParts, ExpandedCard, WidthAwareLines, TimelineTool, colorizeDiff } from "./cards/card.js";
+import { builtinSpec } from "./cards/specs/builtins.js";
 import { cardRenderers, cardRuntime, specForTool } from "./cards/index.js";
 import { ChillState, chillRenderers, hasText } from "./chill.js";
 export { buildToolBlock, fitToolLine, formatElapsed } from "./cards/card.js";
@@ -96,15 +99,26 @@ class RichToolResult {
 	private richKey = "";
 	private richLines: string[] | undefined;
 	private richPending = false;
+	private expandedCard: ExpandedCard | undefined;
 
 	constructor(
 		private readonly name: string,
 		private readonly args: Record<string, unknown>,
 		private readonly result: any,
-		private readonly options: { isError: boolean; expanded: boolean; elapsedMs?: number; mode: TidyMode; icons: boolean },
+		private readonly options: { isError: boolean; expanded: boolean; elapsedMs?: number; mode: TidyMode; icons: boolean; expandedMaxLines: number },
 		private readonly theme: any,
 		private readonly invalidateResult: () => void,
 	) {}
+
+	/** The plain expanded output, wrapped and capped. Edit and write diffs use rich rendering instead. */
+	private wrapped(width: number, background: (text: string) => string): string[] {
+		this.expandedCard ??= new ExpandedCard(
+			() => cardParts({ spec: builtinSpec(this.name), args: this.args, result: this.result }, { ...this.options, expanded: true }),
+			background,
+			() => this.options.expandedMaxLines,
+		);
+		return this.expandedCard.render(width);
+	}
 
 	invalidate(): void {}
 
@@ -114,10 +128,8 @@ class RichToolResult {
 		const compactLines = new WidthAwareLines(compact, background).render(width);
 		if (!this.options.expanded) return compactLines;
 
+		if (this.options.isError || (this.name !== "edit" && this.name !== "write")) return this.wrapped(width, background);
 		const fallback = buildToolBlock(this.name, this.args, this.result, { ...this.options, expanded: true }).slice(compact.length);
-		if (this.options.isError || (this.name !== "edit" && this.name !== "write")) {
-			return [...compactLines, ...new WidthAwareLines(fallback, background).render(width)];
-		}
 
 		const key = [
 			this.name,
@@ -195,7 +207,7 @@ export function buildTurnDiffBlock(diffs: TurnDiff[], opts: { icons?: boolean } 
 const DIFF_MSG_TYPE = "minimal-turn-diff";
 const TIDY_COMPLETIONS = [
 	"on", "off", "toggle", "status", "mode default", "mode reasoning", "mode result", "mode status",
-	"icons on", "icons off", "icons status",
+	"icons on", "icons off", "icons status", "lines status", "lines 500", "lines 0",
 	"pi-fff setup", "pi-fff status", "pi-fff teardown",
 ];
 
@@ -208,6 +220,8 @@ export interface TidyExtensionDependencies {
 	loadChill?: typeof loadTidyChill;
 	chillGraceMs?: number;
 	saveIcons?: typeof saveTidyIcons;
+	loadExpandedMaxLines?: typeof loadTidyExpandedMaxLines;
+	saveExpandedMaxLines?: typeof saveTidyExpandedMaxLines;
 	createIntegration?: (pi: ExtensionAPI, cwd: string) => PiFffIntegrationController;
 	decorateSource?: (source: SourceToolDefinition) => SourceToolDefinition;
 	isReplayCall?: (toolCallId: string) => boolean;
@@ -225,6 +239,11 @@ export function createTidyExtension(dependencies: TidyExtensionDependencies = {}
 		const tidyMode = (dependencies.loadMode ?? loadTidyMode)();
 		const tidyIcons = (dependencies.loadIcons ?? loadTidyIcons)();
 		const persistIcons = dependencies.saveIcons ?? saveTidyIcons;
+		// Read once at startup and changed only by `/tidy lines`, so renders never touch the disk.
+		let expandedMaxLines = (dependencies.loadExpandedMaxLines ?? loadTidyExpandedMaxLines)();
+		const persistExpandedMaxLines = dependencies.saveExpandedMaxLines ?? saveTidyExpandedMaxLines;
+		const cardSettings = { mode: tidyMode, icons: tidyIcons, expandedMaxLines };
+		const describeLines = (lines: number) => lines === 0 ? "every line" : `up to ${lines} lines`;
 		const integration = dependencies.createIntegration?.(pi, cwd)
 			?? createPiFffIntegrationController({ pi: pi as any, cwd });
 		let startupPlan: Awaited<ReturnType<PiFffIntegrationController["initialize"]>> | undefined;
@@ -256,7 +275,7 @@ export function createTidyExtension(dependencies: TidyExtensionDependencies = {}
 					const detail = tidyState.source === "environment" ? "PI_TIDY_TOOLS override"
 						: tidyState.source === "file" ? CONFIG_PATH : "default; no config file";
 					const status = (await integration.run("status", { enabled: tidyState.enabled })).status;
-					ctx.ui.notify(`pi-tidy-tools is ${tidyState.enabled ? "on" : "off"}, mode ${tidyMode}, icons ${tidyIcons ? "on" : "off"} (${detail}).\n${concisePiFffStatus(status)}.`, "info");
+					ctx.ui.notify(`pi-tidy-tools is ${tidyState.enabled ? "on" : "off"}, mode ${tidyMode}, icons ${tidyIcons ? "on" : "off"}, expanded output ${describeLines(expandedMaxLines)} (${detail}).\n${concisePiFffStatus(status)}.`, "info");
 					return;
 				}
 				if (action === "icons status") {
@@ -272,6 +291,23 @@ export function createTidyExtension(dependencies: TidyExtensionDependencies = {}
 					ctx.ui.notify(`pi-tidy-tools icons set to ${icons ? "on" : "off"}; reloading.`, "info");
 					await ctx.reload(); return;
 				}
+				if (action === "lines" || action === "lines status") {
+					ctx.ui.notify(`Expanded tool output shows ${describeLines(expandedMaxLines)}. Use /tidy lines <n>; 0 means no limit.`, "info");
+					return;
+				}
+				const linesMatch = action.match(/^lines (\d+)$/);
+				if (linesMatch) {
+					const lines = Number(linesMatch[1]);
+					if (!Number.isSafeInteger(lines)) { ctx.ui.notify("Use a whole number of lines; 0 means no limit.", "warning"); return; }
+					if (lines === expandedMaxLines) { ctx.ui.notify(`Expanded tool output already shows ${describeLines(lines)}.`, "info"); return; }
+					try { await persistExpandedMaxLines(lines); }
+					catch (error) { ctx.ui.notify(`Could not save ${CONFIG_PATH}: ${error instanceof Error ? error.message : String(error)}`, "error"); return; }
+					// Applies to the next render; no reload needed.
+					expandedMaxLines = lines;
+					cardSettings.expandedMaxLines = lines;
+					ctx.ui.notify(`Expanded tool output now shows ${describeLines(lines)}.`, "info");
+					return;
+				}
 				const modeMatch = action.match(/^mode (default|reasoning|result)$/);
 				if (modeMatch) {
 					const mode = modeMatch[1] as TidyMode;
@@ -282,7 +318,7 @@ export function createTidyExtension(dependencies: TidyExtensionDependencies = {}
 					await ctx.reload(); return;
 				}
 				if (action !== "on" && action !== "off" && action !== "toggle") {
-					ctx.ui.notify("Usage: /tidy on|off|toggle|status|mode default|reasoning|result|status|icons on|off|status|pi-fff setup|status|teardown", "warning"); return;
+					ctx.ui.notify("Usage: /tidy on|off|toggle|status|mode default|reasoning|result|status|icons on|off|status|lines <n>|status|pi-fff setup|status|teardown", "warning"); return;
 				}
 				if (tidyState.source === "environment") { ctx.ui.notify("PI_TIDY_TOOLS overrides persistent settings; change or unset it first.", "warning"); return; }
 				const enabled = action === "toggle" ? !tidyState.enabled : action === "on";
@@ -309,7 +345,7 @@ export function createTidyExtension(dependencies: TidyExtensionDependencies = {}
 				const original = next();
 				if (!tidyState.enabled) return original;
 				const spec = specForTool({ name });
-				const renderers = spec ? cardRenderers(spec, runtime, original, { mode: tidyMode, icons: tidyIcons }) : original;
+				const renderers = spec ? cardRenderers(spec, runtime, original, cardSettings) : original;
 				return renderers && (spec || builtins.has(name)) ? chillRenderers(renderers, chill) : original;
 			});
 			if (tidyState.enabled) {
@@ -328,7 +364,9 @@ export function createTidyExtension(dependencies: TidyExtensionDependencies = {}
 						if (assistantTextSeen) chill.boundary();
 					}
 				});
-				const observeText = (event: { message: unknown }) => {
+				// Only assistant text closes a group. Tool results also carry text blocks.
+				const observeText = (event: { message: any }) => {
+					if (event.message?.role !== "assistant") return;
 					if (!assistantTextSeen && hasText(event.message)) { assistantTextSeen = true; chill.boundary(); }
 				};
 				pi.on("message_update", observeText);
@@ -380,7 +418,7 @@ export function createTidyExtension(dependencies: TidyExtensionDependencies = {}
 						name,
 						context?.args ?? {},
 						result,
-						{ isError, expanded: options?.expanded ?? false, elapsedMs: timing?.elapsedMs, mode, icons: tidyIcons },
+						{ isError, expanded: options?.expanded ?? false, elapsedMs: timing?.elapsedMs, mode, icons: tidyIcons, expandedMaxLines },
 						theme,
 						() => context?.invalidate?.(),
 					), () => timing, theme);
