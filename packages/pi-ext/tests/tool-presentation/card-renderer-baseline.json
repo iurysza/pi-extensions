@@ -2595,5 +2595,111 @@
         "  \u001b[31mError: No approved plan is executing.\u001b[0m                                                                                 \u001b[0m"
       ]
     }
+  ],
+  [
+    {
+      "expanded": false,
+      "width": 20,
+      "lines": [
+        "\u001b[34m󰳽\u001b[0m Cursor web search \u001b[0m",
+        "\u001b[2m3 resul\u001b[0m…\u001b[0m →\u001b[0m \u001b[32m3 results\u001b[0m\u001b[0m"
+      ]
+    },
+    {
+      "expanded": false,
+      "width": 80,
+      "lines": [
+        "\u001b[34m󰳽\u001b[0m Cursor web search                                                             \u001b[0m",
+        "\u001b[2m3 results\u001b[0m \u001b[2m→\u001b[0m \u001b[32m3 results\u001b[0m                                                           \u001b[0m"
+      ]
+    },
+    {
+      "expanded": false,
+      "width": 120,
+      "lines": [
+        "\u001b[34m󰳽\u001b[0m Cursor web search                                                                                                     \u001b[0m",
+        "\u001b[2m3 results\u001b[0m \u001b[2m→\u001b[0m \u001b[32m3 results\u001b[0m                                                                                                   \u001b[0m"
+      ]
+    },
+    {
+      "expanded": true,
+      "width": 20,
+      "lines": [
+        "\u001b[34m󰳽\u001b[0m Cursor web search \u001b[0m",
+        "\u001b[2m3 resul\u001b[0m…\u001b[0m →\u001b[0m \u001b[32m3 results\u001b[0m\u001b[0m",
+        "  \u001b[2mExample response\u001b[0m  \u001b[0m"
+      ]
+    },
+    {
+      "expanded": true,
+      "width": 80,
+      "lines": [
+        "\u001b[34m󰳽\u001b[0m Cursor web search                                                             \u001b[0m",
+        "\u001b[2m3 results\u001b[0m \u001b[2m→\u001b[0m \u001b[32m3 results\u001b[0m                                                           \u001b[0m",
+        "  \u001b[2mExample response\u001b[0m                                                              \u001b[0m"
+      ]
+    },
+    {
+      "expanded": true,
+      "width": 120,
+      "lines": [
+        "\u001b[34m󰳽\u001b[0m Cursor web search                                                                                                     \u001b[0m",
+        "\u001b[2m3 results\u001b[0m \u001b[2m→\u001b[0m \u001b[32m3 results\u001b[0m                                                                                                   \u001b[0m",
+        "  \u001b[2mExample response\u001b[0m                                                                                                      \u001b[0m"
+      ]
+    }
+  ],
+  [
+    {
+      "expanded": false,
+      "width": 20,
+      "lines": [
+        "\u001b[34m󰳽\u001b[0m Cursor web search \u001b[0m",
+        "\u001b[31mfailed\u001b[0m              \u001b[0m"
+      ]
+    },
+    {
+      "expanded": false,
+      "width": 80,
+      "lines": [
+        "\u001b[34m󰳽\u001b[0m Cursor web search                                                             \u001b[0m",
+        "\u001b[31mfailed\u001b[0m                                                                          \u001b[0m"
+      ]
+    },
+    {
+      "expanded": false,
+      "width": 120,
+      "lines": [
+        "\u001b[34m󰳽\u001b[0m Cursor web search                                                                                                     \u001b[0m",
+        "\u001b[31mfailed\u001b[0m                                                                                                                  \u001b[0m"
+      ]
+    },
+    {
+      "expanded": true,
+      "width": 20,
+      "lines": [
+        "\u001b[34m󰳽\u001b[0m Cursor web search \u001b[0m",
+        "\u001b[31mfailed\u001b[0m              \u001b[0m",
+        "  \u001b[31mfailed\u001b[0m            \u001b[0m"
+      ]
+    },
+    {
+      "expanded": true,
+      "width": 80,
+      "lines": [
+        "\u001b[34m󰳽\u001b[0m Cursor web search                                                             \u001b[0m",
+        "\u001b[31mfailed\u001b[0m                                                                          \u001b[0m",
+        "  \u001b[31mfailed\u001b[0m                                                                        \u001b[0m"
+      ]
+    },
+    {
+      "expanded": true,
+      "width": 120,
+      "lines": [
+        "\u001b[34m󰳽\u001b[0m Cursor web search                                                                                                     \u001b[0m",
+        "\u001b[31mfailed\u001b[0m                                                                                                                  \u001b[0m",
+        "  \u001b[31mfailed\u001b[0m                                                                                                                \u001b[0m"
+      ]
+    }
   ]
 ]

@@ -4,22 +4,6 @@ import {
 	CURSOR_REPLAY_GENERATE_IMAGE_RESULT_TITLE,
 	parseCursorReplayToolDetails,
 } from "../src/cursor-replay-tool-details.js";
-import { renderCursorReplayResult } from "../src/cursor-native-tool-display-replay.js";
-import { createRenderContext, createRenderTheme } from "./helpers/render-fixtures.js";
-
-const theme = createRenderTheme();
-
-function renderReplayResult(details: unknown, text = "ok", isError = false): string {
-	return renderCursorReplayResult(
-		{ content: [{ type: "text", text }], details },
-		{ expanded: false, isPartial: false },
-		theme,
-		createRenderContext({ isError, showImages: false }),
-		isError,
-	)
-		.render(120)
-		.join("\n");
-}
 
 describe("cursor replay tool details contract", () => {
 	it("parses known nativeEdit, nativeWrite, activity, generateImage, and genericFallback detail variants", () => {
@@ -134,29 +118,6 @@ describe("cursor replay tool details contract", () => {
 		expect(image).toMatchObject({ variant: "genericFallback", sourceToolName: "generateImage" });
 	});
 
-	it("renders nativeEdit replay through the typed edit renderer path", () => {
-		const rendered = renderReplayResult({
-			variant: "nativeEdit",
-			path: "src/example.ts",
-			diffString: "--- a/src/example.ts\n+++ b/src/example.ts\n@@ -1 +1 @@\n-old\n+new",
-			linesAdded: 1,
-		});
-		expect(rendered).toContain("✏️ edit update");
-		expect(rendered).toContain("  src/example.ts → +1/-0");
-	});
-
-	it("renders nativeWrite replay through the typed write renderer path", () => {
-		const rendered = renderReplayResult({
-			variant: "nativeWrite",
-			path: "notes.txt",
-			linesCreated: 2,
-			expandedText: "hello\nworld",
-		});
-		expect(rendered).toContain("write");
-		expect(rendered).toContain("notes.txt");
-		expect(rendered).toContain("2 lines");
-	});
-
 	it("produces typed generateImage details from the display spec producer", () => {
 		const display = buildCursorPiToolDisplayFromSpec({
 			rawName: "generateImage",
@@ -173,101 +134,4 @@ describe("cursor replay tool details contract", () => {
 		expect(details).not.toHaveProperty("title");
 	});
 
-	it("renders generateImage producer details with the current visible title and path", () => {
-		const display = buildCursorPiToolDisplayFromSpec({
-			rawName: "generateImage",
-			name: "generateImage",
-			args: { prompt: "a red circle" },
-			result: { status: "success", value: { filePath: "/tmp/generated.png" }, error: undefined },
-			options: { cwd: "/tmp", maxChars: 4000 },
-		});
-		const rendered = renderReplayResult(display.result.details, display.result.content[0]?.text ?? "");
-		expect(rendered).toContain(`${CURSOR_REPLAY_GENERATE_IMAGE_RESULT_TITLE} generated.png`);
-		expect(rendered).not.toContain("Cursor generateImage");
-	});
-
-	it("renders path-only edit errors with the activity error body", () => {
-		const display = buildCursorPiToolDisplayFromSpec({
-			rawName: "edit",
-			name: "edit",
-			args: { path: "src/a.ts" },
-			result: { status: "error", value: undefined, error: "no match" },
-			options: { cwd: "/repo", maxChars: 4000 },
-		});
-		const rendered = renderReplayResult(display.result.details, display.result.content[0]?.text ?? "", true);
-
-		expect(display.result.details).toMatchObject({
-			variant: "activity",
-			sourceToolName: "edit",
-			title: "Cursor edit",
-		});
-		expect(rendered).toContain("Cursor edit");
-		expect(rendered).toContain("Error: no match");
-		expect(rendered).not.toMatch(/^edit src\/a\.ts$/m);
-	});
-
-	it("renders successful path-only edits with native edit styling", () => {
-		const display = buildCursorPiToolDisplayFromSpec({
-			rawName: "edit",
-			name: "edit",
-			args: { path: "src/a.ts" },
-			result: { status: "success", value: { linesAdded: 0, linesRemoved: 0 }, error: undefined },
-			options: { cwd: "/repo", maxChars: 4000 },
-		});
-		const rendered = renderReplayResult(display.result.details, display.result.content[0]?.text ?? "");
-
-		expect(display.result.details).toMatchObject({
-			variant: "activity",
-			sourceToolName: "edit",
-			title: "Cursor edit",
-		});
-		expect(rendered).toContain("✏️ edit review");
-		expect(rendered).toContain("  src/a.ts → +0/-0");
-		expect(rendered).not.toContain("Cursor edit");
-	});
-
-	it("renders path-only write errors with the activity error body", () => {
-		const display = buildCursorPiToolDisplayFromSpec({
-			rawName: "write",
-			name: "write",
-			args: { path: "src/a.ts" },
-			result: { status: "error", value: undefined, error: "permission denied" },
-			options: { cwd: "/repo", maxChars: 4000 },
-		});
-		const rendered = renderReplayResult(display.result.details, display.result.content[0]?.text ?? "", true);
-
-		expect(display.result.details).toMatchObject({
-			variant: "activity",
-			sourceToolName: "write",
-			title: "Cursor write",
-		});
-		expect(rendered).toContain("Cursor write");
-		expect(rendered).toContain("Error: permission denied");
-		expect(rendered).not.toMatch(/^write src\/a\.ts$/m);
-	});
-
-	it("renders generateImage producer error details with the current visible title", () => {
-		const display = buildCursorPiToolDisplayFromSpec({
-			rawName: "generateImage",
-			name: "generateImage",
-			args: { prompt: "a red circle" },
-			result: { status: "error", value: undefined, error: "image generation failed" },
-			options: { cwd: "/tmp", maxChars: 4000 },
-		});
-		const rendered = renderCursorReplayResult(
-			{
-				content: display.result.content,
-				details: display.result.details,
-			},
-			{ expanded: false, isPartial: false },
-			theme,
-			createRenderContext({ isError: true, showImages: false }),
-			true,
-		)
-			.render(120)
-			.join("\n");
-		expect(rendered).toContain(CURSOR_REPLAY_GENERATE_IMAGE_RESULT_TITLE);
-		expect(rendered).not.toContain("Cursor generateImage");
-		expect(rendered).not.toMatch(/^image generation failed$/m);
-	});
 });

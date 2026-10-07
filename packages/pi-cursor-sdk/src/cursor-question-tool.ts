@@ -1,5 +1,4 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import { arePiToolsDisabled } from "./cursor-active-tools.js";
 import { parseEnvBoolean } from "./cursor-env-boolean.js";
@@ -253,11 +252,6 @@ export function registerCursorQuestionTool(pi: CursorQuestionToolExtensionApi): 
 			} finally {
 				emitCursorAskQuestionBlockedEvent(pi, { active: false });
 			}
-		},
-		renderCall(args, theme) {
-			const questions = normalizeQuestions(args as CursorAskQuestionParams);
-			const label = questions[0]?.question ?? "Ask the user";
-			return new Text(theme.fg("toolTitle", theme.bold("cursor question ")) + theme.fg("muted", label), 0, 0);
 		},
 	});
 
