@@ -57,15 +57,20 @@ export class ChillState {
     return call.done && (call.settled === true || call.group.calls.at(-1) !== call);
   }
 
-  /** Pi expands only the clicked card, which is the summary owner. Open the whole group with it. */
-  syncOpen(id: string, expanded: boolean): void {
+  /** Opens or folds the group that owns this card. Chill owns this state, not Pi's per-card expand. */
+  toggleGroup(id: string): void {
     const call = this.calls.get(id);
-    if (!this.enabled || !call || !this.isFolded(call)) return;
-    if (call.group.calls.filter((item) => this.isFolded(item)).at(-1) !== call) return;
-    if (!!call.group.open === expanded) return;
-    call.group.open = expanded;
-    // Defer: this runs inside the owner's own render pass.
-    queueMicrotask(() => this.refresh());
+    if (!call) return;
+    call.group.open = !call.group.open;
+    this.refresh();
+  }
+
+  /** Clickable header above the first card of an open group. */
+  header(id: string): string | undefined {
+    const call = this.calls.get(id);
+    if (!this.enabled || !call?.group.open || !this.isFolded(call)) return undefined;
+    if (call.group.calls.find((item) => this.isFolded(item)) !== call) return undefined;
+    return `${DIM} ${this.summary(call.group)}${RESET}`;
   }
 
   /** undefined keeps the normal card; [] hides it; the last folded card owns the group summary. */
@@ -74,12 +79,17 @@ export class ChillState {
     if (!this.enabled || !call || call.group.open || !this.isFolded(call)) return undefined;
     const finished = call.group.calls.filter((item) => this.isFolded(item));
     if (kind === "call" || finished.at(-1) !== call) return [];
-    const running = call.group.calls.some((item) => !this.isFolded(item));
+    return [`${DIM} ${this.summary(call.group)}${RESET}`];
+  }
+
+  private summary(group: Group): string {
+    const finished = group.calls.filter((item) => this.isFolded(item));
+    const running = group.calls.some((item) => !this.isFolded(item));
     const failures = finished.filter((item) => item.failed).length;
     const timed = finished.filter((item) => item.elapsedMs !== undefined);
     const duration = timed.length ? ` · ${formatElapsed(timed.reduce((total, item) => total + item.elapsedMs!, 0))}` : "";
     const tools = `${finished.length} ${finished.length === 1 ? "tool" : "tools"}`;
-    return [`${DIM}${running ? "Working" : "Worked"} · ${tools}${duration}${RESET}${failures ? ` ${RED}· ${failures} failed${RESET}` : ""}`];
+    return `${running ? "Working" : "Worked"} · ${tools}${duration}${RESET}${failures ? ` ${RED}· ${failures} failed` : ""}`;
   }
 
   restore(entries: readonly { type: string; message?: any }[]): void {
@@ -112,15 +122,30 @@ export function hasText(message: any): boolean {
 /** The live components consult state at render time, so earlier cards fold too. */
 export function chillRenderers(renderers: ToolRenderers, chill: ChillState): ToolRenderers {
   const wrap = (component: Component, context: any, kind: "call" | "result", expanded: boolean): Component => {
-    if (context?.invalidate) chill.watch(context.toolCallId, context.invalidate);
-    if (kind === "result") chill.syncOpen(context?.toolCallId, expanded);
+    const id = context?.toolCallId;
+    if (context?.invalidate) chill.watch(id, context.invalidate);
+    // Lines added above the card, so mouse rows shift down by this much.
+    let offset = 0;
+    let summary = false;
     return {
       invalidate: () => component.invalidate(),
       render(width) {
-        const folded = expanded ? undefined : chill.folded(context?.toolCallId, kind);
-        return folded === undefined ? component.render(width) : new WidthAwareLines(folded).render(width);
+        offset = 0;
+        const folded = expanded ? undefined : chill.folded(id, kind);
+        summary = !!folded?.length;
+        if (folded !== undefined) return new WidthAwareLines(folded).render(width);
+        const header = kind === "call" ? chill.header(id) : undefined;
+        if (header === undefined) return component.render(width);
+        offset = 1;
+        return [...new WidthAwareLines([header]).render(width), ...component.render(width)];
       },
-    };
+      handleMouse(event) {
+        const click = event.type === "click" && event.button === "left";
+        if (summary) return click ? (chill.toggleGroup(id), { handled: true }) : undefined;
+        if (offset && event.y < offset) return click ? (chill.toggleGroup(id), { handled: true }) : undefined;
+        return (component as any).handleMouse?.({ ...event, y: event.y - offset });
+      },
+    } as Component;
   };
   return {
     ...renderers,

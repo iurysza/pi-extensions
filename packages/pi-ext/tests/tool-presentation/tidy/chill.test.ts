@@ -212,22 +212,25 @@ test("tool result messages do not split a group", async () => {
   } finally { await h.emit("session_shutdown"); }
 });
 
-test("expanding the summary card opens every card in its group", async () => {
+test("clicking the summary opens the group and clicking its header folds it", async () => {
   const h = await rendererHarness({ chill: true });
+  const click = { type: "click", button: "left", x: 0, y: 0, screenX: 0, screenY: 0 } as any;
   try {
     const renderers = h.resolvers[0]("memo_note", () => undefined)!;
     await start(h, "a"); await finish(h, "a");
     await start(h, "b"); await finish(h, "b", "memo_note", output("Saved as #2.", { piTidyElapsedMs: 2000 }));
+    const firstCall = renderers.renderCall!({ line: "First" }, theme, context("a", { line: "First" }));
     const first = renderers.renderResult!(output("Saved as #1."), { expanded: false, isPartial: false }, theme, context("a"));
+    const owner = renderers.renderResult!(output("Saved as #2."), { expanded: false, isPartial: false }, theme, context("b"));
     assert.deepEqual(first.render(80), []);
-    const owner = renderers.renderResult!(output("Saved as #2."), { expanded: true, isPartial: false }, theme, context("b", {}, true));
-    owner.render(80);
-    await new Promise((resolve) => queueMicrotask(() => resolve(undefined)));
+    assert.match(plain(owner.render(80).join("\n")), / Worked · 2 tools · 3s/);
+    assert.deepEqual(owner.handleMouse!(click), { handled: true });
+    const header = plain(firstCall.render(80)[0]);
+    assert.match(header, / Worked · 2 tools · 3s/, "open group shows a header");
     assert.notDeepEqual(first.render(80), [], "sibling card shows");
-    assert.doesNotMatch(plain(first.render(80).join("\n")), /Work(ed|ing)/);
     assert.doesNotMatch(plain(owner.render(80).join("\n")), /Worked/);
-    const closed = renderers.renderResult!(output("Saved as #2."), { expanded: false, isPartial: false }, theme, context("b"));
-    assert.match(plain(closed.render(80).join("\n")), /Worked · 2 tools · 3s/, "collapsing folds the group again");
+    assert.deepEqual(firstCall.handleMouse!(click), { handled: true });
+    assert.match(plain(owner.render(80).join("\n")), / Worked · 2 tools · 3s/, "header click folds the group");
     assert.deepEqual(first.render(80), []);
   } finally { await h.emit("session_shutdown"); }
 });
