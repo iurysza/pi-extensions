@@ -380,7 +380,7 @@ function createHarnessEventApi(): EventHarness {
 	};
 
 	return {
-		on: on as MockFn<HarnessOn> & HarnessOn,
+		on: on as MockFn<HarnessOn>,
 		invokeEvent,
 		invokeEventWithContext,
 		runSessionStart,

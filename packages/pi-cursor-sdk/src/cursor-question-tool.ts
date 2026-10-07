@@ -1,4 +1,3 @@
-import { ownedCard, cardSpecs, type CardAPI } from "@iurysza/pi-ext/tool-cards";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
@@ -44,7 +43,7 @@ interface CursorQuestionDetails {
 	cancelled: boolean;
 }
 
-type CursorQuestionToolExtensionApi = Pick<ExtensionAPI, "getActiveTools" | "registerTool" | "setActiveTools"> & CursorModelLifecycleExtensionApi & CardAPI;
+interface CursorQuestionToolExtensionApi extends Pick<ExtensionAPI, "getActiveTools" | "registerTool" | "setActiveTools">, CursorModelLifecycleExtensionApi {}
 
 type RawQuestionOption = string | { label?: string; value?: string; description?: string };
 
@@ -236,7 +235,6 @@ export function registerCursorQuestionTool(pi: CursorQuestionToolExtensionApi): 
 			const label = questions[0]?.question ?? "Ask the user";
 			return new Text(theme.fg("toolTitle", theme.bold("cursor question ")) + theme.fg("muted", label), 0, 0);
 		},
-	  ...ownedCard(pi, cardSpecs.cursor_ask_question),
 	});
 
 	registerCursorModelLifecycle(pi, (ctx) => {

@@ -1,4 +1,3 @@
-import { ownedCard, cardSpecs } from "../tool-presentation/tidy/cards/index.js";
 /**
  * Handoff extension — transfer context to a new pi session in a split or tab.
  *
@@ -793,6 +792,5 @@ export default function (pi: ExtensionAPI) {
 				details: { goal: effectiveGoal, tab: useTab },
 			};
 		},
-	  ...ownedCard(pi, cardSpecs.handoff),
 	});
 }

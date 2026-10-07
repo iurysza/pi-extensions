@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
@@ -73,11 +73,6 @@ describe("non-interactive project trust CLI/provider contract", () => {
 		expect(extract.error).toBeUndefined();
 		expect(extract.status, extract.stderr).toBe(0);
 		packedPackageRoot = join(extractDir, "package");
-		// npm installs declared dependencies for real packages. The tar-only fixture
-		// needs the local workspace dependency explicitly, without registry access.
-		const scopeDir = join(packedPackageRoot, "node_modules", "@iurysza");
-		mkdirSync(scopeDir, { recursive: true });
-		symlinkSync(resolve(packageRoot, "../pi-ext"), join(scopeDir, "pi-ext"), "junction");
 		expect(existsSync(join(packedPackageRoot, "src", "index.ts"))).toBe(true);
 		probeExtensionPath = join(packedPackageRoot, "src", "project-trust-contract-probe.ts");
 		writeFileSync(probeExtensionPath, `

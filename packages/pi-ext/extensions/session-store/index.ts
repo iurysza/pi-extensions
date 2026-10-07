@@ -1,4 +1,3 @@
-import { ownedCard, cardSpecs } from "../tool-presentation/tidy/cards/index.js";
 /**
  * session-store — Full-text search across all pi sessions via SQLite FTS5 + BM25
  *
@@ -272,7 +271,6 @@ export default function (pi: ExtensionAPI) {
       }
       return container;
     },
-    ...ownedCard(pi, cardSpecs.search_sessions),
   });
 
   // ── session_start — catch-up scan ──

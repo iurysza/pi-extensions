@@ -1,4 +1,3 @@
-import { ownedCard, cardSpecs } from "@iurysza/pi-ext/tool-cards";
 import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
@@ -389,7 +388,6 @@ export function registerOptMem(pi: ExtensionAPI, deps: OptMemDeps = {}): void {
       "Record one permanent memory: one line of at most 280 bytes. If the result asks for a compression, call memo_nap before your next action.",
     parameters: Type.Object({ line: Type.String({ description: "The memory, one line, at most 280 bytes" }) }),
     execute: async (_id, params) => runTool(TOOL_NOTE, ["note", params.line]),
-    ...ownedCard(pi, cardSpecs.memo_note),
   });
 
   pi.registerTool({
@@ -402,7 +400,6 @@ export function registerOptMem(pi: ExtensionAPI, deps: OptMemDeps = {}): void {
       line: Type.String({ description: "The merged summary, one line, at most 280 bytes" }),
     }),
     execute: async (_id, params) => runTool(TOOL_NAP, ["nap", params.range, params.line]),
-    ...ownedCard(pi, cardSpecs.memo_nap),
   });
 
   pi.registerTool({
@@ -411,7 +408,6 @@ export function registerOptMem(pi: ExtensionAPI, deps: OptMemDeps = {}): void {
     description: "Open one node of the memory tree, like 16-31, into its two halves.",
     parameters: Type.Object({ range: Type.String({ description: "Block id as the wake view prints it, like 16-31" }) }),
     execute: async (_id, params) => runTool(TOOL_ZOOM, ["zoom", params.range]),
-    ...ownedCard(pi, cardSpecs.memo_zoom),
   });
 
   pi.registerTool({
@@ -420,7 +416,6 @@ export function registerOptMem(pi: ExtensionAPI, deps: OptMemDeps = {}): void {
     description: "Search every memory ever recorded with a case-insensitive regex.",
     parameters: Type.Object({ regex: Type.String({ description: "Case-insensitive regular expression" }) }),
     execute: async (_id, params) => runTool(TOOL_RECALL, ["recall", params.regex]),
-    ...ownedCard(pi, cardSpecs.memo_recall),
   });
 }
 

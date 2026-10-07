@@ -13,8 +13,7 @@ async function withWorkspace(run) {
 
 test("registers the wtf tool", () => {
   let tool;
-  piWtf({ events: {}, on() {}, registerTool(value) { tool = value; } });
-  assert.equal(tool.renderShell, "self");
+  piWtf({ registerTool(value) { tool = value; } });
   assert.equal(tool.name, "wtf");
   assert.match(tool.description, /WTF\.md/);
 });

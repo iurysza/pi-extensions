@@ -1,6 +1,6 @@
 import type { ToolRenderers } from "@earendil-works/pi-coding-agent";
 import { Box, Container } from "@earendil-works/pi-tui";
-import { loadTidyIcons, loadTidyMode, loadTidyState, type TidyMode } from "../config.js";
+import { loadTidyIcons, loadTidyMode, type TidyMode } from "../config.js";
 import { readToolTiming, ToolTimeline } from "../timeline.js";
 import { renderCard, TimelineTool, WidthAwareLines } from "./card.js";
 import { rawExpanded, type CardSpec } from "./spec.js";
@@ -105,9 +105,4 @@ export function cardRenderers(spec: CardSpec, runtime?: ReturnType<typeof cardRu
       return new TimelineTool(expanded, timing, theme);
     },
   };
-}
-/** First-party registrations keep their execute and schema untouched. */
-export function ownedCard(pi: CardAPI, spec: CardSpec) {
-  if (!loadTidyState().enabled) return {};
-  return cardRenderers(spec, cardRuntime(pi));
 }

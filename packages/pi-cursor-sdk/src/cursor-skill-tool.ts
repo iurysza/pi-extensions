@@ -1,4 +1,3 @@
-import { ownedCard, cardSpecs, type CardAPI } from "@iurysza/pi-ext/tool-cards";
 import type { Dirent } from "node:fs";
 import { readdir, readFile } from "node:fs/promises";
 import { dirname, join, relative } from "node:path";
@@ -23,7 +22,7 @@ const AVAILABLE_SKILLS_SECTION_PATTERN = /\n\nThe following skills provide speci
 const MAX_SKILL_RESOURCES = 80;
 const RESOURCE_DIR_NAMES = ["scripts", "references", "assets"] as const;
 
-type CursorSkillToolExtensionApi = Pick<ExtensionAPI, "getActiveTools" | "registerTool" | "setActiveTools"> & CursorModelLifecycleExtensionApi & CardAPI;
+type CursorSkillToolExtensionApi = Pick<ExtensionAPI, "getActiveTools" | "registerTool" | "setActiveTools"> & CursorModelLifecycleExtensionApi;
 
 type CursorActivateSkillParams = {
 	name?: string;
@@ -230,7 +229,6 @@ export function registerCursorSkillTool(pi: CursorSkillToolExtensionApi): void {
 				);
 			}
 		},
-	  ...ownedCard(pi, cardSpecs.cursor_activate_skill),
 	});
 
 	const clearSkillsAndSync = (model: ExtensionContext["model"], runtime: CursorRuntime = "local"): void => {

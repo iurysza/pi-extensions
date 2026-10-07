@@ -4,7 +4,6 @@ import { resolve } from "node:path";
 import { test } from "node:test";
 import { cardSpecs, specForTool, renderCard, WidthAwareLines, cardRenderers, cardRuntime } from "../../extensions/tool-presentation/tidy/cards/index.js";
 import { mcpSummary } from "../../extensions/tool-presentation/tidy/cards/specs/mcp.js";
-import { adoptFactory } from "../../extensions/tool-presentation/tidy/cards/adopter.js";
 import { visibleWidth } from "@earendil-works/pi-tui";
 
 const fixtures = [
@@ -153,26 +152,4 @@ test("card replay restores recorded timing but never invents missing duration", 
     assert.equal(runtime.timeline.get("untimed"), undefined);
   }
   assert.equal(JSON.stringify(messages), before);
-});
-test("factory proxy retains execute identity and skips registered names", async () => {
-  const { pi, tools } = api(["Agent"]); const warnings: string[] = [];
-  const execute = async () => ({ content: [], details: undefined });
-  await adoptFactory(pi, { name: "subagents", version: "0.19.0", testedVersion: "0.19.0", factory: (proxy) => {
-    proxy.registerTool({ name: "Agent", execute } as any);
-    proxy.registerTool({ name: "get_subagent_result", execute } as any);
-    proxy.registerTool({ name: "get_subagent_result", execute } as any);
-  } }, (s) => warnings.push(s));
-  assert.deepEqual(tools.map((t) => t.name), ["Agent", "get_subagent_result"]);
-  assert.equal(tools[1].execute, execute);
-  assert.equal(tools[1].renderShell, "self");
-  assert.equal(warnings.length, 1);
-});
-test("factory adoption refuses unknown versions and uninitialized registration", async () => {
-  const { pi } = api(); let called = false; const warnings: string[] = [];
-  const candidate = { name: "MCP", version: "next", testedVersion: "1.0.0", factory: () => { called = true; } };
-  assert.equal(await adoptFactory(pi, candidate, (s) => warnings.push(s)), false);
-  pi.getAllTools = () => { throw new Error("not initialized"); };
-  assert.equal(await adoptFactory(pi, { ...candidate, version: "1.0.0" }, (s) => warnings.push(s)), false);
-  assert.equal(called, false);
-  assert.equal(warnings.length, 2);
 });
