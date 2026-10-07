@@ -27,7 +27,9 @@ export const firstLine = (result: CardResult): string => resultText(result).trim
 export const shortUrl = (value: unknown): string => oneLine(value).replace(/^https?:\/\/(www\.)?/, "");
 export const basename = (value: unknown): string => oneLine(value).split(/[\\/]/).pop() ?? "";
 export const joinFacts = (...facts: unknown[]): string => facts.filter((v) => v !== undefined && v !== null && v !== "").join(" · ");
-export const count = (value: unknown, noun: string): string => typeof value === "number" ? `${value} ${noun}` : "";
+/** `noun` is the plural form; a count of exactly 1 drops its trailing "s". */
+export const count = (value: unknown, noun: string): string =>
+	typeof value === "number" ? `${value} ${value === 1 && noun.endsWith("s") ? noun.slice(0, -1) : noun}` : "";
 export const compactNumber = (value: number): string => value >= 1000 ? `${Number((value / 1000).toFixed(1))}k` : String(value);
 export const detailsError = (r: CardResult): boolean => Boolean(r.details?.error);
 export const rawExpanded = (r: CardResult): string[] => {

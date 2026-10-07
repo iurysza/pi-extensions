@@ -21,12 +21,12 @@ export const miscSpecs: Record<string, CardSpec> = {
   cmux_workspace: { ...base, icon: "󰯌", color: MAGENTA, label: "pane", headline: (a) => `pane ${a.action ?? ""}`, target: (a) => a.surface_id ?? a.direction ?? "", summary: firstLine },
   cmux_notify: { ...base, icon: "󰂞", color: BLUE, label: "notify", headline: (a) => a.title, target: (a) => a.subtitle ?? "", summary: () => "sent" },
   cursor_ask_question: { ...base, icon: "󱜺", color: BLUE, label: "ask", headline: (a) => a.questions?.[0]?.question ?? a.questions?.[0]?.prompt ?? a.question ?? a.prompt ?? "ask the user",
-    target: (a) => `${a.questions?.length ?? 1} questions`, running: () => "waiting for you", failed: (r) => detailsError(r) || !!r.details?.cancelled,
+    target: (a) => count(a.questions?.length ?? 1, "questions"), running: () => "waiting for you", failed: (r) => detailsError(r) || !!r.details?.cancelled,
     summary: (r) => (r.details?.answers ?? []).map((a: any) => a.answer ?? "cancelled").join("; ") },
   cursor_activate_skill: { ...base, icon: "󱐋", color: MAGENTA, label: "skill", headline: () => "activate skill", target: (a) => a.name,
     summary: (r) => count(r.details?.resources?.length, "resources") },
   ask_user: { ...base, icon: "󱜸", color: BLUE, label: "ask", headline: (a) => a.question,
-    target: (a) => a.options?.length ? `${a.options.length} options${a.allowMultiple ? " · multi" : ""}` : "freeform",
+    target: (a) => a.options?.length ? `${count(a.options.length, "options")}${a.allowMultiple ? " · multi" : ""}` : "freeform",
     running: () => "waiting for you", failed: (r) => !!r.details?.cancelled || detailsError(r),
     summary: (r) => {
       const response = r.details?.response;
@@ -42,7 +42,7 @@ export const miscSpecs: Record<string, CardSpec> = {
     expanded: (r) => [(r.details?.skillNames ?? []).join(", ")] },
   search_external_files: { ...base, icon: "󰈞", color: CYAN, label: "extfind", headline: () => "find external files", target: (a) => a.pattern,
     summary: (r) => `${r.details?.totalFound ?? 0} files${r.details?.dirCount === undefined ? "" : ` in ${r.details.dirCount} dirs`}` },
-  choose_visual_artifact_direction: { ...base, icon: "󰏘", color: BLUE, label: "look", headline: (a) => a.question, target: (a) => `${a.directions?.length ?? 0} directions`,
+  choose_visual_artifact_direction: { ...base, icon: "󰏘", color: BLUE, label: "look", headline: (a) => a.question, target: (a) => count(a.directions?.length ?? 0, "directions"),
     running: () => "waiting for you", failed: (r) => !!r.details?.cancelled || detailsError(r), summary: (r) => r.details?.selected?.title ?? "cancelled",
     expanded: (r, a) => (r.details?.directions ?? a.directions ?? []).flatMap((d: any) => [`${d.title === r.details?.selected?.title ? "●" : "○"} ${d.title}: ${d.description}`, d.instruction]) },
   create_visual_artifact: { ...base, icon: "󱕍", color: YELLOW, label: "artifact", headline: (a) => a.title, target: (a) => joinFacts(a.artifactType ?? "artifact", `${a.nodes?.length ?? 0} nodes`),

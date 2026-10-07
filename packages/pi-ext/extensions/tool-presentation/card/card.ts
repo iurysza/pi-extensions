@@ -293,15 +293,18 @@ export function renderCard({ spec, args = {}, result = {} }: CardModel, opts: Ca
 	const detail = singleLine(spec.target(rest, result));
 	// Keep the target on failures too; width fitting preserves the useful error
 	// tail while the command/path answers what actually failed.
+	// No target: new cards show the summary alone rather than a dangling arrow.
+	// Built-ins (legacy) keep their tested "→ summary" shape.
+	const bareArrow = spec.legacy ? `${DIM}→${RESET} ` : "";
 	const line2 = !detail
-		? `${DIM}→${RESET} ${summary}`
+		? `${bareArrow}${summary}`
 		: `${DIM}${detail}${RESET} ${DIM}→${RESET} ${summary}`;
 	let lines: string[];
 	if (mode === "reasoning") {
 		lines = [`${runningPrefix}${toolLabel} ${headline} ${DIM}→${RESET} ${summary}`];
 	} else if (mode === "result") {
 		const resultDetail = !detail ? "" : ` ${DIM}${detail}${RESET}`;
-		lines = [`${runningPrefix}${toolLabel}${resultDetail} ${DIM}→${RESET} ${summary}`];
+		lines = [`${runningPrefix}${toolLabel}${resultDetail}${resultDetail || spec.legacy ? ` ${DIM}→${RESET}` : ""} ${summary}`];
 	} else {
 		lines = [
 			`${runningPrefix}${toolLabel} ${headline}`,

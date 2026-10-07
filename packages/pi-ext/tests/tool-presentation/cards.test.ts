@@ -41,6 +41,16 @@ for (const [name, spec] of Object.entries(cardSpecs)) {
     assert.ok(spec.label.length <= 8);
   });
 }
+test("counts of one are singular and cards without a target have no dangling arrow", () => {
+  const strip = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, "");
+  const ask = renderCard({ spec: specForTool({ name: "ask_user" })!, args: { question: "Pick", options: [{ title: "a" }] }, result: { content: [{ type: "text", text: "a" }], details: { answer: "a" } } }, { icons: false });
+  assert.match(strip(ask[1]), /^1 option →/);
+  const code = renderCard({ spec: specForTool({ name: "codemode" })!, args: { code: "// one" }, result: { content: [{ type: "text", text: "ok" }], details: { calls: [{ name: "read", status: "done" }] } } }, { icons: false });
+  assert.match(strip(code[1]), /^1 call →/);
+  const note = renderCard({ spec: specForTool({ name: "memo_note" })!, args: { line: "x" }, result: { content: [{ type: "text", text: "Saved #0" }] } }, { icons: false });
+  assert.doesNotMatch(strip(note[1]), /^\s*→/);
+});
+
 test("memory summaries use verified CLI wording", () => {
   const text = (text: string) => ({ content: [{ type: "text", text }] });
   assert.equal(cardSpecs.memo_note.summary(text("Saved as #83.\n\nCompress memories #82-83 into one line."), {}), "saved #83 · nap requested");

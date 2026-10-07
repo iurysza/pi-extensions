@@ -1,13 +1,13 @@
 import { highlightCode } from "@earendil-works/pi-coding-agent";
 import { MAGENTA, DIM, RESET, style } from "../../tidy/render.js";
 import { formatElapsed } from "../card.js";
-import { firstLine, joinFacts, resultText, type CardSpec } from "../spec.js";
+import { count, firstLine, joinFacts, resultText, type CardSpec } from "../spec.js";
 const output = (r: any) => resultText(r).replace(/^Script (?:completed|failed)\r?\nWall time [^\n]*\r?\nOutput:\r?\n?/i, "").replace(/^Script completed[^\n]*\n?\s*/i, "").trimEnd();
 export const codemodeSpec: CardSpec = {
   icon: "󰅩", color: MAGENTA, label: "code",
   headline: (a) => String(a.code ?? "").split("\n").map((l) => l.match(/^\s*\/\/\s*(?!@options:)(.+)/)?.[1]).find(Boolean) ?? "run script",
   target: (_a, r) => { const calls = r?.details?.calls; if (!Array.isArray(calls)) return ""; const failures = calls.filter((c: any) => c.status === "error" || c.status === "cancelled").length;
-    return joinFacts(`${calls.length} calls`, failures ? `${failures} failed` : "", calls.find((c: any) => c.status === "running")?.name ? `${calls.find((c: any) => c.status === "running").name} running` : ""); },
+    return joinFacts(count(calls.length, "calls"), failures ? `${failures} failed` : "", calls.find((c: any) => c.status === "running")?.name ? `${calls.find((c: any) => c.status === "running").name} running` : ""); },
   summary: (r) => { const cost = (r.details?.calls ?? []).reduce((total: number, c: any) => total + (typeof c.cost === "number" ? c.cost : 0), 0);
     return joinFacts(output(r).trim().split("\n")[0] || "done", cost ? `$${cost.toFixed(2)}` : ""); },
   errorSummary: (r) => output(r).trim().split("\n")[0] || "script failed",
