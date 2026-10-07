@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
 import { cardSpecs, specForTool, renderCard, WidthAwareLines, cardRenderers, cardRuntime } from "../../extensions/tool-presentation/tidy/cards/index.js";
+import { cardParts, ExpandedCard, layoutBody } from "../../extensions/tool-presentation/tidy/cards/card.js";
 import { mcpSummary } from "../../extensions/tool-presentation/tidy/cards/specs/mcp.js";
 import { visibleWidth } from "@earendil-works/pi-tui";
 
@@ -75,15 +76,51 @@ test("cancelled questions and rejected plans are semantic failures", () => {
   assert.ok(cardSpecs.plannotator_submit_plan.failed!({ details: { approved: false } }));
   assert.ok(cardSpecs.plannotator_mark_done.failed!({ details: { completed: false } }));
 });
-test("expanded output is capped, pretty printed, and points at full output", () => {
+test("expanded output is pretty printed and keeps every line until render", () => {
   const spec = cardSpecs.cmux_browser;
   const result = { content: [{ type: "text", text: Array.from({ length: 512 }, (_, i) => String(i)).join("\n") }], details: { fullOutputPath: "/tmp/full.txt" } };
   const lines = renderCard({ spec, args: { action: "snapshot" }, result }, { expanded: true });
-  assert.equal(lines.length, 204);
-  assert.match(plain(lines.at(-2)!), /312 more lines/);
+  assert.equal(lines.length, 2 + 512 + 1);
   assert.match(plain(lines.at(-1)!), /full output: \/tmp\/full.txt/);
   const json = renderCard({ spec, args: {}, result: { content: [{ type: "text", text: '{"ok":true}' }] } }, { expanded: true });
   assert.ok(json.some((line) => line.includes('"ok": true')));
+});
+test("expanded cards wrap long lines instead of cutting them off", () => {
+  const long = "alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu";
+  const result = { content: [{ type: "text", text: long }] };
+  const card = new ExpandedCard(() => cardParts({ spec: cardSpecs.cmux_browser, args: { action: "snapshot" }, result }, { expanded: true }));
+  const rows = card.render(30).map(plain);
+  assert.ok(rows.every((row) => visibleWidth(row) <= 30));
+  assert.ok(!rows.slice(2).some((row) => row.includes("…")), "body rows are never cut");
+  assert.equal(rows.slice(2).map((row) => row.trim()).join(" "), long, "all words survive");
+  assert.ok(rows.slice(2).every((row) => row.startsWith("  ")), "continuation rows keep the indent");
+});
+test("the expanded limit counts wrapped rows and keeps the full output note", () => {
+  const result = { content: [{ type: "text", text: Array.from({ length: 50 }, (_, i) => `line ${i} ${"x ".repeat(20)}`).join("\n") }], details: { fullOutputPath: "/tmp/full.txt" } };
+  const parts = () => cardParts({ spec: cardSpecs.cmux_browser, args: { action: "snapshot" }, result }, { expanded: true });
+  const rows = new ExpandedCard(parts, undefined, () => 10).render(30).map(plain);
+  // Head, then ten body rows, then the hidden-line note, then the full output path.
+  assert.equal(rows.length, 2 + 10 + 2);
+  assert.match(rows.at(-2)!, /45 more lines/);
+  assert.match(rows.at(-1)!, /full output: \/tmp\/full.txt/);
+  assert.equal(new ExpandedCard(parts, undefined, () => 0).render(30).filter((row) => /more line/.test(row)).length, 0, "0 means no limit");
+});
+test("layoutBody shows the start of one line that is longer than the limit", () => {
+  const rows = layoutBody([`  ${"word ".repeat(40)}`], 20, 3).map(plain);
+  assert.equal(rows.length, 4);
+  assert.match(rows.at(-1)!, /1 more line\b/);
+});
+test("expanded cards reuse their rows until width, limit or content changes", () => {
+  let calls = 0;
+  const parts = () => { calls++; return { head: ["h"], body: ["  a"], tail: [] }; };
+  let limit = 500;
+  const card = new ExpandedCard(parts, undefined, () => limit);
+  const first = card.render(40);
+  assert.equal(card.render(40), first, "same array, no re-wrap");
+  assert.notEqual(card.render(41), first);
+  limit = 1;
+  assert.notEqual(card.render(41), card.render(40));
+  assert.ok(calls >= 4);
 });
 test("codemode keeps script and nested calls out of collapsed view", () => {
   const fixture = fixtures.find((f: any) => f.name === "codemode" && f.state === "success");

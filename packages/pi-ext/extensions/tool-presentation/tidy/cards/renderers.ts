@@ -1,8 +1,8 @@
 import type { ToolRenderers } from "@earendil-works/pi-coding-agent";
 import { Box, Container } from "@earendil-works/pi-tui";
-import { loadTidyIcons, loadTidyMode, type TidyMode } from "../config.js";
+import { loadTidyExpandedMaxLines, loadTidyIcons, loadTidyMode, type TidyMode } from "../config.js";
 import { readToolTiming, ToolTimeline } from "../timeline.js";
-import { renderCard, TimelineTool, WidthAwareLines } from "./card.js";
+import { cardParts, ExpandedCard, renderCard, TimelineTool, WidthAwareLines } from "./card.js";
 import { rawExpanded, type CardSpec } from "./spec.js";
 
 interface CardReplayContext {
@@ -49,8 +49,9 @@ export function cardRuntime(pi: CardAPI, timeline = new ToolTimeline(), isReplay
   return runtime;
 }
 export function cardRenderers(spec: CardSpec, runtime?: ReturnType<typeof cardRuntime>, original?: ToolRenderers,
-  settings: { mode: TidyMode; icons: boolean } = { mode: loadTidyMode(), icons: loadTidyIcons() }) {
+  settings: { mode: TidyMode; icons: boolean; expandedMaxLines?: number } = { mode: loadTidyMode(), icons: loadTidyIcons(), expandedMaxLines: loadTidyExpandedMaxLines() }) {
   const { mode, icons } = settings;
+  const maxLines = () => settings.expandedMaxLines ?? loadTidyExpandedMaxLines();
   return {
     renderShell: "self" as const,
     renderCall(args: any, theme: any, context: any) {
@@ -78,10 +79,14 @@ export function cardRenderers(spec: CardSpec, runtime?: ReturnType<typeof cardRu
       const hasImages = result.content?.some((block: { type: string }) => block.type === "image");
       const useOriginal = options?.expanded && original && (!spec.expanded || hasImages);
       const bg = (text: string) => theme.bg(partial ? "toolPendingBg" : failed ? "toolErrorBg" : "toolSuccessBg", text);
-      const content = new WidthAwareLines(() => renderCard({ spec: spec.expanded ? spec : { ...spec, expanded: rawExpanded }, args: context?.args ?? {}, result }, {
+      const parts = () => cardParts({ spec: spec.expanded ? spec : { ...spec, expanded: rawExpanded }, args: context?.args ?? {}, result }, {
         mode, icons, isPartial: partial, expanded: options?.expanded && !useOriginal, isError: context?.isError,
         elapsedMs: timing()?.elapsedMs ?? (timing()?.startedAt === undefined ? undefined : Math.max(0, Date.now() - timing()!.startedAt!)),
-      }), bg);
+      });
+      // Expanded cards wrap their body; collapsed cards keep every row to one line.
+      const content = options?.expanded && !useOriginal && !partial
+        ? new ExpandedCard(parts, bg, maxLines)
+        : new WidthAwareLines(() => { const { head, body, tail } = parts(); return [...head, ...body, ...tail]; }, bg);
       if (!useOriginal) return new TimelineTool(content, timing, theme);
 
       // Keep native renderer state and lastComponent separate from the card wrapper.

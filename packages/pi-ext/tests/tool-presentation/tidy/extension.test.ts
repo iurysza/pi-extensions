@@ -57,6 +57,7 @@ const absentIntegration = () => ({
 });
 const hermeticExtension = createTidyExtension({
   createIntegration: absentIntegration,
+  loadExpandedMaxLines: () => 500,
 });
 
 async function loadWith(value: string): Promise<Registrations> {
@@ -705,7 +706,7 @@ test("status reports an active environment override without reloading", async ()
       reloads++;
     },
   });
-  assert.match(notices[0], /off, mode default, icons on \(PI_TIDY_TOOLS override\)/);
+  assert.match(notices[0], /off, mode default, icons on, expanded output up to 500 lines \(PI_TIDY_TOOLS override\)/);
   assert.equal(reloads, 0);
 });
 
@@ -717,6 +718,7 @@ test("icons commands persist independently from the enablement environment overr
     loadMode: () => "result",
     loadIcons: () => false,
     saveIcons: async (icons) => { saved.push(icons); },
+    loadExpandedMaxLines: () => 500,
     createIntegration: absentIntegration,
   });
   await iconless({
@@ -741,8 +743,8 @@ test("icons commands persist independently from the enablement environment overr
   assert.match(notices[0], /icons are off/);
   assert.match(notices[1], /already off/);
   assert.match(notices[2], /icons set to on; reloading/);
-  assert.match(notices[3], /off, mode result, icons off \(PI_TIDY_TOOLS override\)/);
-  assert.match(notices[4], /off, mode result, icons off \(PI_TIDY_TOOLS override\)/);
+  assert.match(notices[3], /off, mode result, icons off, expanded output up to 500 lines \(PI_TIDY_TOOLS override\)/);
+  assert.match(notices[4], /off, mode result, icons off, expanded output up to 500 lines \(PI_TIDY_TOOLS override\)/);
   assert.match(notices[5], /icons on\|off\|status/);
 });
 
@@ -1582,6 +1584,9 @@ test("registered APIs expose exact completions and reason-first tool metadata", 
     { value: "icons on", label: "icons on" },
     { value: "icons off", label: "icons off" },
     { value: "icons status", label: "icons status" },
+    { value: "lines status", label: "lines status" },
+    { value: "lines 500", label: "lines 500" },
+    { value: "lines 0", label: "lines 0" },
     { value: "pi-fff setup", label: "pi-fff setup" },
     { value: "pi-fff status", label: "pi-fff status" },
     { value: "pi-fff teardown", label: "pi-fff teardown" },
@@ -1609,4 +1614,31 @@ test("registered APIs expose exact completions and reason-first tool metadata", 
     assert.equal(Object.keys(tool.parameters.properties)[0], "reasoning");
     assert.equal(tool.parameters.required[0], "reasoning");
   }
+});
+
+test("/tidy lines saves the expanded output limit without a reload", async () => {
+  const saved: number[] = [];
+  const commands = new Map<string, any>();
+  await createTidyExtension({
+    loadState: () => ({ enabled: false, source: "default" }),
+    loadExpandedMaxLines: () => 500,
+    saveExpandedMaxLines: async (lines) => { saved.push(lines); },
+    createIntegration: absentIntegration,
+  })({
+    on() {}, registerShortcut() {}, registerMessageRenderer() {}, registerTool() {},
+    registerCommand(name: string, options: any) { commands.set(name, options); },
+  } as any);
+  const notices: string[] = [];
+  let reloads = 0;
+  const context = { ui: { notify: (message: string) => notices.push(message) }, reload: async () => { reloads++; } };
+  const tidy = commands.get("tidy");
+  for (const action of ["lines status", "lines 500", "lines 120", "lines 0", "lines status", "lines -3"]) await tidy.handler(action, context);
+  assert.deepEqual(saved, [120, 0]);
+  assert.equal(reloads, 0);
+  assert.match(notices[0], /up to 500 lines/);
+  assert.match(notices[1], /already shows up to 500 lines/);
+  assert.match(notices[2], /now shows up to 120 lines/);
+  assert.match(notices[3], /now shows every line/);
+  assert.match(notices[4], /shows every line/);
+  assert.match(notices[5], /lines <n>\|status/);
 });
