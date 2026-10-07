@@ -70,6 +70,12 @@ export function loadTidyMode(configPath = CONFIG_PATH): TidyMode {
 	return "default";
 }
 
+/** Chill is opt-in. Session toggles never write this setting. */
+export function loadTidyChill(configPath = CONFIG_PATH): boolean {
+	try { return JSON.parse(readFileSync(configPath, "utf8"))?.chill === true; }
+	catch { return false; }
+}
+
 async function updateConfig(update: Record<string, unknown>, configPath: string): Promise<void> {
 	let current: Record<string, unknown> = {};
 	try {

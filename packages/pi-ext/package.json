@@ -3,6 +3,9 @@
   "version": "0.2.0",
   "description": "An attributed fork of tomsej/pi-ext with additional Pi workflows and integrations.",
   "type": "module",
+  "exports": {
+    "./*": "./*"
+  },
   "keywords": [
     "pi-package",
     "pi-extension"
@@ -36,10 +39,10 @@
     "typebox": "*"
   },
   "devDependencies": {
-    "@earendil-works/pi-agent-core": "^0.80.10",
-    "@earendil-works/pi-ai": "^0.80.10",
-    "@earendil-works/pi-coding-agent": "^0.80.10",
-    "@earendil-works/pi-tui": "^0.80.10",
+    "@earendil-works/pi-agent-core": "1.0.4",
+    "@earendil-works/pi-ai": "1.0.4",
+    "@earendil-works/pi-coding-agent": "1.0.4",
+    "@earendil-works/pi-tui": "1.0.4",
     "@types/semver": "^7.7.1",
     "tsx": "^4.19.0",
     "typebox": "^1.1.32",
