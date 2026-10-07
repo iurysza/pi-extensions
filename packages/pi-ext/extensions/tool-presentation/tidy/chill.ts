@@ -7,7 +7,7 @@ import { readToolTiming, type ToolTimeline } from "./timeline.js";
 
 const builtins = new Set(["read", "write", "edit", "bash", "grep", "find", "ls"]);
 const hasCard = (name: string) => builtins.has(name) || !!specForTool({ name });
-type Group = { calls: Call[] };
+type Group = { calls: Call[]; open?: boolean };
 type Call = { id: string; group: Group; done: boolean; failed: boolean; elapsedMs?: number; settled?: boolean };
 
 /** How long the newest finished card stays visible when no other tool follows. */
@@ -57,16 +57,27 @@ export class ChillState {
     return call.done && (call.settled === true || call.group.calls.at(-1) !== call);
   }
 
+  /** Pi expands only the clicked card, which is the summary owner. Open the whole group with it. */
+  syncOpen(id: string, expanded: boolean): void {
+    const call = this.calls.get(id);
+    if (!this.enabled || !call || !this.isFolded(call)) return;
+    if (call.group.calls.filter((item) => this.isFolded(item)).at(-1) !== call) return;
+    if (!!call.group.open === expanded) return;
+    call.group.open = expanded;
+    // Defer: this runs inside the owner's own render pass.
+    queueMicrotask(() => this.refresh());
+  }
+
   /** undefined keeps the normal card; [] hides it; the last folded card owns the group summary. */
   folded(id: string, kind: "call" | "result"): string[] | undefined {
     const call = this.calls.get(id);
-    if (!this.enabled || !call || !this.isFolded(call)) return undefined;
+    if (!this.enabled || !call || call.group.open || !this.isFolded(call)) return undefined;
     const finished = call.group.calls.filter((item) => this.isFolded(item));
     if (kind === "call" || finished.at(-1) !== call) return [];
     const running = call.group.calls.some((item) => !this.isFolded(item));
     const failures = finished.filter((item) => item.failed).length;
-    const duration = finished.every((item) => item.elapsedMs !== undefined)
-      ? ` · ${formatElapsed(finished.reduce((total, item) => total + item.elapsedMs!, 0))}` : "";
+    const timed = finished.filter((item) => item.elapsedMs !== undefined);
+    const duration = timed.length ? ` · ${formatElapsed(timed.reduce((total, item) => total + item.elapsedMs!, 0))}` : "";
     const tools = `${finished.length} ${finished.length === 1 ? "tool" : "tools"}`;
     return [`${DIM}${running ? "Working" : "Worked"} · ${tools}${duration}${RESET}${failures ? ` ${RED}· ${failures} failed${RESET}` : ""}`];
   }
@@ -102,6 +113,7 @@ export function hasText(message: any): boolean {
 export function chillRenderers(renderers: ToolRenderers, chill: ChillState): ToolRenderers {
   const wrap = (component: Component, context: any, kind: "call" | "result", expanded: boolean): Component => {
     if (context?.invalidate) chill.watch(context.toolCallId, context.invalidate);
+    if (kind === "result") chill.syncOpen(context?.toolCallId, expanded);
     return {
       invalidate: () => component.invalidate(),
       render(width) {

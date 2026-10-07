@@ -328,7 +328,9 @@ export function createTidyExtension(dependencies: TidyExtensionDependencies = {}
 						if (assistantTextSeen) chill.boundary();
 					}
 				});
-				const observeText = (event: { message: unknown }) => {
+				// Only assistant text closes a group. Tool results also carry text blocks.
+				const observeText = (event: { message: any }) => {
+					if (event.message?.role !== "assistant") return;
 					if (!assistantTextSeen && hasText(event.message)) { assistantTextSeen = true; chill.boundary(); }
 				};
 				pi.on("message_update", observeText);

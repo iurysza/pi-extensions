@@ -119,7 +119,7 @@ test("parallel calls keep pending cards visible and summary ownership follows ca
   } finally { await h.emit("session_shutdown"); }
 });
 
-test("replay groups restore per branch without modifying messages or inventing durations", async () => {
+test("replay groups restore per branch without modifying messages and sum known durations", async () => {
   const h = await rendererHarness({ chill: true });
   const branch = [
     { type: "message", message: { role: "user", content: "Start" } },
@@ -133,7 +133,7 @@ test("replay groups restore per branch without modifying messages or inventing d
       await h.emit(event, {}, { sessionManager: { getBranch: () => branch } });
       const renderers = h.resolvers[0]("memo_note", () => undefined)!;
       const lines = renderers.renderResult!(output("Saved"), { expanded: false, isPartial: false }, theme, context("b")).render(80).join("\n");
-      assert.match(plain(lines), /Worked · 2 tools(?! ·)/);
+      assert.match(plain(lines), /Worked · 2 tools · 1s/);
     }
     assert.equal(JSON.stringify(branch), before);
     await h.emit("session_tree", {}, { sessionManager: { getBranch: () => [] } });
@@ -193,5 +193,41 @@ test("newest finished card stays visible until the next tool starts or the grace
     await new Promise((resolve) => setTimeout(resolve, 80));
     assert.deepEqual(first.render(80), []);
     assert.match(plain(second.render(80).join("\n")), /Worked · 2 tools · 2s/, "folds after the grace period");
+  } finally { await h.emit("session_shutdown"); }
+});
+
+test("tool result messages do not split a group", async () => {
+  const h = await rendererHarness({ chill: true });
+  try {
+    const renderers = h.resolvers[0]("memo_note", () => undefined)!;
+    const toolResult = { role: "toolResult", content: [{ type: "text", text: "Saved as #1." }] };
+    await h.emit("message_start", { message: { role: "assistant", content: [] } });
+    await start(h, "a"); await finish(h, "a");
+    await h.emit("message_end", { message: toolResult });
+    await h.emit("message_start", { message: { role: "assistant", content: [] } });
+    await start(h, "b"); await finish(h, "b");
+    await h.emit("message_end", { message: toolResult });
+    const second = renderers.renderResult!(output("Saved as #2."), { expanded: false, isPartial: false }, theme, context("b"));
+    assert.match(plain(second.render(80).join("\n")), /Worked · 2 tools/);
+  } finally { await h.emit("session_shutdown"); }
+});
+
+test("expanding the summary card opens every card in its group", async () => {
+  const h = await rendererHarness({ chill: true });
+  try {
+    const renderers = h.resolvers[0]("memo_note", () => undefined)!;
+    await start(h, "a"); await finish(h, "a");
+    await start(h, "b"); await finish(h, "b", "memo_note", output("Saved as #2.", { piTidyElapsedMs: 2000 }));
+    const first = renderers.renderResult!(output("Saved as #1."), { expanded: false, isPartial: false }, theme, context("a"));
+    assert.deepEqual(first.render(80), []);
+    const owner = renderers.renderResult!(output("Saved as #2."), { expanded: true, isPartial: false }, theme, context("b", {}, true));
+    owner.render(80);
+    await new Promise((resolve) => queueMicrotask(() => resolve(undefined)));
+    assert.notDeepEqual(first.render(80), [], "sibling card shows");
+    assert.doesNotMatch(plain(first.render(80).join("\n")), /Work(ed|ing)/);
+    assert.doesNotMatch(plain(owner.render(80).join("\n")), /Worked/);
+    const closed = renderers.renderResult!(output("Saved as #2."), { expanded: false, isPartial: false }, theme, context("b"));
+    assert.match(plain(closed.render(80).join("\n")), /Worked · 2 tools · 3s/, "collapsing folds the group again");
+    assert.deepEqual(first.render(80), []);
   } finally { await h.emit("session_shutdown"); }
 });
