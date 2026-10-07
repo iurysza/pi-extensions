@@ -11,7 +11,7 @@ interface CardReplayContext {
 /** Structural boundary shared by the workspace's different Pi patch versions. */
 export interface CardAPI {
   events?: object;
-  on(event: "tool_call", handler: (event: { toolCallId: string }) => void): void;
+  on(event: "tool_call", handler: (event: { toolCallId: string; parentToolCallId?: string }) => void): void;
   on(event: "tool_result", handler: (event: { toolCallId: string }) => void): void;
   on(event: "session_start", handler: (event: unknown, ctx: CardReplayContext) => void): void;
   on(event: "session_tree", handler: (event: unknown, ctx: CardReplayContext) => void): void;
@@ -32,7 +32,7 @@ export function cardRuntime(pi: CardAPI, timeline = new ToolTimeline(), isReplay
   runtimes.set(key, runtime);
   const stop = (id: string) => { const timer = runtime.timers.get(id); if (timer) clearInterval(timer); runtime.timers.delete(id); };
   const clear = () => { for (const id of runtime.timers.keys()) stop(id); };
-  pi.on("tool_call", (e) => { if (!runtime.isReplayCall?.(e.toolCallId)) timeline.start(e.toolCallId, Date.now()); });
+  pi.on("tool_call", (e) => { if (!e.parentToolCallId && !runtime.isReplayCall?.(e.toolCallId)) timeline.start(e.toolCallId, Date.now()); });
   pi.on("tool_result", (e) => { timeline.finish(e.toolCallId, Date.now()); stop(e.toolCallId); });
   const restore = (_e: unknown, ctx: CardReplayContext) => {
     clear();

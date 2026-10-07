@@ -53,6 +53,7 @@ import { Container, truncateToWidth } from "@earendil-works/pi-tui";
 import {
 	CONFIG_PATH,
 	loadTidyIcons,
+	loadTidyChill,
 	loadTidyMode,
 	loadTidyState,
 	saveTidyEnabled,
@@ -86,6 +87,7 @@ import { readToolTiming, ToolTimeline } from "./timeline.js";
 
 import { buildToolBlock, WidthAwareLines, TimelineTool, colorizeDiff } from "./cards/card.js";
 import { cardRenderers, cardRuntime, specForTool } from "./cards/index.js";
+import { ChillState, chillRenderers, hasText } from "./chill.js";
 export { buildToolBlock, fitToolLine, formatElapsed } from "./cards/card.js";
 
 export { withReasoning } from "./tool-composition.js";
@@ -203,6 +205,7 @@ export interface TidyExtensionDependencies {
 	loadState?: typeof loadTidyState;
 	loadMode?: typeof loadTidyMode;
 	loadIcons?: typeof loadTidyIcons;
+	loadChill?: typeof loadTidyChill;
 	saveIcons?: typeof saveTidyIcons;
 	createIntegration?: (pi: ExtensionAPI, cwd: string) => PiFffIntegrationController;
 	decorateSource?: (source: SourceToolDefinition) => SourceToolDefinition;
@@ -299,12 +302,44 @@ export function createTidyExtension(dependencies: TidyExtensionDependencies = {}
 		// Older Pi hosts retain the built-in registrations, but cannot resolve foreign tools.
 		if (pi.registerToolRenderer) {
 			const runtime = tidyState.enabled ? cardRuntime(pi, timeline, dependencies.isReplayCall) : undefined;
+			const chill = new ChillState((dependencies.loadChill ?? loadTidyChill)(), timeline);
+			const builtins = new Set(["read", "write", "edit", "bash", "grep", "find", "ls"]);
 			pi.registerToolRenderer((name, next) => {
 				const original = next();
 				if (!tidyState.enabled) return original;
 				const spec = specForTool({ name });
-				return spec ? cardRenderers(spec, runtime, original, { mode: tidyMode, icons: tidyIcons }) : original;
+				const renderers = spec ? cardRenderers(spec, runtime, original, { mode: tidyMode, icons: tidyIcons }) : original;
+				return renderers && (spec || builtins.has(name)) ? chillRenderers(renderers, chill) : original;
 			});
+			if (tidyState.enabled) {
+				pi.registerCommand("chill", {
+					description: "Toggle finished tool folding for this session only",
+					handler: async (_args, ctx) => { ctx.ui.notify(`Chill mode ${chill.toggle() ? "on" : "off"} for this session.`, "info"); },
+				});
+				const restoreChill = (_event: unknown, ctx: any) => chill.restore(ctx.sessionManager.getBranch());
+				pi.on("session_start", restoreChill);
+				pi.on("session_tree", restoreChill);
+				let assistantTextSeen = false;
+				pi.on("message_start", (event) => {
+					if (event.message.role === "user") chill.boundary();
+					if (event.message.role === "assistant") {
+						assistantTextSeen = hasText(event.message);
+						if (assistantTextSeen) chill.boundary();
+					}
+				});
+				const observeText = (event: { message: unknown }) => {
+					if (!assistantTextSeen && hasText(event.message)) { assistantTextSeen = true; chill.boundary(); }
+				};
+				pi.on("message_update", observeText);
+				pi.on("message_end", observeText);
+				pi.on("tool_execution_start", (event) => { if (!event.parentToolCallId) chill.start(event.toolCallId, event.toolName); });
+				pi.on("tool_execution_end", (event) => {
+					if (event.parentToolCallId) return;
+					timeline.finish(event.toolCallId, Date.now());
+					chill.finish(event.toolCallId, event.toolName, event.result, event.isError);
+				});
+				pi.on("session_shutdown", () => chill.clear());
+			}
 		}
 		if (!tidyState.enabled) return;
 
