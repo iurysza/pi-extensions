@@ -60,7 +60,7 @@ test("host enables the conversation timeline only when tidy is enabled", async (
   assert.deepEqual(off.appended, []);
 });
 
-test("messages and built-in tools share minute groups without splitting streaming messages", async (t) => {
+test("messages and built-in tools share 10-minute divider groups without splitting streaming messages", async (t) => {
   let now = start;
   t.mock.method(Date, "now", () => now);
   const h = await harness();
@@ -70,11 +70,11 @@ test("messages and built-in tools share minute groups without splitting streamin
   await h.fire("message_end", { message: request });
   await h.fire("message_start", { message: assistant() });
   assert.deepEqual(h.appended, [{ kind: "minute", at: start }]);
-  now += 60_000;
+  now += 600_000;
   await h.fire("message_update", { message: assistant("Checking the implementation") });
-  now += 60_000;
+  now += 600_000;
   await h.fire("message_update", { message: assistant("Checking the implementation and callers") });
-  assert.deepEqual(h.appended.map((e) => e.at), [start, start + 60_000]);
+  assert.deepEqual(h.appended.map((e) => e.at), [start, start + 600_000]);
   await h.fire("message_end", { message: assistant("Checking the implementation and callers") });
   const args = { path: "test.ts", reasoning: "inspect the test" };
   await h.fire("tool_execution_start", { toolName: "read", toolCallId: "read", args });
@@ -85,7 +85,7 @@ test("messages and built-in tools share minute groups without splitting streamin
   await h.fire("message_end", { message: result });
   await h.fire("tool_execution_end", { toolName: "read", toolCallId: "read", result });
   const output = h.tools.get("read").renderResult(result, {}, theme, { toolCallId: "read", args }).render(60).map(plain);
-  assert.match(output[0], /^── 14:34 ─/);
+  assert.match(output[0], /^── 14:52 ─/);
   assert.equal(output.at(-1), "test.ts → 1 lines · <1s");
   await h.fire("message_start", { message: assistant() });
   await h.fire("message_update", { message: assistant("Fixed") });
@@ -94,7 +94,7 @@ test("messages and built-in tools share minute groups without splitting streamin
   assert.equal(h.appended.length, 2, "agent_end is not the completion boundary");
   now += 1_300;
   await h.fire("agent_settled");
-  assert.deepEqual(h.appended.at(-1), { kind: "run-end", at: now, startedAt: start, elapsedMs: 122_000, outcome: "completed" });
+  assert.deepEqual(h.appended.at(-1), { kind: "run-end", at: now, startedAt: start, elapsedMs: 1_202_000, outcome: "completed" });
   await h.fire("agent_settled");
   assert.equal(h.appended.length, 3);
   // Custom entries must never enter model context.
@@ -156,7 +156,7 @@ test("reload and tree navigation restore only the active branch without adding e
   await h.fire("message_start", { message: request });
   await h.fire("message_end", { message: request });
   const branchPoint = h.manager.getLeafId()!;
-  now += 180_000;
+  now += 1_800_000;
   await h.fire("message_start", { message: assistant("Later") });
   await h.fire("message_end", { message: assistant("Later") });
   const before = h.manager.getEntries().length;
