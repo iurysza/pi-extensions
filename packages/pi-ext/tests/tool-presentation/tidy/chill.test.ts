@@ -174,3 +174,24 @@ test("chill config defaults false and only the literal boolean true enables it",
     await writeFile(path, '{"chill":true,"icons":false}'); assert.equal(loadTidyChill(path), true);
   } finally { await rm(root, { recursive: true, force: true }); }
 });
+
+test("newest finished card stays visible until the next tool starts or the grace period ends", async () => {
+  const h = await rendererHarness({ chill: true, chillGraceMs: 40 });
+  try {
+    const renderers = h.resolvers[0]("memo_note", () => undefined)!;
+    const a = context("a", { line: "First" });
+    const b = context("b", { line: "Second" });
+    await start(h, "a"); await finish(h, "a");
+    const first = renderers.renderResult!(output("Saved as #1."), { expanded: false, isPartial: false }, theme, a);
+    assert.doesNotMatch(plain(first.render(80).join("\n")), /Worked/, "visible during grace");
+    await start(h, "b");
+    assert.match(plain(first.render(80).join("\n")), /Working · 1 tool · 1s/, "folds when the next tool starts");
+    await finish(h, "b");
+    const second = renderers.renderResult!(output("Saved as #2."), { expanded: false, isPartial: false }, theme, b);
+    assert.doesNotMatch(plain(second.render(80).join("\n")), /Worked/, "newest card visible during grace");
+    assert.match(plain(first.render(80).join("\n")), /Working · 1 tool/);
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    assert.deepEqual(first.render(80), []);
+    assert.match(plain(second.render(80).join("\n")), /Worked · 2 tools · 2s/, "folds after the grace period");
+  } finally { await h.emit("session_shutdown"); }
+});

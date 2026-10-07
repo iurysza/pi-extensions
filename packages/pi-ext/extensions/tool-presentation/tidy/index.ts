@@ -206,6 +206,7 @@ export interface TidyExtensionDependencies {
 	loadMode?: typeof loadTidyMode;
 	loadIcons?: typeof loadTidyIcons;
 	loadChill?: typeof loadTidyChill;
+	chillGraceMs?: number;
 	saveIcons?: typeof saveTidyIcons;
 	createIntegration?: (pi: ExtensionAPI, cwd: string) => PiFffIntegrationController;
 	decorateSource?: (source: SourceToolDefinition) => SourceToolDefinition;
@@ -302,7 +303,7 @@ export function createTidyExtension(dependencies: TidyExtensionDependencies = {}
 		// Older Pi hosts retain the built-in registrations, but cannot resolve foreign tools.
 		if (pi.registerToolRenderer) {
 			const runtime = tidyState.enabled ? cardRuntime(pi, timeline, dependencies.isReplayCall) : undefined;
-			const chill = new ChillState((dependencies.loadChill ?? loadTidyChill)(), timeline);
+			const chill = new ChillState((dependencies.loadChill ?? loadTidyChill)(), timeline, dependencies.chillGraceMs);
 			const builtins = new Set(["read", "write", "edit", "bash", "grep", "find", "ls"]);
 			pi.registerToolRenderer((name, next) => {
 				const original = next();
