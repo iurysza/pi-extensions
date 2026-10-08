@@ -16,7 +16,7 @@ const SAFE_ROOT = mkdtempSync(join(tmpdir(), "optmem-ext-"));
 mkdirSync(join(SAFE_ROOT, "memory"));
 process.on("exit", () => rmSync(SAFE_ROOT, { recursive: true, force: true }));
 
-function harness({ flags = {}, branch = [], mode = "tui", config = DEFAULT_CONFIG, memoExists = true, runner, env: givenEnv = {}, pollMs = 0 } = {}) {
+function harness({ flags = {}, branch = [], mode = "tui", config = DEFAULT_CONFIG, memoExists = true, runner, env: givenEnv = {}, pollMs = 0, launchFlush = () => {} } = {}) {
   const safeDir = config.memoryDir === DEFAULT_CONFIG.memoryDir ? { MEMORY_DIR: join(SAFE_ROOT, "memory") } : {};
   const env = { ...safeDir, PI_CODING_AGENT_DIR: join(SAFE_ROOT, "agent"), ...givenEnv };
   const handlers = new Map();
@@ -44,7 +44,7 @@ function harness({ flags = {}, branch = [], mode = "tui", config = DEFAULT_CONFI
     mode,
     hasUI: mode === "tui" || mode === "rpc",
     cwd: "/tmp/project",
-    sessionManager: { getBranch: () => h.branch },
+    sessionManager: { getBranch: () => h.branch, getSessionFile: () => "/tmp/session.jsonl" },
     ui: {
       notify: (message, level) => notes.push({ message, level }),
       setStatus: (key, value) => status.set(key, value),
@@ -55,6 +55,7 @@ function harness({ flags = {}, branch = [], mode = "tui", config = DEFAULT_CONFI
   registerOptMem(pi, {
     env,
     pollMs,
+    launchFlush,
     loadConfig: async () => ({ config }),
     memoExists: typeof memoExists === "function" ? memoExists : () => memoExists,
     runner:
@@ -380,6 +381,42 @@ test("non-UI modes do not touch ctx.ui", async () => {
   const h = harness({ flags: { memory: true }, mode: "json", memoExists: false });
   h.ctx.ui = new Proxy({}, { get: () => assert.fail("ui used without UI") });
   await start(h);
+});
+
+test("compaction starts a detached flush without waiting for model work", async () => {
+  const jobs = [];
+  const h = harness({ flags: { memory: true }, launchFlush: (job) => jobs.push(job) });
+  await start(h);
+  const preparation = { messagesToSummarize: [{ role: "user", content: "durable fact ".repeat(600), timestamp: 1 }], turnPrefixMessages: [], previousSummary: "previous" };
+  assert.equal(await h.emit("session_before_compact", { preparation }), undefined);
+  assert.equal(jobs.length, 1);
+  assert.equal(jobs[0].model, DEFAULT_CONFIG.model);
+  assert.equal(jobs[0].session, "/tmp/session.jsonl");
+  assert.match(jobs[0].span, /previous/);
+  assert.match(h.notes.at(-1).message, /background/);
+});
+
+for (const options of [
+  {},
+  { flags: { "memory-read": true } },
+  { flags: { memory: true }, config: { ...DEFAULT_CONFIG, flushBeforeCompact: false } },
+  { flags: { memory: true }, env: { PI_OPTMEM_FLUSH_CHILD: "1" } },
+  { flags: { memory: true }, mode: "print" },
+]) {
+  test(`flush honours mode, setting and recursion guard: ${JSON.stringify(options)}`, async () => {
+    let launched = false;
+    const h = harness({ ...options, launchFlush: () => { launched = true; } });
+    await start(h);
+    await h.emit("session_before_compact", { preparation: { messagesToSummarize: [{ role: "user", content: "x".repeat(5000), timestamp: 1 }], turnPrefixMessages: [] } });
+    assert.equal(launched, false);
+  });
+}
+
+test("flush spawn failure never fails compaction", async () => {
+  const h = harness({ flags: { memory: true }, launchFlush: () => { throw new Error("test"); } });
+  await start(h);
+  assert.equal(await h.emit("session_before_compact", { preparation: { messagesToSummarize: [{ role: "user", content: "x".repeat(5000), timestamp: 1 }], turnPrefixMessages: [] } }), undefined);
+  assert.match(h.notes.at(-1).message, /compaction will continue/);
 });
 
 // ---------------------------------------------------------------- integration

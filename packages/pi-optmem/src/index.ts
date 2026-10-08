@@ -2,6 +2,8 @@ import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { configPath, loadLayeredConfig } from "./config-file.ts";
+import { selectFlushSpan } from "./flush.ts";
+import { FLUSH_CHILD, flushLogPath, launchFlush, type FlushLaunch } from "./flush-job.ts";
 import { HANDLERS, type CommandEnv } from "./commands.ts";
 import { subscribeMenu } from "./menu.ts";
 import { statusText } from "./status.ts";
@@ -70,6 +72,7 @@ export type OptMemDeps = {
   readonly launch?: Launch;
   /** Footer refresh interval for job progress; 0 disables polling. */
   readonly pollMs?: number;
+  readonly launchFlush?: FlushLaunch;
 };
 
 function isWakeMessage(message: unknown): boolean {
@@ -216,10 +219,20 @@ export function registerOptMem(pi: ExtensionAPI, deps: OptMemDeps = {}): void {
   });
 
   // Legacy sessions persisted the wake view; keep it out of summaries.
-  pi.on("session_before_compact", async (event) => {
+  pi.on("session_before_compact", async (event, ctx) => {
     const prep = event.preparation;
     spliceWhere(prep.messagesToSummarize, isWakeMessage);
     spliceWhere(prep.turnPrefixMessages, isWakeMessage);
+    if (mode !== "on" || isSubagent || !config.flushBeforeCompact || env[FLUSH_CHILD] === "1") return;
+    try {
+      const span = selectFlushSpan(prep);
+      if (!span || !memoExists(paths().memoPath)) return;
+      (deps.launchFlush ?? launchFlush)({ ...paths(), model: config.model, session: ctx.sessionManager.getSessionFile(), span }, env, ctx.cwd);
+      if (ctx.hasUI) ctx.ui.notify("OptMem: saving key facts in the background before compaction.", "info");
+    } catch {
+      // Extraction, disk and spawn failures must never change compaction's outcome.
+      if (ctx.hasUI) ctx.ui.notify("OptMem: could not start memory flush; compaction will continue.", "warning");
+    }
     return undefined;
   });
 
@@ -238,6 +251,8 @@ export function registerOptMem(pi: ExtensionAPI, deps: OptMemDeps = {}): void {
       `memory: ${memoryDir}`,
       `config: ${configPath(env)}`,
       `wake: ${wake}`,
+      `pre-compaction flush: ${config.flushBeforeCompact ? "on" : "off"} (${config.model})`,
+      `flush log: ${flushLogPath(memoryDir)}`,
     ];
     if (!memoExists(memoPath)) lines.push(missingMemoHint(memoPath));
     ctx.ui.notify(lines.join("\n"), "info");

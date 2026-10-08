@@ -20,8 +20,10 @@ export type OptMemConfig = {
   readonly memoPath?: string;
   readonly memoryDir: string;
   readonly rules: readonly CwdRule[];
-  /** Model for generating memory from sessions and for background naps. */
+  /** Model for generation, background naps and pre-compaction flushes. */
   readonly model: string;
+  /** Save durable facts in a detached worker before compaction (on-mode only). */
+  readonly flushBeforeCompact: boolean;
   /** Replaces the built-in distil rules when set. Sessions are appended after it. */
   readonly distilPrompt?: string;
 };
@@ -38,6 +40,7 @@ export const DEFAULT_CONFIG: OptMemConfig = {
   memoryDir: DEFAULT_MEMORY_DIR,
   rules: [],
   model: DEFAULT_MODEL,
+  flushBeforeCompact: true,
 };
 
 export function expandHome(path: string, home = homedir()): string {
@@ -50,7 +53,7 @@ export type ConfigResult =
   | { readonly ok: true; readonly config: OptMemConfig }
   | { readonly ok: false; readonly error: string };
 
-export const CONFIG_KEYS = new Set(["defaultMode", "subagentMode", "memoPath", "memoryDir", "rules", "model", "distilPrompt"]);
+export const CONFIG_KEYS = new Set(["defaultMode", "subagentMode", "memoPath", "memoryDir", "rules", "model", "distilPrompt", "flushBeforeCompact"]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -70,6 +73,8 @@ export function parseConfig(value: unknown): ConfigResult {
   const memoPath = value.memoPath;
   const memoryDir = value.memoryDir ?? DEFAULT_CONFIG.memoryDir;
   const model = value.model ?? DEFAULT_CONFIG.model;
+  const flushBeforeCompact = value.flushBeforeCompact ?? DEFAULT_CONFIG.flushBeforeCompact;
+  if (typeof flushBeforeCompact !== "boolean") return { ok: false, error: "flushBeforeCompact must be a boolean" };
   if (memoPath !== undefined && (typeof memoPath !== "string" || !memoPath.trim())) {
     return { ok: false, error: "memoPath must be a non-empty string" };
   }
@@ -95,6 +100,7 @@ export function parseConfig(value: unknown): ConfigResult {
     memoryDir,
     rules,
     model,
+    flushBeforeCompact,
     ...(memoPath === undefined ? {} : { memoPath }),
     ...(distilPrompt === undefined ? {} : { distilPrompt }),
   };

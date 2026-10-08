@@ -99,6 +99,7 @@ A layer that fails to parse is skipped with a warning, so a broken user file fal
   "subagentMode": "off",
   "memoryDir": "~/.local/share/optmem/memory",
   "model": "openai-codex/gpt-6-luna",
+  "flushBeforeCompact": true,
   "rules": [
     { "cwd": "~/dev/personal/obsidian-vault", "mode": "on" }
   ]
@@ -108,12 +109,25 @@ A layer that fails to parse is skipped with a warning, so a broken user file fal
 - `defaultMode`: `off`, `read` or `on`. The built-in default is `off`; the personal and work profiles set `on`.
 - `subagentMode`: the highest mode a subagent can have, either `off` or `read`.
 - `rules`: per-directory starting modes. The longest matching `cwd` prefix wins.
-- `model`: the model for generating memory from sessions and for background naps.
+- `model`: the model for generation, background naps and pre-compaction flushes. agents2's `pi.optmem.model` sets the profile default. The personal profile uses `claude-code/claude-haiku-5-5`; work uses `github-copilot/gpt-6-luna`.
+- `flushBeforeCompact`: saves durable facts before compaction, default `true`. Set it to `false` in the user config to disable it.
 - `distilPrompt`: optional. Replaces the built-in distil rules; the sessions are appended after it. Edit it from the menu (Defaults → Distil prompt); saving it empty restores the built-in prompt.
 - `memoPath`: optional. When unset, memo is found in this order: the agents2-installed copy (`~/.local/share/agents2/tools/optmem/<active rev>/memo`, active rev from `history.json`), then `~/.local/share/optmem/memo` (install-memo.sh).
 - `MEMORY_DIR` in the environment overrides `memoryDir`.
 
 The memory directory is created with `memo init` the first time a session loads it.
+
+## Save facts before compaction
+
+In `on` mode, `session_before_compact` starts a detached Pi worker. It reads the selected messages and split-turn prefix, without wake messages, plus the previous summary. New spans below 4,000 characters are skipped, roughly 1,000 tokens, to avoid model calls for short manual compactions. A previous summary alone does not trigger another flush.
+
+Compaction does not wait for the model. The worker survives parent exit and works without a UI, including RPC exit compactions. It loads the configured providers and calls the selected model through `ctx.modelRegistry`, never pi-ai's built-in-only completion helper. It sends no agent prompt and cancels any attempted worker compaction.
+
+The model returns at most 5 normal memory lines. The worker rejects multiline, over-280-byte and recognisable sensitive output. It asks the model to skip facts in the current wake view and checks exact normalised duplicates against the raw log before each append. Semantic duplicate detection still depends on the model. Concurrent flushes can save the same new fact, but cannot corrupt the store.
+
+Every write goes through `memo note` or `memo nap`. Memo already holds an OS file lock while assigning IDs and appending records, then flushes and syncs the file. The worker pays requested naps before writing its next line. A failed call leaves already saved notes and any unpaid naps intact for a later session.
+
+The transcript snapshot lives in a private temporary directory and is deleted when the worker finishes. Interactive and RPC sessions get a start notification. Results and counts, without transcripts or memory text, go to `<memoryDir>/../flush/flush.jsonl`. `/memory status` shows the model, setting and log path. If the worker is forcibly killed, its temporary snapshot may remain in the OS temp directory.
 
 ## Leader menu
 
@@ -149,7 +163,7 @@ Generate on a non-empty memory offers **Catch up** (only session entries newer t
 
 State lives in `<memoryDir>/../generate/`: `job.json`, `job.log`, `draft.txt`, `lines.jsonl`, `state.json` (last generated session time), `lock` (one job at a time) and `onboarding-shown`. A killed job resumes: run the same command again. The footer shows job progress (see Modes).
 
-The model runs as `pi -p --model <id> --no-extensions --no-tools --no-session --no-skills --no-context-files` with `PI_OPTMEM_SUBAGENT=1`, so a child never wakes or writes memory. `PI_OPTMEM_MODEL_CMD` swaps in any command (model id as argument, prompt on stdin) for tests.
+The model runs as `pi -p --model <id> --no-tools --no-session --no-skills --no-context-files` with `PI_OPTMEM_SUBAGENT=1`, so a child never wakes or writes memory. Extensions stay enabled so models such as `claude-code/...` have their provider registered. `PI_OPTMEM_MODEL_CMD` swaps in any command (model id as argument, prompt on stdin) for tests.
 
 The same work from a terminal (Node 22.18+):
 
@@ -192,5 +206,13 @@ Known gaps:
 ```sh
 npm test --workspace @iurysza/pi-optmem
 ```
+
+The opt-in real-provider test runs a fake RPC session, compacts it, exits Pi, then lets a detached Haiku worker write to a temporary store:
+
+```sh
+PI_OPTMEM_REAL_FLUSH_TEST=1 PI_OPTMEM_TEST_PROVIDER=/path/to/pi-claude-code npm test
+```
+
+The test uses a deterministic compaction summary to isolate the real flush call. It gates worker startup until the parent exits, so a fast response cannot hide a broken detach.
 
 Tests never touch a real memory directory. The integration test copies `memo` into a temp directory and creates a temp store. It looks for `memo` in `PI_OPTMEM_TEST_MEMO`, `~/.local/share/optmem/memo` or `/tmp/memo.py`, and skips if none exists.

@@ -1,5 +1,5 @@
 // Model access for distilling and naps. The real runner spawns
-// `pi -p --no-extensions` with PI_OPTMEM_SUBAGENT=1 (so a child never wakes or
+// `pi -p` with provider extensions and PI_OPTMEM_SUBAGENT=1 (so a child never wakes or
 // writes memory). PI_OPTMEM_MODEL_CMD swaps in any executable for tests: it gets
 // the model id as its only argument and the prompt on stdin.
 import { spawn } from "node:child_process";
@@ -45,7 +45,6 @@ export function modelCall(env: NodeJS.ProcessEnv = process.env): ModelCall {
         ...(model ? ["--model", model] : []),
         "--no-session",
         "--no-tools",
-        "--no-extensions",
         "--no-skills",
         "--no-context-files",
         "--thinking",
