@@ -13,6 +13,7 @@ all-or-nothing setup: install the packages that fit your workflow.
 | [@iurysza/pi-cache-hit-predictor](packages/pi-cache-hit-predictor) | Predict reusable prompt-cache prefixes across model and reasoning lanes. |
 | [@iurysza/pi-follow-up](packages/pi-follow-up) | Suggest likely follow-up messages after long Pi replies. |
 | [@iurysza/pi-cursor-sdk](packages/pi-cursor-sdk) | Run Cursor SDK models in Pi with fail-closed recorded tool replay. |
+| [@iurysza/pi-claude-code](packages/pi-claude-code) | Run Claude turns through your own Claude Code CLI login while Pi runs every tool. |
 | [@iurysza/pi-agent-explorer](packages/pi-agent-explorer) | Read-only Neovim snapshot of Pi's loaded runtime. |
 | [@iurysza/pi-context-audit](packages/pi-context-audit) | Inspect prompt, tool-schema, context, and MCP overhead. |
 | [@iurysza/pi-secret-env](packages/pi-secret-env) | Load shared credentials while blocking and redacting secret access. |

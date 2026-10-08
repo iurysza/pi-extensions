@@ -1,0 +1,74 @@
+{
+  "name": "@iurysza/pi-claude-code",
+  "version": "0.1.0",
+  "description": "pi provider extension that runs Claude turns through the official Claude Code CLI on a Claude Pro or Max subscription",
+  "author": "Iury Souza (https://github.com/iurysza)",
+  "license": "MIT",
+  "keywords": [
+    "pi-package",
+    "pi",
+    "pi-extension",
+    "claude",
+    "claude-code",
+    "anthropic",
+    "ai",
+    "extension"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iurysza/pi-extensions.git",
+    "directory": "packages/pi-claude-code"
+  },
+  "bugs": {
+    "url": "https://github.com/iurysza/pi-extensions/issues"
+  },
+  "homepage": "https://github.com/iurysza/pi-extensions/tree/main/packages/pi-claude-code#readme",
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "src",
+    "scripts/live-smoke.mjs",
+    "README.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md",
+    "CHANGELOG.md"
+  ],
+  "type": "module",
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "scripts": {
+    "typecheck": "npm run typecheck:src && npm run typecheck:tests",
+    "typecheck:src": "tsc --noEmit",
+    "typecheck:tests": "tsc -p tsconfig.test.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:contract": "PI_CLAUDE_CODE_CONTRACT_CLI=\"$(node scripts/fetch-contract-cli.mjs)\" vitest run test/contract",
+    "smoke:live": "node scripts/live-smoke.mjs"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*"
+  },
+  "peerDependenciesMeta": {
+    "@earendil-works/pi-ai": {
+      "optional": true
+    },
+    "@earendil-works/pi-coding-agent": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@earendil-works/pi-ai": "^0.80.10",
+    "@earendil-works/pi-coding-agent": "^0.80.10",
+    "@types/node": "^24.12.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.6"
+  },
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ]
+  }
+}
