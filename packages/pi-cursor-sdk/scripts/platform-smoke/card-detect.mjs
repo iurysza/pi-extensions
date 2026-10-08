@@ -13,8 +13,8 @@ import { matchesWrappedLineAt } from "./wrapped-line-match.mjs";
 const CARD_PATTERNS = [
 	{
 		id: "read",
-		pattern: /^\s*read\s+(?:(?:\.\/)?package\.json|.*[\\/]package\.json)\s*$/i,
-		wrappedPattern: /^\s*read\s+.*[\\/]package\.(?:json|js\s+on|j\s*son)\s*$/i,
+		pattern: /^\s*read\s+(?:(?:\.\/)?package\.json|.*[\\/]package\.json)(?:\s+·\s+local file preview)?\s*$/i,
+		wrappedPattern: /^\s*read\s+.*[\\/]package\.(?:json|js\s+on|j\s*son)(?:\s+·\s+local file preview)?\s*$/i,
 	},
 	{ id: "grep", pattern: /^\s*grep \/pi-cursor-sdk\/ in\s+(?:(?:\S+[\\/])?README\.md)\s*$/i },
 	{ id: "find", pattern: /^\s*find README\.md in\s+\S+/i },

@@ -22,22 +22,29 @@ export function readToolTiming(details: unknown): ToolTiming | undefined {
   return { startedAt, elapsedMs, showTimestamp: startedAt !== undefined && value.piTidyShowTimestamp === true };
 }
 
-/** Share one minute clock across visible messages and tool execution starts. */
+/** Minimum gap between two time dividers. */
+export const DIVIDER_INTERVAL_MS = 10 * 60_000;
+
+/** Share one divider clock across visible messages and tool execution starts. */
 export class ToolTimeline {
   private readonly calls = new Map<string, ToolTiming>();
-  private lastActivityAt: number | undefined;
+  /** When the last divider was shown. */
+  private lastShownAt: number | undefined;
 
   get(id: string): ToolTiming | undefined { return this.calls.get(id); }
 
+  /** Show a divider when none has been shown for 10 minutes. A clock moved backwards also shows one. */
   observe(now: number): boolean {
-    const showTimestamp = this.lastActivityAt === undefined
-      || Math.floor(now / 60_000) !== Math.floor(this.lastActivityAt / 60_000);
-    this.lastActivityAt = now;
+    const showTimestamp = this.lastShownAt === undefined
+      || now < this.lastShownAt
+      || now - this.lastShownAt >= DIVIDER_INTERVAL_MS;
+    if (showTimestamp) this.lastShownAt = now;
     return showTimestamp;
   }
 
+  /** Seed from a divider that was shown before. */
   restoreClock(timestamp: number): void {
-    this.lastActivityAt = Math.max(this.lastActivityAt ?? timestamp, timestamp);
+    this.lastShownAt = Math.max(this.lastShownAt ?? timestamp, timestamp);
   }
 
   start(id: string, now: number): void {
@@ -58,13 +65,13 @@ export class ToolTimeline {
 
   restore(results: Iterable<{ toolCallId: string; details?: unknown }>): void {
     this.calls.clear();
-    this.lastActivityAt = undefined;
+    this.lastShownAt = undefined;
     for (const result of results) {
       const timing = readToolTiming(result.details);
       if (!timing) continue;
       this.calls.set(result.toolCallId, timing);
       // Parallel tools can finish out of order. Use the latest start, not result order.
-      if (timing.startedAt !== undefined) {
+      if (timing.startedAt !== undefined && timing.showTimestamp) {
         this.restoreClock(timing.startedAt);
       }
     }

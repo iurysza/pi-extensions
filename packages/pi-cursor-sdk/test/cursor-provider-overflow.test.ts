@@ -6,7 +6,7 @@ import {
 	registerCursorOverflowNormalization,
 } from "../src/cursor-provider-overflow.js";
 import { makeAssistantMessage } from "./helpers/pi-harness.js";
-import type { AssistantMessage } from "@earendil-works/pi-ai/compat";
+import type { AssistantMessage } from "@earendil-works/pi-ai";
 
 function assistantError(provider: string | undefined, errorMessage?: string): AssistantMessage {
 	return {

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createAssistantMessageEventStream } from "@earendil-works/pi-ai/compat";
+import { createAssistantMessageEventStream } from "@earendil-works/pi-ai";
 import { resolveCursorSdkConfig, type CursorResolvedSdkConfig } from "../src/cursor-config.js";
 import { installCursorSdkProcessErrorGuard } from "../src/cursor-sdk-process-error-guard.js";
 import { makeAssistantMessage, makeContext, makeModel } from "./helpers/pi-harness.js";

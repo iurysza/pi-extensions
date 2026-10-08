@@ -4,6 +4,7 @@ import { Cursor } from "@cursor/sdk";
 import { defaultApiKeyFromEnv, parseArgv } from "./lib/cursor-cli-args.mjs";
 import { scrubSensitiveText } from "../shared/cursor-sensitive-text.mjs";
 import { createScriptFail } from "./lib/cursor-script-fail.mjs";
+import { normalizeCursorContextWindowEntries } from "../shared/cursor-model-selection-identities.mjs";
 
 const FALLBACK_MODELS_PATH = "src/cursor-fallback-models.generated.ts";
 const CONTEXT_WINDOWS_PATH = "src/bundled-context-windows.ts";
@@ -40,7 +41,9 @@ Notes:
   - This script prints model IDs/counts only; it never prints API keys.
   - Cursor.models.list() is the source of truth for fallback catalog metadata.
   - Checkpoint-derived context windows are optional input because collecting them
-    requires successful local SDK runs; this script does not start agents.`);
+    requires successful local SDK runs; this script does not start agents.
+  - Context-window keys are limited to current selectable model IDs. Redundant
+    :fast/:slow aliases that send the default parameters collapse to one key.`);
 }
 
 const fail = createScriptFail("refresh-cursor-snapshots");
@@ -156,9 +159,10 @@ function hasContextParameter(model) {
 }
 
 function formatContextWindows(models, checkpointWindows, fallbackContextWindow) {
-	const existing = parseExistingContextWindows();
-	const merged = new Map(existing);
-	for (const [modelId, contextWindow] of checkpointWindows) merged.set(modelId, contextWindow);
+	const merged = normalizeCursorContextWindowEntries(models, parseExistingContextWindows(), "existing bundled context windows");
+	for (const [modelId, contextWindow] of normalizeCursorContextWindowEntries(models, checkpointWindows, "checkpoint context windows")) {
+		merged.set(modelId, contextWindow);
+	}
 	for (const model of models) {
 		if (!hasContextParameter(model) && !merged.has(model.id)) merged.set(model.id, fallbackContextWindow);
 	}
@@ -167,7 +171,7 @@ function formatContextWindows(models, checkpointWindows, fallbackContextWindow) 
 	const date = new Date().toISOString().slice(0, 10);
 	const sorted = [...merged.entries()].sort(([a], [b]) => (a === "default" ? -1 : b === "default" ? 1 : a.localeCompare(b)));
 	const lines = sorted.map(([modelId, contextWindow]) => `\t${JSON.stringify(modelId)}: ${contextWindow},`);
-	return `// Generated from Cursor SDK checkpoint tokenDetails.maxTokens on ${date}.\n// Refresh with: npm run refresh:cursor-snapshots -- --write --context-windows ~/.pi/agent/cursor-sdk-context-windows.json\n// These are default/non-Max-mode SDK context windows for Cursor models that do not\n// expose a catalog \`context\` parameter. Do not replace them with Max Mode values\n// unless the Cursor SDK exposes an exact Max Mode model selection and the extension\n// uses that selection for matching pi model IDs.\nexport const BUNDLED_CONTEXT_WINDOWS = {\n${lines.join("\n")}\n} as const satisfies Record<string, number>;\n`;
+	return `// Generated from Cursor SDK checkpoint tokenDetails.maxTokens on ${date}.\n// Refresh with: npm run refresh:cursor-snapshots -- --write --context-windows ~/.pi/agent/cursor-sdk-context-windows.json\n// Keys are current selectable model IDs. Equivalent default :fast/:slow selections\n// collapse to one key; stale and ambiguous aliases are omitted. Values are observed\n// or conservative default/non-Max-mode limits and may override a catalog context\n// label when the completed SDK checkpoint reports a different effective limit.\nexport const BUNDLED_CONTEXT_WINDOWS = {\n${lines.join("\n")}\n} as const satisfies Record<string, number>;\n`;
 }
 
 const args = parseRefreshArgs(process.argv.slice(2));
@@ -184,11 +188,16 @@ if (!Array.isArray(rawModels) || rawModels.length === 0) fail("Cursor.models.lis
 const models = rawModels.map(sanitizeModelItem).sort((a, b) => a.id.localeCompare(b.id));
 const checkpointWindows = parseContextWindowsFile(args.contextWindowsPath);
 const fallbackSource = formatFallbackModels(models, sdkVersion);
-const contextWindowSource = args.contextWindowsPath ? formatContextWindows(models, checkpointWindows, args.fallbackContextWindow) : undefined;
+let contextWindowSource;
+try {
+	contextWindowSource = args.contextWindowsPath ? formatContextWindows(models, checkpointWindows, args.fallbackContextWindow) : undefined;
+} catch (error) {
+	fail(error instanceof Error ? error.message : String(error));
+}
 const existingContextWindowCount = parseExistingContextWindows().size;
 
 console.log(`Fetched ${models.length} Cursor models with @cursor/sdk@${sdkVersion}.`);
-console.log(`Context windows: ${checkpointWindows.size} checkpoint override(s), ${existingContextWindowCount} existing bundled entr${existingContextWindowCount === 1 ? "y" : "ies"}.`);
+console.log(`Context windows: ${checkpointWindows.size} checkpoint input(s), ${existingContextWindowCount} existing bundled entr${existingContextWindowCount === 1 ? "y" : "ies"}.`);
 console.log(`First models: ${models.slice(0, 8).map((model) => model.id).join(", ")}${models.length > 8 ? ", ..." : ""}`);
 
 if (args.check) {

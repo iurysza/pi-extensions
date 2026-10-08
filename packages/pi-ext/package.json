@@ -42,7 +42,7 @@
     "@earendil-works/pi-agent-core": "1.0.4",
     "@earendil-works/pi-ai": "1.0.4",
     "@earendil-works/pi-coding-agent": "1.0.4",
-    "@earendil-works/pi-tui": "1.0.2",
+    "@earendil-works/pi-tui": "1.0.4",
     "@types/semver": "^7.7.1",
     "tsx": "^4.19.0",
     "typebox": "^1.1.32",

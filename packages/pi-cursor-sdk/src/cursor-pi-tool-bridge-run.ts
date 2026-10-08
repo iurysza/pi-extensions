@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { McpServerConfig } from "@cursor/sdk";
-import type { Context, ToolResultMessage } from "@earendil-works/pi-ai/compat";
+import type { Context, ToolResultMessage } from "@earendil-works/pi-ai";
 import { Server as McpProtocolServer } from "@modelcontextprotocol/sdk/server/index.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import {

@@ -12,7 +12,7 @@ vi.mock("@earendil-works/pi-coding-agent", async (importOriginal) => {
 });
 
 import type { BeforeAgentStartEvent, BuildSystemPromptOptions, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import type { Context } from "@earendil-works/pi-ai/compat";
+import type { Context } from "@earendil-works/pi-ai";
 import {
 	classifyContextFileOverlap,
 	CURSOR_PRESERVE_PI_AGENTS_MD_ENV,
@@ -126,7 +126,7 @@ describe("pi project_context serialization helpers", () => {
 			'<project_instructions path="/repo/AGENTS.md">\nProject guidance\n</project_instructions>\n\n',
 		);
 		expect(serializePiProjectContextSection([PROJECT_FILE])).toBe(
-			'\n\n<project_context>\n\nProject-specific instructions and guidelines:\n\n<project_instructions path="/repo/AGENTS.md">\nProject guidance\n</project_instructions>\n\n</project_context>\n',
+			'\n\n<project_context>\nProject-specific instructions and guidelines:\n\n<project_instructions path="/repo/AGENTS.md">\nProject guidance\n</project_instructions>\n</project_context>\n',
 		);
 	});
 

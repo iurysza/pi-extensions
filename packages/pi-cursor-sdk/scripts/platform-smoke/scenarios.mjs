@@ -85,8 +85,8 @@ NATIVE_MATRIX_OK package=<name> grep=<yes/no> find=<yes/no> list=<yes/no> shell=
 		visualEvidence: [
 			{
 				id: "native-read-package",
-				pattern: "^\\s*read\\s+(?:(?:\\./)?package\\.json|.*[\\\\/]package\\.json)\\s*$",
-				wrappedPattern: "^\\s*read\\s+.*[\\\\/]package\\.(?:json|js\\s+on|j\\s*son)\\s*$",
+				pattern: "^\\s*read\\s+(?:(?:\\./)?package\\.json|.*[\\\\/]package\\.json)(?:\\s+·\\s+local file preview)?\\s*$",
+				wrappedPattern: "^\\s*read\\s+.*[\\\\/]package\\.(?:json|js\\s+on|j\\s*son)(?:\\s+·\\s+local file preview)?\\s*$",
 				jsonlResultId: "native-read-package",
 			},
 			{ id: "native-shell-success", pattern: "^\\s*cursor visual smoke\\s*$", jsonlResultId: "native-shell-output" },
@@ -108,7 +108,7 @@ NATIVE_MATRIX_OK package=<name> grep=<yes/no> find=<yes/no> list=<yes/no> shell=
 			PI_CURSOR_EXPOSE_BUILTIN_TOOLS: "0",
 			PI_CURSOR_SDK_EVENT_DEBUG: "1",
 		},
-		promptTemplate: "Reply exactly HTTP1_LIVE_OK.",
+		promptTemplate: "Join HTTP1, LIVE, and OK with underscores and reply with only the result.",
 		finalMarker: "HTTP1_LIVE_OK",
 		requiredCards: ["http1-status"],
 	},

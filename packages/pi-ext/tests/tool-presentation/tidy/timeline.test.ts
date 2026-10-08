@@ -42,16 +42,18 @@ function recorded(toolCallId: string, piTidyStartedAt: number, piTidyShowTimesta
   return { toolCallId, details: { piTidyStartedAt, piTidyShowTimestamp, piTidyElapsedMs: 800 } };
 }
 
-test("minute grouping follows starts, not result order or render order", () => {
+test("dividers follow starts 10 minutes apart, not result order or render order", () => {
   const timeline = new ToolTimeline();
   timeline.start("first", start);
   timeline.start("second", start + 10_000);
-  timeline.start("next-minute", start + 60_000);
+  timeline.start("next-minute", start + 600_000);
+  timeline.start("nine-minutes", start + 540_000);
   timeline.finish("second", start + 61_000);
   timeline.finish("first", start + 62_000);
   assert.equal(timeline.get("first")!.showTimestamp, true);
   assert.equal(timeline.get("second")!.showTimestamp, false);
   assert.equal(timeline.get("next-minute")!.showTimestamp, true);
+  assert.equal(timeline.get("nine-minutes")!.showTimestamp, true, "earlier clock shows a divider");
   timeline.start("first", start + 180_000);
   assert.equal(timeline.get("first")!.startedAt, start);
   assert.equal(timeline.finish("first", start + 600_000)!.elapsedMs, 62_000);
@@ -142,12 +144,12 @@ test("rendering before execution does not count argument streaming as tool runti
   await h.emit("session_shutdown");
 });
 
-test("registered renderers place one plain divider per minute across turns and reload", async (t) => {
+test("registered renderers place one plain divider per 10 minutes across turns and reload", async (t) => {
   const h = await harness();
   let now = start;
   t.mock.method(Date, "now", () => now);
   const results: any[] = [];
-  for (const [id, when, expectedDivider] of [["first", start, true], ["second", start + 10_000, false], ["third", start + 180_000, true]] as const) {
+  for (const [id, when, expectedDivider] of [["first", start, true], ["second", start + 180_000, false], ["third", start + 600_000, true]] as const) {
     now = when;
     await h.emit("tool_execution_start", { toolName: "read", toolCallId: id, args });
     now += 300;
@@ -164,7 +166,7 @@ test("registered renderers place one plain divider per minute across turns and r
   for (const entry of results.reverse()) {
     assert.deepEqual(rows(restored.settled(entry.message.toolCallId, entry.message.details)), rows(h.settled(entry.message.toolCallId, entry.message.details)));
   }
-  now = start + 190_000;
+  now = start + 610_000;
   await restored.emit("tool_execution_start", { toolName: "read", toolCallId: "after-reload", args });
   const patch = await restored.emit("tool_result", { toolName: "read", toolCallId: "after-reload" });
   assert.equal(patch.details.piTidyShowTimestamp, false);

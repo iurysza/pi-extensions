@@ -1,4 +1,4 @@
-import type { Api, AssistantMessage, Context, Model } from "@earendil-works/pi-ai/compat";
+import type { Api, AssistantMessage, Context, Model } from "@earendil-works/pi-ai";
 import {
 	CURSOR_APPROX_CHARS_PER_TOKEN,
 	CURSOR_IMAGE_TOKEN_ESTIMATE,
@@ -7,6 +7,7 @@ import {
 	type CursorPromptOptions,
 } from "./context.js";
 import { asRecord, getNumber } from "./cursor-record-utils.js";
+import type { CursorRuntime } from "./cursor-config.js";
 
 export interface CursorUsagePromptOptions extends CursorPromptOptions {
 	maxInputTokens: number;
@@ -84,21 +85,51 @@ export function estimateCursorContextTotalTokens(partial: AssistantMessage, mode
 	return estimateCursorContextTokens(withAssistantMessage(context, partial), getCursorPromptOptions(model));
 }
 
+function getCursorSdkUncachedInputTokens(turnUsage: CursorSdkTurnUsage): number {
+	// Observed raw local turn-ended.usage: inputTokens is the full prompt; cache fields partition it.
+	// Published SDK toTokenUsage instead sums all four into totalTokens — do not use that transform here.
+	return turnUsage.inputTokens - turnUsage.cacheReadTokens - turnUsage.cacheWriteTokens;
+}
+
 export function isCursorSdkUsageSafeForPiMessage(turnUsage: CursorSdkTurnUsage, model: Model<Api>): boolean {
 	const counts = [turnUsage.inputTokens, turnUsage.outputTokens, turnUsage.cacheReadTokens, turnUsage.cacheWriteTokens];
+	const uncachedInput = getCursorSdkUncachedInputTokens(turnUsage);
 	return (
 		counts.every((count) => Number.isFinite(count) && count >= 0) &&
+		Number.isFinite(uncachedInput) &&
+		uncachedInput >= 0 &&
 		turnUsage.outputTokens <= model.maxTokens &&
-		turnUsage.inputTokens + turnUsage.outputTokens + turnUsage.cacheReadTokens + turnUsage.cacheWriteTokens <= model.contextWindow
+		turnUsage.inputTokens + turnUsage.outputTokens <= model.contextWindow
 	);
 }
 
 export function applyCursorSdkUsage(partial: AssistantMessage, turnUsage: CursorSdkTurnUsage): void {
-	partial.usage.input = turnUsage.inputTokens;
+	// Pi treats input/cacheRead/cacheWrite as disjoint additive prompt components.
+	partial.usage.input = getCursorSdkUncachedInputTokens(turnUsage);
 	partial.usage.output = turnUsage.outputTokens;
 	partial.usage.cacheRead = turnUsage.cacheReadTokens;
 	partial.usage.cacheWrite = turnUsage.cacheWriteTokens;
-	partial.usage.totalTokens = turnUsage.inputTokens + turnUsage.outputTokens + turnUsage.cacheReadTokens + turnUsage.cacheWriteTokens;
+	// totalTokens is context occupancy (full prompt + output), not the sum of spend components alone.
+	partial.usage.totalTokens = turnUsage.inputTokens + turnUsage.outputTokens;
+}
+
+function isCompatibleCursorAssistantMeasurement(assistant: AssistantMessage, model: Model<Api>): boolean {
+	return assistant.api === model.api && assistant.provider === model.provider && assistant.model === model.id;
+}
+
+function getLastAcceptedContextOccupancy(context: Context, model: Model<Api>): number {
+	for (let index = context.messages.length - 1; index >= 0; index -= 1) {
+		const message = context.messages[index];
+		if (message.role !== "assistant" || !("usage" in message)) continue;
+		const assistant = message as AssistantMessage;
+		if (assistant.stopReason === "aborted" || assistant.stopReason === "error" || !assistant.usage) continue;
+		if (!isCompatibleCursorAssistantMeasurement(assistant, model)) continue;
+		const { usage } = assistant;
+		const total =
+			usage.totalTokens || usage.input + usage.output + usage.cacheRead + usage.cacheWrite;
+		if (Number.isFinite(total) && total > 0 && total <= model.contextWindow) return total;
+	}
+	return 0;
 }
 
 export function applyCursorApproximateUsage(partial: AssistantMessage, model: Model<Api>, context: Context, sessionInputTokens: number): void {
@@ -107,9 +138,11 @@ export function applyCursorApproximateUsage(partial: AssistantMessage, model: Mo
 	partial.usage.output = outputTokens;
 	partial.usage.cacheRead = 0;
 	partial.usage.cacheWrite = 0;
+	// Never report less occupancy than the last compatible same-model in-window assistant measurement.
 	partial.usage.totalTokens = Math.max(
 		partial.usage.input + partial.usage.output,
 		estimateCursorContextTotalTokens(partial, model, context),
+		getLastAcceptedContextOccupancy(context, model),
 	);
 }
 
@@ -118,9 +151,11 @@ export function applyCursorUsage(
 	model: Model<Api>,
 	context: Context,
 	sessionInputTokens: number,
-	sdkUsage?: { turn?: CursorSdkTurnUsage },
+	sdkUsage?: { runtime: CursorRuntime; turn?: CursorSdkTurnUsage },
 ): void {
-	const usage = sdkUsage?.turn;
+	// Only local raw turn-ended usage has a captured full-prompt/cache-partition contract.
+	// Cloud raw usage remains display-only until its field semantics are independently observed.
+	const usage = sdkUsage?.runtime === "local" ? sdkUsage.turn : undefined;
 	if (usage && isCursorSdkUsageSafeForPiMessage(usage, model)) {
 		applyCursorSdkUsage(partial, usage);
 		return;

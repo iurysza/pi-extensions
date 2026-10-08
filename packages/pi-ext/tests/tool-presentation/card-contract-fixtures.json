@@ -145,5 +145,55 @@
         "completed": false
       }
     }
+  },
+  {
+    "name": "cursor",
+    "state": "success",
+    "source": {
+      "constructor": "pi-cursor-sdk/src/cursor-native-tool-display-replay.ts:createCursorReplayOnlyToolDefinition",
+      "transport": "replay-only, recorded result"
+    },
+    "args": {
+      "activityTitle": "Cursor web search",
+      "activitySummary": "pi docs"
+    },
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Example response"
+        }
+      ],
+      "details": {
+        "variant": "activity",
+        "title": "Cursor web search",
+        "summary": "3 results"
+      }
+    }
+  },
+  {
+    "name": "cursor",
+    "state": "error",
+    "source": {
+      "constructor": "pi-cursor-sdk/src/cursor-native-tool-display-replay.ts:createCursorReplayOnlyToolDefinition",
+      "transport": "replay-only, recorded result"
+    },
+    "args": {
+      "activityTitle": "Cursor web search"
+    },
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Error: failed"
+        }
+      ],
+      "details": {
+        "variant": "activity",
+        "title": "Cursor web search",
+        "error": "failed"
+      },
+      "isError": true
+    }
   }
 ]

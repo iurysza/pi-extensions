@@ -165,6 +165,22 @@ function isCursorSdkStallAbortNetworkError(code: unknown, evidence: string, stac
 	);
 }
 
+/**
+ * @cursor/sdk@1.0.23 throws internal RetriableError (name/kind "RetriableError") with message
+ * "Connection stalled" or "Connection stalled repeatedly" after fetchWithRetry exhausts stalls.
+ * The ConnectError is only the cause; the top-level error is not a ConnectError.
+ */
+export function isCursorSdkConnectionStalledError(error: unknown): boolean {
+	const record = asRecord(error);
+	if (!record) return false;
+	const name = getErrorName(error, record) ?? getErrorStringField(record, "kind");
+	if (name !== "RetriableError") return false;
+	const message = (error instanceof Error ? error.message : getErrorStringField(record, "message") ?? "").trim();
+	if (!/^Connection stalled(?: repeatedly)?$/i.test(message)) return false;
+	const stack = getErrorStack(error, record);
+	return /(?:^|[\\/])node_modules[\\/]@cursor[\\/]sdk[\\/]dist[\\/]/.test(stack) || stack.includes("@cursor/sdk");
+}
+
 function isCursorExtensionConnectStack(stack: string): boolean {
 	// pi runs Cursor SDK in Node, where the SDK dynamically imports connect-node.
 	// connect-web is the SDK's Bun/Deno path and is intentionally not classified for supported pi runs.
@@ -354,7 +370,7 @@ export function sanitizeCursorProviderError(
 	) {
 		return runtimeTarget === "cloud" ? CLOUD_AUTH_CURSOR_SDK_ERROR_MESSAGE : AUTH_CURSOR_SDK_ERROR_MESSAGE;
 	}
-	if (connectClassification?.kind === "network" || isLikelyNetworkTimeout(scrubbed)) return NETWORK_CURSOR_SDK_ERROR_MESSAGE;
+	if (connectClassification?.kind === "network" || isCursorSdkConnectionStalledError(error) || isLikelyNetworkTimeout(scrubbed)) return NETWORK_CURSOR_SDK_ERROR_MESSAGE;
 	if (isGenericCursorRunFailureMessage(scrubbed)) return RETRYABLE_CURSOR_RUN_FAILURE_PREFIX;
 	if (isGenericErrorMessage(scrubbed)) return GENERIC_CURSOR_SDK_ERROR_MESSAGE;
 	return scrubbed || GENERIC_CURSOR_SDK_ERROR_MESSAGE;

@@ -2,7 +2,7 @@ import type { ChildProcess } from "node:child_process";
 import { pathToFileURL } from "node:url";
 import { createRequire } from "node:module";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { join, sep } from "node:path";
 import { describe, expect, it } from "vitest";
 import type {
 	CursorDebugCaptureCounts,
@@ -85,6 +85,7 @@ const packageJson = require("../package.json") as { files: string[] };
 
 /** Type-only exports that intentionally have no runtime .mjs value. */
 const DECLARATION_TYPE_ONLY_EXPORTS: Record<string, readonly string[]> = {
+	"shared/cursor-model-selection-identities.d.mts": ["CursorModelSelectionIdentity"],
 	"scripts/cloud-runtime-smoke.d.mts": [
 		"CloudSmokeBranchLaneEvidence",
 		"CloudSmokeCancelLaneEvidence",
@@ -196,7 +197,7 @@ function listDeclarationsInDirectory(directory: string): string[] {
 		if (!entry.isFile() || !path.endsWith(".d.mts")) return [];
 		const runtimePath = path.replace(/\.d\.mts$/, ".mjs");
 		expect(existsSync(runtimePath), `${path} must have a runtime .mjs sibling`).toBe(true);
-		return [path];
+		return [path.split(sep).join("/")];
 	});
 }
 

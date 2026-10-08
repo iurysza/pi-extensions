@@ -46,6 +46,7 @@ import {
 } from "../../src/cursor-cloud-lifecycle.js";
 import { __testUtils as cursorSessionScopeTestUtils } from "../../src/cursor-session-scope.js";
 import { __testUtils as cursorSessionResumeTestUtils } from "../../src/cursor-session-agent-resume.js";
+import { __testUtils as cursorSessionLineageTestUtils } from "../../src/cursor-session-agent-lineage.js";
 import { __testUtils as cursorStateTestUtils } from "../../src/cursor-state.js";
 import { __testUtils as cursorHttp1TestUtils } from "../../src/cursor-http1.js";
 import { CURSOR_HTTP1_ENV } from "../../src/cursor-config.js";
@@ -56,7 +57,7 @@ import { __testUtils as nativeToolDisplayTestUtils } from "../../src/cursor-nati
 import { registerCursorNativeToolDisplay } from "../../src/cursor-native-tool-display-registration.js";
 import type { CursorNativeToolDisplayExtensionApi } from "../../src/cursor-native-tool-display-registration.js";
 import type { ModelListItem, Run, SDKAgent, SendOptions } from "@cursor/sdk";
-import type { AssistantMessage, AssistantMessageEvent, TextContent, ImageContent, ToolCall } from "@earendil-works/pi-ai/compat";
+import type { AssistantMessage, AssistantMessageEvent, TextContent, ImageContent, ToolCall } from "@earendil-works/pi-ai";
 import type { ExtensionAPI, ToolInfo } from "@earendil-works/pi-coding-agent";
 import { installCursorSessionStoreMock } from "./cursor-session-store.js";
 import {
@@ -426,6 +427,7 @@ export async function resetCursorProviderTestState(): Promise<void> {
 	cursorProviderTestUtils.resetSessionTurnQueue();
 	cursorSessionScopeTestUtils.reset();
 	cursorSessionResumeTestUtils.reset();
+	cursorSessionLineageTestUtils.reset();
 	cursorStateTestUtils.resetCursorModeStateForTests();
 	cursorHttp1TestUtils.reset();
 	nativeToolDisplayTestUtils.reset();

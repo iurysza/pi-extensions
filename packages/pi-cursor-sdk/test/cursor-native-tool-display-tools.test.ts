@@ -12,42 +12,6 @@ import { BUILTIN_NATIVE_CURSOR_TOOL_NAMES } from "../src/cursor-native-tool-name
 import { createRenderContext, createRenderOptions, createRenderTheme } from "./helpers/render-fixtures.js";
 
 describe("wrapNativeCursorTool", () => {
-	it("does not use Cursor replay rendering for ordinary pi edit toolCallIds", () => {
-		const replaySpy = vi.spyOn(replay, "renderCursorReplayResult").mockReturnValue(new Text("", 0, 0));
-		const parameters = Type.Object({});
-		type EditToolDefinition = ToolDefinition<typeof parameters, unknown, unknown>;
-		const delegateRenderResult = vi.fn<NonNullable<EditToolDefinition["renderResult"]>>(() => new Text("pi edit", 0, 0));
-		const definition: EditToolDefinition = {
-			name: "edit",
-			label: "edit",
-			description: "edit",
-			parameters,
-			execute: vi.fn(async () => ({ content: [], details: undefined })),
-			renderResult: delegateRenderResult,
-		};
-		const wrapped = wrapNativeCursorTool(definition, () => definition);
-		const theme = createRenderTheme();
-
-		wrapped.renderResult?.(
-			{
-				content: [{ type: "text", text: "edit src/foo.ts" }],
-				details: {
-					path: "src/foo.ts",
-					diffString: "--- a\n+++ b\n",
-					linesAdded: 1,
-					linesRemoved: 1,
-				},
-			},
-			createRenderOptions(),
-			theme,
-			createRenderContext({ isError: false, toolCallId: "ordinary-edit-1" }),
-		);
-
-		expect(replaySpy).not.toHaveBeenCalled();
-		expect(delegateRenderResult).toHaveBeenCalledOnce();
-		replaySpy.mockRestore();
-	});
-
 	it.each(BUILTIN_NATIVE_CURSOR_TOOL_NAMES)("fails closed when %s replay state is missing", async (toolName) => {
 		__testUtils.reset();
 		const parameters = Type.Object({});

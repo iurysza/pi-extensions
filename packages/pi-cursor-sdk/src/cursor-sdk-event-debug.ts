@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { copyFileSync, existsSync, unlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import type { AssistantMessageEventStream } from "@earendil-works/pi-ai/compat";
+import type { AssistantMessageEventStream } from "@earendil-works/pi-ai";
 import type { AgentModeOption, InteractionUpdate } from "@cursor/sdk";
 import type { CursorPiToolBridgeDiagnosticEvent } from "./cursor-pi-tool-bridge-diagnostics.js";
 import { serializeCursorPiToolBridgeDiagnostic } from "./cursor-pi-tool-bridge-diagnostics.js";

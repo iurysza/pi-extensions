@@ -1,6 +1,6 @@
 import type { Theme } from "@earendil-works/pi-coding-agent";
-import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
-import type { TidyMode } from "../config.js";
+import { truncateToWidth, visibleWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
+import { DEFAULT_EXPANDED_MAX_LINES, type TidyMode } from "../config.js";
 import { BOLD, CYAN, DIM, GREEN, MAGENTA, RED, RESET, grepResultCounts, nonEmptyLineCount, shortPath, style } from "../render.js";
 import { stripReasoning } from "../tool-composition.js";
 import { builtinSpec } from "./specs/builtins.js";
@@ -52,15 +52,77 @@ export class WidthAwareLines {
 	render(width: number): string[] {
 		const max = Math.max(1, width);
 		const lines = typeof this.source === "function" ? this.source() : this.source;
-		return lines.map((line) => {
-			const fitted = fitToolLine(line, max);
-			if (!this.background) return fitted;
-			const padded = fitted + " ".repeat(Math.max(0, max - visibleWidth(fitted)));
-			// Raw foreground styling uses RESET, which also clears an enclosing
-			// background. Apply the background independently to every reset-delimited
-			// segment so it remains continuous through the full padded line.
-			return padded.split(RESET).map((segment) => this.background!(`${segment}${RESET}`)).join("");
-		});
+		return lines.map((line) => paint(fitToolLine(line, max), max, this.background));
+	}
+}
+
+/** Pad a row that already fits and keep its background unbroken. */
+function paint(row: string, max: number, background?: (text: string) => string): string {
+	if (!background) return row;
+	const padded = row + " ".repeat(Math.max(0, max - visibleWidth(row)));
+	// Raw foreground styling uses RESET, which also clears an enclosing
+	// background. Apply the background independently to every reset-delimited
+	// segment so it remains continuous through the full padded line.
+	return padded.split(RESET).map((segment) => background(`${segment}${RESET}`)).join("");
+}
+
+/** Card lines by layout: head and tail rows fit one row each; body lines wrap and are capped. */
+export interface CardParts { head: string[]; body: string[]; tail: string[] }
+
+/** Wrap one body line, keeping the hanging indent on continuation rows. */
+function wrapBodyLine(line: string, max: number): string[] {
+	const indented = line.startsWith(INDENT) && max > INDENT.length;
+	const rows = indented ? wrapTextWithAnsi(line.slice(INDENT.length), max - INDENT.length).map((row) => `${INDENT}${row}`) : wrapTextWithAnsi(line, max);
+	// Guard against characters the wrapper measures differently, such as tabs.
+	return rows.map((row) => truncateToWidth(row, max, ""));
+}
+
+/**
+ * Wrap body lines until `maxLines` rows (0 means no limit). Wrapping stops at the
+ * limit, so huge output costs no more than the limit itself.
+ */
+export function layoutBody(body: string[], width: number, maxLines: number): string[] {
+	const max = Math.max(1, width);
+	const rows: string[] = [];
+	let shown = 0;
+	for (const line of body) {
+		const wrapped = wrapBodyLine(line, max);
+		if (maxLines > 0 && rows.length + wrapped.length > maxLines) {
+			// One line longer than the whole limit still shows its first rows.
+			if (rows.length === 0) rows.push(...wrapped.slice(0, maxLines));
+			break;
+		}
+		rows.push(...wrapped);
+		shown++;
+	}
+	const hidden = body.length - shown;
+	if (hidden > 0) rows.push(truncateToWidth(`${INDENT}${DIM}… ${hidden} more ${hidden === 1 ? "line" : "lines"} · /tidy lines <n> changes the limit${RESET}`, max, "…"));
+	return rows;
+}
+
+/** An expanded card that wraps its body. Results are cached per width, limit and content. */
+export class ExpandedCard {
+	private key = "";
+	private rows: string[] = [];
+	constructor(
+		private readonly source: () => CardParts,
+		private readonly background?: (text: string) => string,
+		private readonly maxLines: () => number = () => DEFAULT_EXPANDED_MAX_LINES,
+	) {}
+	invalidate(): void { this.key = ""; }
+	render(width: number): string[] {
+		const max = Math.max(1, width);
+		const { head, body, tail } = this.source();
+		const limit = this.maxLines();
+		const key = [max, limit, head.join("\n"), body.join("\n"), tail.join("\n")].join("\0");
+		if (key === this.key) return this.rows;
+		this.key = key;
+		this.rows = [
+			...head.map((line) => fitToolLine(line, max)),
+			...layoutBody(body, max, limit),
+			...tail.map((line) => fitToolLine(line, max)),
+		].map((row) => paint(row, max, this.background));
+		return this.rows;
 	}
 }
 
@@ -267,8 +329,14 @@ export function buildToolBlock(
 export interface CardModel { spec: CardSpec; args: CardArgs; result: CardResult }
 export interface CardOptions { isError?: boolean; isPartial?: boolean; expanded?: boolean; elapsedMs?: number; mode?: TidyMode; icons?: boolean }
 
-/** All layouts share the same two-line shape and width fitting. */
-export function renderCard({ spec, args = {}, result = {} }: CardModel, opts: CardOptions = {}): string[] {
+/** All layouts share the same two-line shape and width fitting. Expanded output is not capped here. */
+export function renderCard(model: CardModel, opts: CardOptions = {}): string[] {
+	const { head, body, tail } = cardParts(model, opts);
+	return [...head, ...body, ...tail];
+}
+
+/** The card split into its summary rows, expanded body and trailing notes. */
+export function cardParts({ spec, args = {}, result = {} }: CardModel, opts: CardOptions = {}): CardParts {
 	const { isError: piError = false, isPartial = false, expanded = false, elapsedMs, mode = "default", icons = true } = opts;
 	const isError = piError || result?.isError === true || spec.failed?.(result) === true;
 	const { reasoning, rest } = stripReasoning(args ?? {});
@@ -311,14 +379,15 @@ export function renderCard({ spec, args = {}, result = {} }: CardModel, opts: Ca
 			line2,
 		];
 	}
+	const body: string[] = [];
+	const tail: string[] = [];
 	if (expanded && !isPartial) {
-		if (spec.legacy) lines.push(...expandedLines(spec.label, rest, result));
+		if (spec.legacy) body.push(...expandedLines(spec.label, rest, result));
 		else {
-			const body = isError && !spec.errorSummary && (piError || result.isError || result.details?.error) ? errorText(result).split("\n") : spec.expanded?.(result, rest) ?? [];
-			lines.push(...body.slice(0, 200).map((line) => `${INDENT}${isError ? RED : DIM}${line}${RESET}`));
-			if (body.length > 200) lines.push(`${INDENT}${DIM}… ${body.length - 200} more lines${RESET}`);
-			if (result.details?.fullOutputPath) lines.push(`${INDENT}${DIM}full output: ${result.details.fullOutputPath}${RESET}`);
+			const output = isError && !spec.errorSummary && (piError || result.isError || result.details?.error) ? errorText(result).split("\n") : spec.expanded?.(result, rest) ?? [];
+			body.push(...output.map((line) => `${INDENT}${isError ? RED : DIM}${line}${RESET}`));
+			if (result.details?.fullOutputPath) tail.push(`${INDENT}${DIM}full output: ${result.details.fullOutputPath}${RESET}`);
 		}
 	}
-	return lines;
+	return { head: lines, body, tail };
 }

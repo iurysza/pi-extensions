@@ -1,6 +1,6 @@
 {
   "name": "@iurysza/pi-cursor-sdk",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "pi provider extension backed by @cursor/sdk local and cloud agents",
   "author": "Mitch Fultz (https://github.com/fitchmultz)",
   "license": "MIT",
@@ -157,8 +157,13 @@
   },
   "dependencies": {
     "@cursor/sdk": "1.0.23",
-    "@modelcontextprotocol/sdk": "^1.29.0"
+    "@hono/node-server": "2.0.12",
+    "@modelcontextprotocol/sdk": "1.30.0"
   },
+  "bundledDependencies": [
+    "@hono/node-server",
+    "@modelcontextprotocol/sdk"
+  ],
   "peerDependencies": {
     "@earendil-works/pi-ai": "*",
     "@earendil-works/pi-coding-agent": "*",
@@ -166,15 +171,15 @@
     "typebox": "*"
   },
   "devDependencies": {
-    "@earendil-works/pi-ai": "0.80.9",
-    "@earendil-works/pi-coding-agent": "0.80.9",
-    "@earendil-works/pi-tui": "1.0.2",
+    "@earendil-works/pi-ai": "1.0.4",
+    "@earendil-works/pi-coding-agent": "1.0.4",
+    "@earendil-works/pi-tui": "1.0.4",
     "@types/node": "25.6.0",
     "@xterm/xterm": "^6.0.0",
     "node-pty": "^1.1.0",
     "playwright": "^1.60.0",
-    "typebox": "^1.1.38",
-    "typescript": "6.0.3",
+    "typebox": "1.3.27",
+    "typescript": "^6.0.3",
     "vitest": "^4.1.6"
   },
   "pi": {

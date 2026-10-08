@@ -64,6 +64,12 @@ describe("streamCursor cloud request validation", () => {
 
 	it("blocks cloud agent creation when the explicit repo does not match the local remote", async () => {
 		const root = mkdtempSync(join(tmpdir(), "pi-cursor-cloud-target-"));
+		const cleanHome = mkdtempSync(join(tmpdir(), "pi-cursor-cloud-target-home-"));
+		const cleanXdg = mkdtempSync(join(tmpdir(), "pi-cursor-cloud-target-xdg-"));
+		const previousHome = process.env.HOME;
+		const previousXdg = process.env.XDG_CONFIG_HOME;
+		process.env.HOME = cleanHome;
+		process.env.XDG_CONFIG_HOME = cleanXdg;
 		initTrackedGitRepo(root, "https://github.com/example/local.git");
 		cursorSessionScopeTestUtils.set(root, join(root, "session.jsonl"), "test-session", true);
 		process.env.PI_CURSOR_RUNTIME = "cloud";
@@ -78,7 +84,13 @@ describe("streamCursor cloud request validation", () => {
 			expect(getErrorEvent(events).error.errorMessage).toContain("cloud target has no locally verified tracking ref");
 			expect(mockedCreate).not.toHaveBeenCalled();
 		} finally {
+			if (previousHome === undefined) delete process.env.HOME;
+			else process.env.HOME = previousHome;
+			if (previousXdg === undefined) delete process.env.XDG_CONFIG_HOME;
+			else process.env.XDG_CONFIG_HOME = previousXdg;
 			rmSync(root, { recursive: true, force: true });
+			rmSync(cleanHome, { recursive: true, force: true });
+			rmSync(cleanXdg, { recursive: true, force: true });
 		}
 	});
 

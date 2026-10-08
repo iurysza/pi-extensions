@@ -19,8 +19,9 @@ export const CURSOR_PRESERVE_PI_AGENTS_MD_ENV = "PI_CURSOR_PRESERVE_PI_AGENTS_MD
 /** Opening tag prefix pi `buildSystemPrompt()` uses for each context file (path attribute only). */
 export const PI_PROJECT_INSTRUCTIONS_OPEN_PREFIX = '<project_instructions path="';
 const PI_PROJECT_INSTRUCTIONS_CLOSE = "</project_instructions>";
-const PI_PROJECT_CONTEXT_OPEN = "\n\n<project_context>\n\nProject-specific instructions and guidelines:\n\n";
-const PI_PROJECT_CONTEXT_CLOSE = "</project_context>\n";
+// Pi 1.0 renders project_context as a tagged section: blocks joined by one blank line, no padding inside the tag.
+const PI_PROJECT_CONTEXT_OPEN = "\n\n<project_context>\nProject-specific instructions and guidelines:\n\n";
+const PI_PROJECT_CONTEXT_CLOSE = "\n</project_context>\n";
 
 function normalizeContextPath(filePath: string): string {
 	return filePath.replace(/\\/g, "/");
@@ -119,7 +120,7 @@ export function serializePiProjectInstructionsBlock(file: PiAgentsContextFile): 
 /** Exact pi `buildSystemPrompt()` serialization for the full project context section. */
 export function serializePiProjectContextSection(contextFiles: readonly PiAgentsContextFile[]): string {
 	if (contextFiles.length === 0) return "";
-	return `${PI_PROJECT_CONTEXT_OPEN}${contextFiles.map(serializePiProjectInstructionsBlock).join("")}${PI_PROJECT_CONTEXT_CLOSE}`;
+	return `${PI_PROJECT_CONTEXT_OPEN}${contextFiles.map((file) => serializePiProjectInstructionsBlock(file).trimEnd()).join("\n\n")}${PI_PROJECT_CONTEXT_CLOSE}`;
 }
 
 /** Remove pi context blocks that overlap Cursor setting sources. */

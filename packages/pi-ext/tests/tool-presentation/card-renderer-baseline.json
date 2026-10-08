@@ -137,8 +137,10 @@
         "\u001b[33m󱕍\u001b[0m Example           \u001b[0m",
         "\u001b[0m…\u001b[0m →\u001b[0m \u001b[32mexample.com/docs\u001b[0m\u001b[0m",
         "  \u001b[2mExample\u001b[0m           \u001b[0m",
-        "  \u001b[2m/tmp/tool-cards/e\u001b[0m…\u001b[0m\u001b[0m",
-        "  \u001b[2mhttps://example.c\u001b[0m…\u001b[0m\u001b[0m"
+        "  \u001b[2m/tmp/tool-cards/ex\u001b[0m",
+        "  \u001b[2mample.md\u001b[0m          \u001b[0m",
+        "  \u001b[2mhttps://example.co\u001b[0m",
+        "  \u001b[2mm/docs\u001b[0m            \u001b[0m"
       ]
     },
     {
@@ -831,7 +833,9 @@
       "lines": [
         "\u001b[36m󰭻\u001b[0m Example           \u001b[0m",
         "→\u001b[0m \u001b[31mError: Session fi\u001b[0m…\u001b[0m\u001b[0m",
-        "  \u001b[31mError: Session fi\u001b[0m…\u001b[0m\u001b[0m"
+        "  \u001b[31mError: Session    \u001b[0m",
+        "  \u001b[31mfile not found:   \u001b[0m",
+        "  \u001b[31m/tmp/example.jsonl\u001b[0m\u001b[0m"
       ]
     },
     {
@@ -937,7 +941,12 @@
       "lines": [
         "\u001b[33m󰎜\u001b[0m Example           \u001b[0m",
         "\u001b[31mToo long: 284 bytes\u001b[0m…\u001b[0m\u001b[0m",
-        "  \u001b[31mToo long: 284 byt\u001b[0m…\u001b[0m\u001b[0m"
+        "  \u001b[31mToo long: 284     \u001b[0m",
+        "  \u001b[31mbytes, limit 280. \u001b[0m",
+        "  \u001b[31mAccented          \u001b[0m",
+        "  \u001b[31mcharacters cost 2 \u001b[0m",
+        "  \u001b[31mbytes. Compress it\u001b[0m",
+        "  \u001b[31mfurther.\u001b[0m          \u001b[0m"
       ]
     },
     {
@@ -946,7 +955,8 @@
       "lines": [
         "\u001b[33m󰎜\u001b[0m Example                                                                       \u001b[0m",
         "\u001b[31mToo long: 284 bytes, limit 280. Accented charac\u001b[0m…\u001b[0m\u001b[0m                                \u001b[0m",
-        "  \u001b[31mToo long: 284 bytes, limit 280. Accented characters cost 2 bytes. Compress it\u001b[0m…\u001b[0m\u001b[0m"
+        "  \u001b[31mToo long: 284 bytes, limit 280. Accented characters cost 2 bytes. Compress it \u001b[0m",
+        "  \u001b[31mfurther.\u001b[0m                                                                      \u001b[0m"
       ]
     },
     {
@@ -991,7 +1001,8 @@
         "\u001b[33m󰒲\u001b[0m Example           \u001b[0m",
         "\u001b[2m#0-1\u001b[0m \u001b[2m→\u001b[0m \u001b[32mmerged\u001b[0m       \u001b[0m",
         "  \u001b[2m0-1 saved.\u001b[0m        \u001b[0m",
-        "  \u001b[2mNothing left to c\u001b[0m…\u001b[0m\u001b[0m"
+        "  \u001b[2mNothing left to   \u001b[0m",
+        "  \u001b[2mcompress.\u001b[0m         \u001b[0m"
       ]
     },
     {
@@ -1153,7 +1164,12 @@
         "\u001b[36m󰄠\u001b[0m Example           \u001b[0m",
         "→\u001b[0m \u001b[32mdone\u001b[0m…\u001b[0m \u001b[2m· 231.7k tok\u001b[0m\u001b[0m",
         "  \u001b[2m[redacted]\u001b[0m        \u001b[0m",
-        "  \u001b[2mType: Agent | Sta\u001b[0m…\u001b[0m\u001b[0m",
+        "  \u001b[2mType: Agent |     \u001b[0m",
+        "  \u001b[2mStatus: completed \u001b[0m",
+        "  \u001b[2m| Tool uses: 26 | \u001b[0m",
+        "  \u001b[2m231.7k token |    \u001b[0m",
+        "  \u001b[2mContext: 54% |    \u001b[0m",
+        "  \u001b[2mDuration: 530.4s\u001b[0m  \u001b[0m",
         "  \u001b[2m[redacted]\u001b[0m        \u001b[0m",
         "  \u001b[2m[redacted]\u001b[0m        \u001b[0m",
         "  \u001b[2m[redacted]\u001b[0m        \u001b[0m",
@@ -1191,7 +1207,8 @@
         "\u001b[36m󰄠\u001b[0m Example                                                                       \u001b[0m",
         "\u001b[2m@Example\u001b[0m \u001b[2m→\u001b[0m \u001b[32mdone · 26 tools · 231.7k tok\u001b[0m                                         \u001b[0m",
         "  \u001b[2m[redacted]\u001b[0m                                                                    \u001b[0m",
-        "  \u001b[2mType: Agent | Status: completed | Tool uses: 26 | 231.7k token | Context: 54%\u001b[0m…\u001b[0m\u001b[0m",
+        "  \u001b[2mType: Agent | Status: completed | Tool uses: 26 | 231.7k token | Context: 54% \u001b[0m",
+        "  \u001b[2m| Duration: 530.4s\u001b[0m                                                            \u001b[0m",
         "  \u001b[2m[redacted]\u001b[0m                                                                    \u001b[0m",
         "  \u001b[2m[redacted]\u001b[0m                                                                    \u001b[0m",
         "  \u001b[2m[redacted]\u001b[0m                                                                    \u001b[0m",
@@ -1346,13 +1363,19 @@
         "\u001b[35m󰅩\u001b[0m verify cards      \u001b[0m",
         "\u001b[2m5 \u001b[0m…\u001b[0m →\u001b[0m \u001b[32mExample output\u001b[0m\u001b[0m",
         "  \u001b[2m// verify cards\u001b[0m   \u001b[0m",
-        "  \u001b[2mtext('Example out\u001b[0m…\u001b[0m\u001b[0m",
+        "  \u001b[2mtext('Example     \u001b[0m",
+        "  \u001b[2moutput');\u001b[0m         \u001b[0m",
         "  \u001b[2m\u001b[0m                  \u001b[0m",
-        "  \u001b[2m✓ \u001b[36m󰈙\u001b[0m example.ts \u001b[2m· \u001b[0m…\u001b[0m\u001b[0m",
-        "  \u001b[2m✓ \u001b[36m󰈙\u001b[0m example.ts \u001b[2m· \u001b[0m…\u001b[0m\u001b[0m",
-        "  \u001b[2m✓ \u001b[36m󰈙\u001b[0m example.ts \u001b[2m· \u001b[0m…\u001b[0m\u001b[0m",
-        "  \u001b[2m✓ \u001b[36m󰈙\u001b[0m example.ts \u001b[2m· \u001b[0m…\u001b[0m\u001b[0m",
-        "  \u001b[2m✓ \u001b[36m󰈙\u001b[0m example.ts \u001b[2m· \u001b[0m…\u001b[0m\u001b[0m",
+        "  \u001b[2m✓ \u001b[36m󰈙\u001b[0m example.ts \u001b[2m·  \u001b[0m",
+        "  \u001b[2m<1s\u001b[0m\u001b[0m               \u001b[0m",
+        "  \u001b[2m✓ \u001b[36m󰈙\u001b[0m example.ts \u001b[2m·  \u001b[0m",
+        "  \u001b[2m<1s\u001b[0m\u001b[0m               \u001b[0m",
+        "  \u001b[2m✓ \u001b[36m󰈙\u001b[0m example.ts \u001b[2m·  \u001b[0m",
+        "  \u001b[2m<1s\u001b[0m\u001b[0m               \u001b[0m",
+        "  \u001b[2m✓ \u001b[36m󰈙\u001b[0m example.ts \u001b[2m·  \u001b[0m",
+        "  \u001b[2m<1s\u001b[0m\u001b[0m               \u001b[0m",
+        "  \u001b[2m✓ \u001b[36m󰈙\u001b[0m example.ts \u001b[2m·  \u001b[0m",
+        "  \u001b[2m<1s\u001b[0m\u001b[0m               \u001b[0m",
         "  \u001b[2m\u001b[0m                  \u001b[0m",
         "  \u001b[2mExample output\u001b[0m    \u001b[0m"
       ]
@@ -1425,9 +1448,11 @@
       "lines": [
         "\u001b[36m󰞑\u001b[0m Example           \u001b[0m",
         "→\u001b[0m \u001b[32m5 s\u001b[0m…\u001b[0m \u001b[2m· 14 passages\u001b[0m\u001b[0m",
-        "  \u001b[2m1. Example · exam\u001b[0m…\u001b[0m\u001b[0m",
+        "  \u001b[2m1. Example ·      \u001b[0m",
+        "  \u001b[2mexample.com/docs\u001b[0m  \u001b[0m",
         "  \u001b[2mExample\u001b[0m           \u001b[0m",
-        "  \u001b[2m2. Example · exam\u001b[0m…\u001b[0m\u001b[0m",
+        "  \u001b[2m2. Example ·      \u001b[0m",
+        "  \u001b[2mexample.com/docs\u001b[0m  \u001b[0m",
         "  \u001b[2mExample\u001b[0m           \u001b[0m"
       ]
     },
@@ -1540,7 +1565,9 @@
       "lines": [
         "\u001b[33m󱃞\u001b[0m Example           \u001b[0m",
         "\u001b[31mFailed to record wo\u001b[0m…\u001b[0m\u001b[0m",
-        "  \u001b[31mFailed to record \u001b[0m…\u001b[0m\u001b[0m"
+        "  \u001b[31mFailed to record  \u001b[0m",
+        "  \u001b[31mworkflow friction:\u001b[0m",
+        "  \u001b[31mEACCES\u001b[0m            \u001b[0m"
       ]
     },
     {
@@ -2018,9 +2045,13 @@
         "\u001b[33m\u001b[0m search            \u001b[0m",
         "→\u001b[0m \u001b[32m[redacted single-\u001b[0m…\u001b[0m\u001b[0m",
         "  \u001b[2mtool: Example\u001b[0m     \u001b[0m",
-        "  \u001b[2margs: {\"query\":\"E\u001b[0m…\u001b[0m\u001b[0m",
+        "  \u001b[2margs:             \u001b[0m",
+        "  \u001b[2m{\"query\":\"Example\"\u001b[0m",
+        "  \u001b[2m}\u001b[0m                 \u001b[0m",
         "  \u001b[2m\u001b[0m                  \u001b[0m",
-        "  \u001b[2m[redacted single-\u001b[0m…\u001b[0m\u001b[0m"
+        "  \u001b[2m[redacted         \u001b[0m",
+        "  \u001b[2msingle-line       \u001b[0m",
+        "  \u001b[2mresult]\u001b[0m           \u001b[0m"
       ]
     },
     {
@@ -2080,9 +2111,11 @@
         "\u001b[35m󰅩\u001b[0m verify cards      \u001b[0m",
         "\u001b[2m1 \u001b[0m…\u001b[0m →\u001b[0m \u001b[31mExample output\u001b[0m\u001b[0m",
         "  \u001b[31m// verify cards\u001b[0m   \u001b[0m",
-        "  \u001b[31mtext('Example out\u001b[0m…\u001b[0m\u001b[0m",
+        "  \u001b[31mtext('Example     \u001b[0m",
+        "  \u001b[31moutput');\u001b[0m         \u001b[0m",
         "  \u001b[31m\u001b[0m                  \u001b[0m",
-        "  \u001b[31m✓ \u001b[36m󰈙\u001b[0m example.ts \u001b[2m· \u001b[0m…\u001b[0m\u001b[0m",
+        "  \u001b[31m✓ \u001b[36m󰈙\u001b[0m example.ts \u001b[2m·  \u001b[0m",
+        "  \u001b[2m<1s\u001b[0m\u001b[0m               \u001b[0m",
         "  \u001b[31m\u001b[0m                  \u001b[0m",
         "  \u001b[31mExample output\u001b[0m    \u001b[0m"
       ]
@@ -2200,9 +2233,12 @@
       "lines": [
         "\u001b[36m󰧑\u001b[0m recall memory     \u001b[0m",
         "\u001b[2m/Exampl\u001b[0m…\u001b[0m →\u001b[0m \u001b[32m3 matches\u001b[0m\u001b[0m",
-        "  \u001b[2m#31 [redacted mem\u001b[0m…\u001b[0m\u001b[0m",
-        "  \u001b[2m#47 [redacted mem\u001b[0m…\u001b[0m\u001b[0m",
-        "  \u001b[2m#62 [redacted mem\u001b[0m…\u001b[0m\u001b[0m",
+        "  \u001b[2m#31 [redacted     \u001b[0m",
+        "  \u001b[2mmemory]\u001b[0m           \u001b[0m",
+        "  \u001b[2m#47 [redacted     \u001b[0m",
+        "  \u001b[2mmemory]\u001b[0m           \u001b[0m",
+        "  \u001b[2m#62 [redacted     \u001b[0m",
+        "  \u001b[2mmemory]\u001b[0m           \u001b[0m",
         "  \u001b[2m3 matches.\u001b[0m        \u001b[0m"
       ]
     },
@@ -2574,7 +2610,8 @@
       "lines": [
         "\u001b[33m󰄴\u001b[0m mark step done    \u001b[0m",
         "→\u001b[0m \u001b[31mError: No approve\u001b[0m…\u001b[0m\u001b[0m",
-        "  \u001b[31mError: No approve\u001b[0m…\u001b[0m\u001b[0m"
+        "  \u001b[31mError: No approved\u001b[0m",
+        "  \u001b[31mplan is executing.\u001b[0m\u001b[0m"
       ]
     },
     {
@@ -2593,6 +2630,112 @@
         "\u001b[33m󰄴\u001b[0m mark step done                                                                                                        \u001b[0m",
         "\u001b[2mstep 1\u001b[0m \u001b[2m→\u001b[0m \u001b[31mError: No approved plan is executing.\u001b[0m                                                                          \u001b[0m",
         "  \u001b[31mError: No approved plan is executing.\u001b[0m                                                                                 \u001b[0m"
+      ]
+    }
+  ],
+  [
+    {
+      "expanded": false,
+      "width": 20,
+      "lines": [
+        "\u001b[34m󰳽\u001b[0m Cursor web search \u001b[0m",
+        "\u001b[32m3 results\u001b[0m           \u001b[0m"
+      ]
+    },
+    {
+      "expanded": false,
+      "width": 80,
+      "lines": [
+        "\u001b[34m󰳽\u001b[0m Cursor web search                                                             \u001b[0m",
+        "\u001b[32m3 results\u001b[0m                                                                       \u001b[0m"
+      ]
+    },
+    {
+      "expanded": false,
+      "width": 120,
+      "lines": [
+        "\u001b[34m󰳽\u001b[0m Cursor web search                                                                                                     \u001b[0m",
+        "\u001b[32m3 results\u001b[0m                                                                                                               \u001b[0m"
+      ]
+    },
+    {
+      "expanded": true,
+      "width": 20,
+      "lines": [
+        "\u001b[34m󰳽\u001b[0m Cursor web search \u001b[0m",
+        "\u001b[32m3 results\u001b[0m           \u001b[0m",
+        "  \u001b[2mExample response\u001b[0m  \u001b[0m"
+      ]
+    },
+    {
+      "expanded": true,
+      "width": 80,
+      "lines": [
+        "\u001b[34m󰳽\u001b[0m Cursor web search                                                             \u001b[0m",
+        "\u001b[32m3 results\u001b[0m                                                                       \u001b[0m",
+        "  \u001b[2mExample response\u001b[0m                                                              \u001b[0m"
+      ]
+    },
+    {
+      "expanded": true,
+      "width": 120,
+      "lines": [
+        "\u001b[34m󰳽\u001b[0m Cursor web search                                                                                                     \u001b[0m",
+        "\u001b[32m3 results\u001b[0m                                                                                                               \u001b[0m",
+        "  \u001b[2mExample response\u001b[0m                                                                                                      \u001b[0m"
+      ]
+    }
+  ],
+  [
+    {
+      "expanded": false,
+      "width": 20,
+      "lines": [
+        "\u001b[34m󰳽\u001b[0m Cursor web search \u001b[0m",
+        "\u001b[31mError: failed\u001b[0m       \u001b[0m"
+      ]
+    },
+    {
+      "expanded": false,
+      "width": 80,
+      "lines": [
+        "\u001b[34m󰳽\u001b[0m Cursor web search                                                             \u001b[0m",
+        "\u001b[31mError: failed\u001b[0m                                                                   \u001b[0m"
+      ]
+    },
+    {
+      "expanded": false,
+      "width": 120,
+      "lines": [
+        "\u001b[34m󰳽\u001b[0m Cursor web search                                                                                                     \u001b[0m",
+        "\u001b[31mError: failed\u001b[0m                                                                                                           \u001b[0m"
+      ]
+    },
+    {
+      "expanded": true,
+      "width": 20,
+      "lines": [
+        "\u001b[34m󰳽\u001b[0m Cursor web search \u001b[0m",
+        "\u001b[31mError: failed\u001b[0m       \u001b[0m",
+        "  \u001b[31mError: failed\u001b[0m     \u001b[0m"
+      ]
+    },
+    {
+      "expanded": true,
+      "width": 80,
+      "lines": [
+        "\u001b[34m󰳽\u001b[0m Cursor web search                                                             \u001b[0m",
+        "\u001b[31mError: failed\u001b[0m                                                                   \u001b[0m",
+        "  \u001b[31mError: failed\u001b[0m                                                                 \u001b[0m"
+      ]
+    },
+    {
+      "expanded": true,
+      "width": 120,
+      "lines": [
+        "\u001b[34m󰳽\u001b[0m Cursor web search                                                                                                     \u001b[0m",
+        "\u001b[31mError: failed\u001b[0m                                                                                                           \u001b[0m",
+        "  \u001b[31mError: failed\u001b[0m                                                                                                         \u001b[0m"
       ]
     }
   ]

@@ -1,4 +1,4 @@
-import type { AssistantMessage, AssistantMessageEventStream } from "@earendil-works/pi-ai/compat";
+import type { AssistantMessage, AssistantMessageEventStream } from "@earendil-works/pi-ai";
 
 const DEFAULT_THINKING_TRACE_MAX_CHARS = 50000;
 

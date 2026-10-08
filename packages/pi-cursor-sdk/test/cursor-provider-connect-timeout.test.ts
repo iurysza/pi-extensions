@@ -130,6 +130,9 @@ describe("streamCursor connect timeout boundary", () => {
 			expect(error.error.errorMessage).toContain("Network error");
 			expect(error.error.errorMessage).toContain("failed during network or service I/O");
 			expect(rejections).toEqual([]);
+			await vi.waitFor(() => {
+				expect(cursorSdkProcessGuardTestUtils.activeProviderTurnCount()).toBe(0);
+			});
 		} finally {
 			restore();
 		}
@@ -147,7 +150,7 @@ describe("streamCursor connect timeout boundary", () => {
 			agentId: "agent-1",
 			status: "running",
 			wait: vi.fn().mockImplementation(async () => {
-				process.emit("uncaughtException", connectError, "uncaughtException");
+				(process as unknown as LooseEmitter).emit("uncaughtException", connectError, "uncaughtException");
 				throw connectError;
 			}),
 			cancel: vi.fn(),
@@ -184,7 +187,7 @@ describe("streamCursor connect timeout boundary", () => {
 			agentId: "agent-1",
 			status: "running",
 			wait: vi.fn().mockImplementation(async () => {
-				process.emit("uncaughtException", connectError, "uncaughtException");
+				(process as unknown as LooseEmitter).emit("uncaughtException", connectError, "uncaughtException");
 				throw connectError;
 			}),
 			cancel: vi.fn(),
@@ -209,3 +212,7 @@ describe("streamCursor connect timeout boundary", () => {
 		}
 	});
 });
+
+
+/** @types/node (Pi 1.0 toolchain) narrows process.emit overloads; tests emit synthetic events. */
+type LooseEmitter = { emit(event: string, ...args: unknown[]): boolean };

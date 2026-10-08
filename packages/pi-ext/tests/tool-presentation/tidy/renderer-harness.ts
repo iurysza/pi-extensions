@@ -4,7 +4,7 @@ import { createTidyExtension } from "../../../extensions/tool-presentation/tidy/
 export const plain = (text: string) => text.replace(/\x1b\[[0-9;]*m/g, "");
 export const theme = { fg: (_key: string, text: string) => text, bg: (_key: string, text: string) => text } as any;
 
-export async function rendererHarness({ enabled = true, chill = false } = {}) {
+export async function rendererHarness({ enabled = true, chill = false, chillGraceMs = 0 } = {}) {
   const hooks = new Map<string, ((event: any, ctx: any) => unknown)[]>();
   const tools = new Map<string, any>();
   const commands = new Map<string, any>();
@@ -19,7 +19,7 @@ export async function rendererHarness({ enabled = true, chill = false } = {}) {
   };
   await createTidyExtension({
     cwd: process.cwd(), loadState: () => ({ enabled, source: "default" }),
-    loadMode: () => "default", loadIcons: () => true, loadChill: () => chill,
+    loadMode: () => "default", loadIcons: () => true, loadChill: () => chill, chillGraceMs,
     createIntegration: () => ({
       async initialize() { return { skipTidyTools: new Set(), commit() {} } as any; },
       async run() { throw new Error("not used"); },

@@ -1,6 +1,6 @@
 import { CYAN, YELLOW, MAGENTA, DIM, RESET } from "../../render.js";
 import { shortPath } from "../../render.js";
-import { basename, count, detailsError, firstLine, joinFacts, rawExpanded, resultText, shortUrl, type CardSpec } from "../spec.js";
+import { basename, count, detailsError, firstLine, joinFacts, oneLine, rawExpanded, resultText, shortUrl, type CardSpec } from "../spec.js";
 const BLUE = "\x1b[34m";
 const base = { failed: detailsError, expanded: rawExpanded };
 const dim = (text: string) => `${DIM}${text}${RESET}`;
@@ -23,6 +23,18 @@ export const miscSpecs: Record<string, CardSpec> = {
   cursor_ask_question: { ...base, icon: "󱜺", color: BLUE, label: "ask", headline: (a) => a.questions?.[0]?.question ?? a.questions?.[0]?.prompt ?? a.question ?? a.prompt ?? "ask the user",
     target: (a) => count(a.questions?.length ?? 1, "questions"), running: () => "waiting for you", failed: (r) => detailsError(r) || !!r.details?.cancelled,
     summary: (r) => (r.details?.answers ?? []).map((a: any) => a.answer ?? "cancelled").join("; ") },
+  // Replay-only activity card the Cursor SDK package emits for work Pi has no tool for. Args and details are duck-typed.
+  cursor: { ...base, icon: "󰳽", color: BLUE, label: "cursor", headline: (a) => oneLine(a.activityTitle) || "Cursor activity",
+    // The activity summary is already the whole story, so there is no separate target.
+    target: () => "",
+    running: () => "running", failed: (r) => detailsError(r) || !!r.isError,
+    summary: (r, a) => {
+      const d = r.details ?? {};
+      const lines = typeof d.linesAdded === "number" || typeof d.linesRemoved === "number" ? `+${d.linesAdded ?? 0}/-${d.linesRemoved ?? 0}` : "";
+      return joinFacts(oneLine(d.summary ?? a.activitySummary) || firstLine(r), lines) || "completed";
+    },
+    errorSummary: (r) => resultText(r).split("\n").find((l) => /^error\s*:/i.test(l.trim()))?.trim() ?? (typeof r.details?.error === "string" ? r.details.error : firstLine(r)),
+    expanded: (r) => (r.details?.diffString ?? r.details?.diff ?? r.details?.expandedText ?? resultText(r)).split("\n") },
   cursor_activate_skill: { ...base, icon: "󱐋", color: MAGENTA, label: "skill", headline: () => "activate skill", target: (a) => a.name,
     summary: (r) => count(r.details?.resources?.length, "resources") },
   ask_user: { ...base, icon: "󱜸", color: BLUE, label: "ask", headline: (a) => a.question,
