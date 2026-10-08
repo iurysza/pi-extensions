@@ -68,7 +68,7 @@ The replay scan flags only error `toolResult` / error assistant messages with `T
 Pass criteria:
 
 - `pi --version` reports Pi 0.84.0 for this cutover baseline.
-- `npm ls` shows `@cursor/sdk@1.0.23` and local `@earendil-works/*@0.84.0` packages.
+- `npm ls` shows `@cursor/sdk@1.0.35` and local `@earendil-works/*@1.0.4` packages.
 - `cursor/composer-2-5` appears in the model list.
 - No Cursor key or auth token is printed.
 - If neither `~/.pi/agent/auth.json` cursor auth nor `CURSOR_API_KEY` is available, stop and report the live smoke as blocked.

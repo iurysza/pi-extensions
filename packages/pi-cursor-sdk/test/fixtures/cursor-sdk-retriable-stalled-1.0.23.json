@@ -1,9 +1,9 @@
 {
   "provenance": {
     "sdkPackage": "@cursor/sdk",
-    "sdkVersion": "1.0.23",
-    "verified": "2026-07-29",
-    "sourceFile": "node_modules/@cursor/sdk/dist/esm/357.js",
+    "sdkVersion": "1.0.35",
+    "verified": "2026-10-08",
+    "sourceFile": "node_modules/@cursor/sdk/dist/esm/689.js",
     "issues": [
       "https://github.com/fitchmultz/pi-cursor-sdk/issues/194",
       "https://github.com/fitchmultz/pi-cursor-sdk/issues/197"
@@ -25,9 +25,9 @@
   },
   "sourceMarkers": [
     "get kind(){return\"RetriableError\"}",
-    "new S(\"Connection stalled repeatedly\"",
-    "new S(\"Connection stalled\"",
+    "new po(\"Connection stalled repeatedly\"",
+    "new po(\"Connection stalled\"",
     "isRetryable:!0"
   ],
-  "syntheticStackFrame": "at fe (file:///repo/node_modules/@cursor/sdk/dist/esm/357.js:1:62073)"
+  "syntheticStackFrame": "at fe (file:///repo/node_modules/@cursor/sdk/dist/esm/689.js:1:62240)"
 }
