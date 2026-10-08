@@ -24,7 +24,7 @@
   "peerDependencies": { "@earendil-works/pi-coding-agent": "*" },
   "devDependencies": {
     "@earendil-works/pi-coding-agent": "^0.80.10",
-    "@types/node": "^24.12.4",
+    "@types/node": "^26.6.4",
     "tsx": "^4.19.0",
     "typescript": "^5.9.3"
   },
