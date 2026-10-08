@@ -22,6 +22,10 @@ export interface CompactionModelConfig {
   model: string;
   thinkingLevel?: ThinkingLevel;
   reasons: CompactionReason[];
+  /** Compact once context use reaches this percent of the window (Pi's own reserve still applies). */
+  thresholdPercent?: number;
+  /** On quit, compact in a detached process when context is at least this many tokens. */
+  compactOnExitMinTokens?: number;
 }
 
 type UnknownRecord = Record<string, unknown>;
@@ -88,10 +92,30 @@ export function resolveConfig(
     }
   }
 
+  let thresholdPercent: number | undefined;
+  if (raw.thresholdPercent !== undefined) {
+    if (typeof raw.thresholdPercent === "number" && raw.thresholdPercent >= 10 && raw.thresholdPercent <= 99) {
+      thresholdPercent = raw.thresholdPercent;
+    } else {
+      warn("thresholdPercent must be a number from 10 to 99; using Pi's own threshold.");
+    }
+  }
+
+  let compactOnExitMinTokens: number | undefined;
+  if (raw.compactOnExitMinTokens !== undefined) {
+    if (typeof raw.compactOnExitMinTokens === "number" && raw.compactOnExitMinTokens > 0) {
+      compactOnExitMinTokens = raw.compactOnExitMinTokens;
+    } else {
+      warn("compactOnExitMinTokens must be a positive number; exit compaction is off.");
+    }
+  }
+
   return {
     model: raw.model.trim(),
     thinkingLevel,
     reasons,
+    ...(thresholdPercent === undefined ? {} : { thresholdPercent }),
+    ...(compactOnExitMinTokens === undefined ? {} : { compactOnExitMinTokens }),
   };
 }
 

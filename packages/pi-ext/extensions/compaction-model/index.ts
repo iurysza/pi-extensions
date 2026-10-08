@@ -6,16 +6,26 @@
  * Configure with `compactionModel` in ~/.pi/agent/settings.json.
  * Falls back to the session model when the chosen one is missing or fails.
  */
+import { spawn } from "node:child_process";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   compact,
+  getAgentDir,
   type ExtensionAPI,
+  type ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
 import { loadConfig, parseModelReference } from "./config.js";
+import { decorateSummary, EXTRA_INSTRUCTIONS, firstUserText, mergeInstructions, overThreshold, stripAdditions } from "./policy.js";
 import { ENTRY_TYPE, reportParts, runningParts, type CardStyle, type CompactionReport } from "./report.js";
 import { ExpandedCard, WidthAwareLines } from "../tool-presentation/tidy/cards/card.js";
 import { loadTidyExpandedMaxLines, loadTidyIcons, loadTidyMode } from "../tool-presentation/tidy/config.js";
 
 const STATUS_KEY = "compaction-model";
+// Set in the detached exit-compaction process, so it never spawns another one.
+const EXIT_CHILD = process.env.PI_COMPACT_ON_EXIT_CHILD === "1";
+const EXIT_RUNNER = fileURLToPath(new URL("./exit-compact.mjs", import.meta.url));
 
 // Kept for headless runs; the TUI shows a transcript line and a notice instead.
 function warn(message: string, error?: unknown): void {
@@ -63,6 +73,8 @@ type Report = CompactionReport;
 export default function compactionModel(pi: ExtensionAPI): void {
   // One compaction runs at a time per session; this carries the hook's outcome to the result events.
   let pending: Report | undefined;
+  // True while a compaction we started for thresholdPercent is running.
+  let thresholdRun = false;
   // Read tidy's settings per render, so /tidy icons, mode and lines apply at once.
   const style = (expanded = false): CardStyle => ({ expanded, icons: loadTidyIcons(), mode: loadTidyMode() });
 
@@ -78,11 +90,12 @@ export default function compactionModel(pi: ExtensionAPI): void {
   pi.on("session_before_compact", async (event, ctx) => {
     pending = undefined;
     const config = loadConfig(ctx);
-    if (!config || !config.reasons.includes(event.reason)) return;
+    const reason = thresholdRun ? "threshold" : event.reason;
+    if (!config || !config.reasons.includes(reason)) return;
     const sessionModel = ctx.model ? ctx.model.name || ctx.model.id : undefined;
     const fallback = (why: string, error?: unknown) => {
       warn(`${why}. Using Pi's active model.`, error);
-      pending = { kind: "fallback", model: config.model, reason: event.reason, sessionModel, why };
+      pending = { kind: "fallback", model: config.model, reason, sessionModel, why };
     };
 
     const reference = parseModelReference(config.model);
@@ -93,7 +106,7 @@ export default function compactionModel(pi: ExtensionAPI): void {
 
     const name = model.name || model.id;
     const started = Date.now();
-    const running = { name, reason: event.reason, tokensBefore: event.preparation.tokensBefore ?? 0 };
+    const running = { name, reason, tokensBefore: event.preparation.tokensBefore ?? 0 };
     if (ctx.hasUI) {
       ctx.ui.setStatus(STATUS_KEY, `compacting with ${name}…`);
       ctx.ui.setWidget(STATUS_KEY, (tui, theme) => {
@@ -110,13 +123,15 @@ export default function compactionModel(pi: ExtensionAPI): void {
       if (!auth.ok) return fallback(`auth failed for ${config.model}: ${"error" in auth ? auth.error : "unknown error"}`);
 
       restorePreviousFileOperations(event.preparation, event.branchEntries);
+      // Our blocks are re-added below; keep them out of the model's input.
+      if (event.preparation.previousSummary) event.preparation.previousSummary = stripAdditions(event.preparation.previousSummary);
 
       const result = await compact(
         event.preparation,
         model,
         auth.apiKey,
         auth.headers,
-        event.customInstructions,
+        mergeInstructions(EXTRA_INSTRUCTIONS, event.customInstructions),
         event.signal,
         config.thinkingLevel,
         // Without this, compact() only sees pi-ai's built-in providers, so models
@@ -130,7 +145,7 @@ export default function compactionModel(pi: ExtensionAPI): void {
         kind: "used",
         model: config.model,
         name,
-        reason: event.reason,
+        reason,
         sessionModel,
         tokensBefore: result.tokensBefore,
         keepRecentTokens: event.preparation.settings?.keepRecentTokens,
@@ -140,7 +155,8 @@ export default function compactionModel(pi: ExtensionAPI): void {
       };
       // Stored with the compaction entry, so old sessions show which model wrote each summary.
       const details = { ...(result.details as object | undefined), compactedBy: config.model, compactionMs: elapsedMs };
-      return { compaction: { ...result, details } };
+      const summary = decorateSummary(result.summary, firstUserText(event.branchEntries), ctx.sessionManager.getSessionFile());
+      return { compaction: { ...result, summary, details } };
     } catch (error) {
       if (event.signal.aborted) return;
       return fallback(`${name} failed: ${error instanceof Error ? error.message : String(error)}`, error);
@@ -160,6 +176,46 @@ export default function compactionModel(pi: ExtensionAPI): void {
     if (report.kind === "used" && !event.fromExtension) return;
     record(report);
     if (report.kind === "fallback" && ctx.hasUI) ctx.ui.notify(`Compaction fell back to the session model: ${report.why}`, "warning");
+  });
+
+  // Pi compacts only near the window's end; thresholdPercent compacts earlier, once the agent is idle.
+  pi.on("agent_end", async (_event, ctx) => {
+    if (EXIT_CHILD || thresholdRun) return;
+    const config = loadConfig(ctx);
+    if (!config || !overThreshold(ctx.getContextUsage(), config.thresholdPercent)) return;
+    thresholdRun = true;
+    const startWhenIdle = (tries: number) => {
+      if (!ctx.isIdle()) {
+        if (tries > 0) setTimeout(() => startWhenIdle(tries - 1), 250);
+        else thresholdRun = false;
+        return;
+      }
+      ctx.compact({
+        onComplete: () => { thresholdRun = false; },
+        onError: () => { thresholdRun = false; },
+      });
+    };
+    setTimeout(() => startWhenIdle(40), 0);
+  });
+
+  // On quit, compact large sessions in a detached process, so a resume days later starts small.
+  pi.on("session_shutdown", async (event, ctx) => {
+    // Interactive quits only: subagents, scripts and RPC clients run in other modes.
+    if (EXIT_CHILD || event.reason !== "quit" || ctx.mode !== "tui") return;
+    const config = loadConfig(ctx);
+    const min = config?.compactOnExitMinTokens;
+    const tokens = ctx.getContextUsage()?.tokens;
+    const sessionFile = ctx.sessionManager.getSessionFile();
+    if (!min || !tokens || tokens < min || !sessionFile || !existsSync(sessionFile)) return;
+    if (ctx.sessionManager.getLeafEntry()?.type === "compaction") return;
+    startExitCompaction(sessionFile, ctx);
+  });
+
+  pi.on("session_start", async (_event, ctx) => {
+    const sessionFile = ctx.sessionManager.getSessionFile();
+    if (ctx.hasUI && sessionFile && existsSync(`${sessionFile}.compacting`)) {
+      ctx.ui.notify("This session is still being compacted in the background. Wait for it to finish before you continue, or the two writers may clash.", "warning");
+    }
   });
 
   pi.on("session_compact_failed", async (event) => {
@@ -182,6 +238,22 @@ export default function compactionModel(pi: ExtensionAPI): void {
       ctx.ui.notify(`Compaction model: ${config.model} (${model.name || model.id}) · ${ready} · reasons: ${config.reasons.join(", ")}`, auth.ok ? "info" : "warning");
     },
   });
+}
+
+function startExitCompaction(sessionFile: string, ctx: ExtensionContext): void {
+  const piCli = process.argv[1];
+  if (!piCli) return;
+  const log = join(getAgentDir(), "compaction-model", "exit.log");
+  try {
+    const child = spawn(process.execPath, [EXIT_RUNNER, piCli, sessionFile, ctx.cwd, log], {
+      detached: true,
+      stdio: "ignore",
+      env: process.env,
+    });
+    child.unref();
+  } catch (error) {
+    warn("could not start exit compaction", error);
+  }
 }
 
 export {
