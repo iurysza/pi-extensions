@@ -289,7 +289,7 @@ describe("cloud smoke helper contracts", () => {
 				const content = fileContents.get(relative);
 				if (content === undefined) throw new Error(`missing ${relative}`);
 				return content;
-			}) as typeof readFileSync,
+			}) as unknown as typeof readFileSync,
 			lstatSync: ((target: string) => {
 				const relative = virtualRelative(target);
 				if (directories.has(relative)) {
