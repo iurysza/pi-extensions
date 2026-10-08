@@ -119,7 +119,9 @@ export default function compactionModel(pi: ExtensionAPI): void {
         event.customInstructions,
         event.signal,
         config.thinkingLevel,
-        undefined,
+        // Without this, compact() only sees pi-ai's built-in providers, so models
+        // from extension providers such as claude-code fail with "No API provider".
+        (streamModel, context, options) => ctx.modelRegistry.streamSimple(streamModel, context as never, options),
         auth.env,
       );
       const elapsedMs = Date.now() - started;
