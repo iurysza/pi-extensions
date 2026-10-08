@@ -18,7 +18,7 @@ describe("Cursor cloud options", () => {
 			.map((name) => readFileSync(new URL(name, sdkDist), "utf8"))
 			.find((source) => source.includes("autoCreatePR:") && source.includes("skipReviewerRequest:"));
 
-		expect(options).toMatch(/autoCreatePR\?: boolean;\s+skipReviewerRequest\?: boolean;/);
+		expect(options).toMatch(/autoCreatePR\?: boolean;[\s\S]*?openAsCursorGithubApp\?: boolean;[\s\S]*?skipReviewerRequest\?: boolean;/);
 		expect(runtime).toBeDefined();
 		if (!runtime) return;
 		const autoCreatePrIndex = runtime.indexOf("autoCreatePR:");

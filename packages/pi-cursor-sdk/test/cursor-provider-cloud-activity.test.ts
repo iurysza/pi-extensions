@@ -1,6 +1,4 @@
 import { readFileSync } from "node:fs";
-import { createRequire } from "node:module";
-import { dirname, join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { SendOptions } from "@cursor/sdk";
 import { AssistantMessageComponent, initTheme } from "@earendil-works/pi-coding-agent";
@@ -23,24 +21,8 @@ import {
 	registerBridgeForProviderTest,
 	resetCursorProviderTestState,
 } from "./helpers/cursor-provider-harness.js";
+import { readInstalledPackageVersion } from "./helpers/installed-package.js";
 
-const require = createRequire(import.meta.url);
-function readInstalledPackageVersion(packageName: string): string {
-	let directory = dirname(require.resolve(packageName));
-	for (let depth = 0; depth < 6; depth += 1) {
-		const packageJsonPath = join(directory, "package.json");
-		try {
-			const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf8")) as { name?: string; version?: string };
-			if (packageJson.name === packageName && typeof packageJson.version === "string") return packageJson.version;
-		} catch {
-			// keep walking toward the package root
-		}
-		const parent = dirname(directory);
-		if (parent === directory) break;
-		directory = parent;
-	}
-	throw new Error(`could not resolve installed version for ${packageName}`);
-}
 const installedSdkVersion = readInstalledPackageVersion("@cursor/sdk");
 const CLOUD_RUN_ID_PATTERN = /^run-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const RENDER_WIDTH = 80;

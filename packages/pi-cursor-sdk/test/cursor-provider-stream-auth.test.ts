@@ -227,7 +227,7 @@ describe("streamCursor auth and abort", () => {
 				agentId: "agent-1",
 				status: "running",
 				wait: vi.fn().mockImplementation(async () => {
-					process.emit("uncaughtException", connectError, "uncaughtException");
+					(process as unknown as LooseEmitter).emit("uncaughtException", connectError, "uncaughtException");
 					throw connectError;
 				}),
 			}),
@@ -455,3 +455,7 @@ describe("streamCursor auth and abort", () => {
 		}
 	});
 });
+
+
+/** @types/node (Pi 1.0 toolchain) narrows process.emit overloads; tests emit synthetic events. */
+type LooseEmitter = { emit(event: string, ...args: unknown[]): boolean };

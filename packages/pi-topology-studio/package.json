@@ -1,0 +1,35 @@
+{
+  "name": "@iurysza/pi-topology-studio",
+  "version": "0.1.0",
+  "description": "/studio opens Topology studio for the current Pi project.",
+  "license": "MIT",
+  "author": "Iury Souza",
+  "type": "module",
+  "private": true,
+  "keywords": [
+    "pi-package",
+    "pi-extension"
+  ],
+  "files": [
+    "index.ts",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iurysza/pi-extensions.git",
+    "directory": "packages/pi-topology-studio"
+  },
+  "bugs": {
+    "url": "https://github.com/iurysza/pi-extensions/issues"
+  },
+  "homepage": "https://github.com/iurysza/pi-extensions/tree/main/packages/pi-topology-studio#readme",
+  "pi": {
+    "extensions": [
+      "index.ts"
+    ]
+  }
+}

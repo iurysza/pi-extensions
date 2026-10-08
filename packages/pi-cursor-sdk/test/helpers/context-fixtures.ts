@@ -1,12 +1,14 @@
 import { vi } from "vitest";
 import { InMemoryCredentialStore } from "@earendil-works/pi-ai";
-import type { AssistantMessage, AssistantMessageEvent, Context } from "@earendil-works/pi-ai/compat";
+import type { AssistantMessage, AssistantMessageEvent, Context } from "@earendil-works/pi-ai";
 import {
 	ModelRegistry,
 	ModelRuntime,
 	type BuildSystemPromptOptions,
+	type NormalizedBuildSystemPromptOptions,
 	type ExtensionCommandContext,
 	type ExtensionContext,
+	type ExtensionToolContext,
 } from "@earendil-works/pi-coding-agent";
 import { makeModel } from "./model-fixtures.js";
 import type { ExtensionCommandContextOverrides, ExtensionContextOverrides } from "./pi-harness-types.js";
@@ -21,11 +23,24 @@ function getSharedTestModelRegistry(): ModelRegistry {
 	return sharedTestModelRegistry;
 }
 
-export function createDefaultSystemPromptOptions(cwd: string): BuildSystemPromptOptions {
+/** Pi 1.0 hands extensions fully populated prompt options (Pi does not export its normalizer). */
+export function normalizeSystemPromptOptions(options: BuildSystemPromptOptions): NormalizedBuildSystemPromptOptions {
 	return {
-		cwd,
-		selectedTools: ["read", "bash", "edit", "write"],
+		...options,
+		selectedTools: options.selectedTools ?? ["read", "bash", "edit", "write"],
+		hiddenTools: options.hiddenTools ?? [],
+		toolSnippets: options.toolSnippets ?? {},
+		toolGuidelines: options.toolGuidelines ?? {},
+		promptGuidelines: options.promptGuidelines ?? [],
+		appendSystemPrompt: options.appendSystemPrompt ?? "",
+		sections: options.sections ?? {},
+		contextFiles: options.contextFiles ?? [],
+		skills: options.skills ?? [],
 	};
+}
+
+export function createDefaultSystemPromptOptions(cwd: string): NormalizedBuildSystemPromptOptions {
+	return normalizeSystemPromptOptions({ cwd, selectedTools: ["read", "bash", "edit", "write"] });
 }
 
 function createMinimalSessionManager(cwd: string, overrides: Partial<ExtensionContext["sessionManager"]> = {}): ExtensionContext["sessionManager"] {
@@ -40,6 +55,7 @@ function createMinimalSessionManager(cwd: string, overrides: Partial<ExtensionCo
 		getLabel: vi.fn(() => undefined),
 		getBranch: vi.fn(() => []),
 		buildContextEntries: vi.fn(() => []),
+		buildSessionProjection: vi.fn(() => ({ entries: [], messages: [], thinkingLevel: "off", model: null })),
 		getHeader: vi.fn(() => null),
 		getEntries: vi.fn(() => []),
 		getTree: vi.fn(() => []),
@@ -91,6 +107,7 @@ function createMinimalExtensionContextInternal(overrides: ExtensionContextOverri
 		sessionManager: createMinimalSessionManager(cwd, overrides.sessionManager),
 		modelRegistry: getSharedTestModelRegistry(),
 		model: makeModel("composer-2.5"),
+		scopedModels: [],
 		isIdle: vi.fn(() => true),
 		isProjectTrusted: vi.fn(() => true),
 		signal: undefined,
@@ -122,6 +139,8 @@ function createMinimalExtensionCommandContextInternal(
 	return {
 		...base,
 		...overrides,
+		getSystemPromptOptions:
+			overrides.getSystemPromptOptions ?? vi.fn(() => createDefaultSystemPromptOptions(base.cwd)),
 		waitForIdle: overrides.waitForIdle ?? vi.fn(async () => undefined),
 		newSession: overrides.newSession ?? vi.fn(async () => ({ cancelled: false })),
 		fork: overrides.fork ?? vi.fn(async () => ({ cancelled: false })),
@@ -139,8 +158,15 @@ function createMinimalExtensionCommandContextInternal(
 	};
 }
 
-export function createExtensionTestContext(ctxOverrides: ExtensionContextOverrides = {}): ExtensionContext {
-	return createMinimalExtensionContextInternal(ctxOverrides);
+/** Tool-execution context (Pi 1.0): extension context plus nested-tool execution. */
+export function createExtensionTestContext(ctxOverrides: ExtensionContextOverrides = {}): ExtensionToolContext {
+	return {
+		...createMinimalExtensionContextInternal(ctxOverrides),
+		tools: [],
+		executeTool: vi.fn(async () => {
+			throw new Error("Nested tool execution is outside this harness");
+		}) as unknown as ExtensionToolContext["executeTool"],
+	};
 }
 
 export function createExtensionCommandContext(

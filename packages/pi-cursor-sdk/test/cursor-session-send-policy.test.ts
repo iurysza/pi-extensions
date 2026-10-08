@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import type { Context } from "@earendil-works/pi-ai/compat";
+import type { Context } from "@earendil-works/pi-ai";
 import { computeCursorContextFingerprint } from "../src/context.js";
 import {
 	buildCursorSessionSendPrompt,

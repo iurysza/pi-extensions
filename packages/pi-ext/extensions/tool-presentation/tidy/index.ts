@@ -16,7 +16,7 @@
  *
  * Line 1: {running mark?} {icon or name} {reasoning headline}
  * Line 2: {dim arg/command detail} → {colored summary} · {duration}
- * A dim clock divider precedes the first execution in each new minute.
+ * A dim clock divider precedes the first execution after 10 minutes without one.
  *
  * Why this beats the spacer floor: pi bakes a Spacer(1) inside every tool's
  * ToolExecutionComponent, so N default cards = N blank lines. BUT in
@@ -34,9 +34,8 @@
  * Collapsed shows the 2-line block; expanded appends the tool's real output —
  * a colored line-numbered diff for code edits (details.diff), else raw content.
  *
- * MCP / foreign tools: NOT overridden — we only own the built-in factories, so
- * we can't re-register a foreign tool's rendering without its execute fn. They
- * keep their default inline card.
+ * One renderer resolver supplies cards for known third-party and MCP tools.
+ * Built-in registrations retain their behavior and historical presentation.
  *
  * Usage:  pi -e ./index.ts     (or install as a pi package)
  */
@@ -50,27 +49,25 @@ import {
 	createLsTool,
 	createReadTool,
 } from "@earendil-works/pi-coding-agent";
-import { Container, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
+import { Container, truncateToWidth } from "@earendil-works/pi-tui";
 import {
 	CONFIG_PATH,
+	loadTidyExpandedMaxLines,
 	loadTidyIcons,
+	loadTidyChill,
 	loadTidyMode,
 	loadTidyState,
 	saveTidyEnabled,
+	saveTidyExpandedMaxLines,
 	saveTidyIcons,
 	saveTidyMode,
 	type TidyMode,
 } from "./config.js";
 import {
 	BOLD,
-	CYAN,
 	DIM,
-	GREEN,
 	MAGENTA,
-	RED,
 	RESET,
-	grepResultCounts,
-	nonEmptyLineCount,
 	shortPath,
 	style,
 } from "./render.js";
@@ -88,97 +85,40 @@ import {
 } from "./pi-fff/controller.js";
 import type { PiFffLifecyclePreview } from "./pi-fff/integration.js";
 import { renderRichDiff } from "../rich-diff.js";
-import { timeDivider, readToolTiming, ToolTimeline, type ToolTiming } from "./timeline.js";
+import { readToolTiming, ToolTimeline } from "./timeline.js";
+
+import { buildToolBlock, cardParts, ExpandedCard, WidthAwareLines, TimelineTool, colorizeDiff } from "./cards/card.js";
+import { builtinSpec } from "./cards/specs/builtins.js";
+import { cardRenderers, cardRuntime, specForTool } from "./cards/index.js";
+import { ChillState, chillRenderers, hasText } from "./chill.js";
+export { buildToolBlock, fitToolLine, formatElapsed } from "./cards/card.js";
 
 export { withReasoning } from "./tool-composition.js";
-
-/** Hanging indent for expanded output only. Compact pills stay flush left. */
-const INDENT = "  ";
-const BUILT_INS = new Set(["read", "write", "edit", "bash", "grep", "find", "ls"]);
-
-/** Collapse whitespace/newlines to one line (width-based truncation happens at render). */
-function oneLine(s: string): string {
-	return s.replace(/\s+/g, " ").trim();
-}
-
-/** Fit a rendered line while preserving its useful result tail. */
-export function fitToolLine(line: string, width: number): string {
-	const max = Math.max(1, width);
-	if (visibleWidth(line) <= max) return line;
-	const arrowIndex = line.indexOf("→");
-	if (arrowIndex < 0) return truncateToWidth(line, max, "…");
-
-	const tail = line.slice(arrowIndex);
-	const tailWidth = visibleWidth(tail);
-	if (tailWidth >= max) {
-		const durationIndex = tail.lastIndexOf("· ");
-		if (durationIndex >= 0) {
-			const duration = `${DIM}${tail.slice(durationIndex)}`;
-			const durationWidth = visibleWidth(duration);
-			if (durationWidth >= max) return truncateToWidth(duration, max, "…");
-			return `${truncateToWidth(tail.slice(0, durationIndex).trimEnd(), max - durationWidth - 1, "…")} ${duration}`;
-		}
-		return truncateToWidth(tail, max, "…");
-	}
-	const head = line.slice(0, arrowIndex).trimEnd();
-	return `${truncateToWidth(head, max - tailWidth - 1, "…")} ${tail}`;
-}
-
-/**
- * A width-aware component: truncates each pre-composed (ANSI-colored) line to the
- * live viewport width so nothing soft-wraps. Re-flows on resize
- * because render(width) is re-invoked by the TUI.
- */
-class WidthAwareLines {
-	constructor(
-		private readonly source: string[] | (() => string[]),
-		private readonly background?: (text: string) => string,
-	) {}
-	invalidate(): void {}
-	render(width: number): string[] {
-		const max = Math.max(1, width);
-		const lines = typeof this.source === "function" ? this.source() : this.source;
-		return lines.map((line) => {
-			const fitted = fitToolLine(line, max);
-			if (!this.background) return fitted;
-			const padded = fitted + " ".repeat(Math.max(0, max - visibleWidth(fitted)));
-			// Raw foreground styling uses RESET, which also clears an enclosing
-			// background. Apply the background independently to every reset-delimited
-			// segment so it remains continuous through the full padded line.
-			return padded.split(RESET).map((segment) => this.background!(`${segment}${RESET}`)).join("");
-		});
-	}
-}
-
-/** The divider sits outside the pill background and never mutates timeline state. */
-class TimelineTool {
-	constructor(
-		private readonly content: { render(width: number): string[]; invalidate(): void },
-		private readonly timing: () => ToolTiming | undefined,
-		private readonly theme: Pick<Theme, "fg">,
-	) {}
-	invalidate(): void { this.content.invalidate(); }
-	render(width: number): string[] {
-		const lines = this.content.render(width);
-		const timing = this.timing();
-		if (!timing?.showTimestamp || timing.startedAt === undefined) return lines;
-		return [timeDivider(timing.startedAt, width, this.theme), "", ...lines];
-	}
-}
 
 class RichToolResult {
 	private richKey = "";
 	private richLines: string[] | undefined;
 	private richPending = false;
+	private expandedCard: ExpandedCard | undefined;
 
 	constructor(
 		private readonly name: string,
 		private readonly args: Record<string, unknown>,
 		private readonly result: any,
-		private readonly options: { isError: boolean; expanded: boolean; elapsedMs?: number; mode: TidyMode; icons: boolean },
+		private readonly options: { isError: boolean; expanded: boolean; elapsedMs?: number; mode: TidyMode; icons: boolean; expandedMaxLines: number },
 		private readonly theme: any,
 		private readonly invalidateResult: () => void,
 	) {}
+
+	/** The plain expanded output, wrapped and capped. Edit and write diffs use rich rendering instead. */
+	private wrapped(width: number, background: (text: string) => string): string[] {
+		this.expandedCard ??= new ExpandedCard(
+			() => cardParts({ spec: builtinSpec(this.name), args: this.args, result: this.result }, { ...this.options, expanded: true }),
+			background,
+			() => this.options.expandedMaxLines,
+		);
+		return this.expandedCard.render(width);
+	}
 
 	invalidate(): void {}
 
@@ -188,10 +128,8 @@ class RichToolResult {
 		const compactLines = new WidthAwareLines(compact, background).render(width);
 		if (!this.options.expanded) return compactLines;
 
+		if (this.options.isError || (this.name !== "edit" && this.name !== "write")) return this.wrapped(width, background);
 		const fallback = buildToolBlock(this.name, this.args, this.result, { ...this.options, expanded: true }).slice(compact.length);
-		if (this.options.isError || (this.name !== "edit" && this.name !== "write")) {
-			return [...compactLines, ...new WidthAwareLines(fallback, background).render(width)];
-		}
 
 		const key = [
 			this.name,
@@ -238,128 +176,6 @@ class RichToolResult {
 	}
 }
 
-/** Dim line-2 detail when the model gave no `reasoning`. Always ONE line. */
-function argDetail(name: string, args: Record<string, unknown>): string {
-	if (name === "bash" && typeof args.command === "string") return oneLine(args.command);
-	if ((name === "grep" || name === "find") && typeof args.pattern === "string") {
-		return oneLine(typeof args.path === "string" ? `${args.pattern} in ${args.path}` : String(args.pattern));
-	}
-	if (typeof args.path === "string") return oneLine(args.path);
-	if (typeof args.name === "string") return oneLine(args.name);
-	return "";
-}
-
-/** Compact execution duration for running and completed tools. */
-export function formatElapsed(milliseconds: number): string {
-	if (milliseconds < 1000) return "<1s";
-	const seconds = Math.floor(milliseconds / 1000);
-	if (seconds < 60) return `${seconds}s`;
-	const minutes = Math.floor(seconds / 60);
-	const remainder = seconds % 60;
-	if (minutes < 60) return `${minutes}m ${remainder.toString().padStart(2, "0")}s`;
-	const hours = Math.floor(minutes / 60);
-	return `${hours}h ${(minutes % 60).toString().padStart(2, "0")}m`;
-}
-
-/** Colored result summary from a finished tool result. */
-function summarize(
-	name: string,
-	result: any,
-	isError: boolean,
-	args: Record<string, unknown> = {},
-): string {
-	const text = textFromResult(result);
-	if (isError) {
-		if (name === "bash") return `${RED}error${RESET}`;
-		return `${RED}${text.split("\n")[0] || "error"}${RESET}`;
-	}
-	if (name === "read") return `${GREEN}${text.split("\n").length} lines${RESET}`;
-	if (name === "write") {
-		if (typeof args.content === "string" && !args.content.includes("\0")) {
-			const lines = args.content.length === 0
-				? 0
-				: (args.content.match(/\n/g)?.length ?? 0) + (args.content.endsWith("\n") ? 0 : 1);
-			return `${GREEN}${lines}${RESET} ${DIM}${lines === 1 ? "line" : "lines"}${RESET}`;
-		}
-		const bytes = text.match(/wrote (\d+) bytes/i)?.[1];
-		return bytes ? `${GREEN}${bytes}b${RESET}` : `${GREEN}written${RESET}`;
-	}
-	if (name === "edit") {
-		const diff = result?.details?.diff as string | undefined;
-		if (!diff) return `${GREEN}applied${RESET}`;
-		let add = 0;
-		let del = 0;
-		for (const l of diff.split("\n")) {
-			if (l.startsWith("+") && !l.startsWith("+++")) add++;
-			if (l.startsWith("-") && !l.startsWith("---")) del++;
-		}
-		return `${GREEN}+${add}${RESET}${DIM}/${RESET}${RED}-${del}${RESET}`;
-	}
-	if (name === "bash") {
-		const m = text.match(/exit code: (\d+)/);
-		const exit = m ? Number(m[1]) : null;
-		const status = exit && exit !== 0 ? `${RED}exit ${exit}` : `${GREEN}done`;
-		return `${status}${RESET}`;
-	}
-	if (name === "grep") {
-		const { matches: count, files } = grepResultCounts(text);
-		const matchLabel = count === 1 ? "match" : "matches";
-		const fileLabel = files === 1 ? "file" : "files";
-		return `${GREEN}${count} ${matchLabel}${RESET} ${DIM}in${RESET} ${CYAN}${files} ${fileLabel}${RESET}`;
-	}
-	const count = nonEmptyLineCount(text);
-	const noun = name === "find" ? "files" : name === "ls" ? "entries" : "results";
-	return `${DIM}${count} ${noun}${RESET}`;
-}
-
-/** Pull the first text block out of a tool result / partial (shape varies). */
-function textFromResult(r: any): string {
-	const content = r?.content ?? r?.partialResult?.content;
-	if (Array.isArray(content)) {
-		const c = content.find((x: any) => x?.type === "text");
-		if (c?.text) return c.text;
-	}
-	if (typeof r?.output === "string") return r.output;
-	if (typeof r?.error === "string") return r.error;
-	if (typeof r?.message === "string") return r.message;
-	if (typeof r?.details?.error === "string") return r.details.error;
-	return "";
-}
-
-/** Replace tabs with painted cells using stops relative to the code payload. */
-function expandTabs(text: string): string {
-	let column = 0;
-	let expanded = "";
-	for (const character of text) {
-		if (character === "\t") {
-			const spaces = 8 - (column % 8);
-			expanded += " ".repeat(spaces);
-			column += spaces;
-		} else {
-			expanded += character;
-			column += visibleWidth(character);
-		}
-	}
-	return expanded;
-}
-
-/** Keep line-number prefixes out of edit payload tab-stop calculations. */
-function expandDiffTabs(line: string): string {
-	const numbered = line.match(/^([ +\-]\s*\d+ )(.*)$/);
-	return numbered ? `${numbered[1]}${expandTabs(numbered[2])}` : expandTabs(line);
-}
-
-/** Colorize a unified/line-numbered diff string (edit tool's details.diff). */
-function colorizeDiff(diff: string): string[] {
-	return diff.split("\n").map((rawLine) => {
-		const line = expandDiffTabs(rawLine);
-		if (line.startsWith("+") && !line.startsWith("+++")) return `${GREEN}${line}${RESET}`;
-		if (line.startsWith("-") && !line.startsWith("---")) return `${RED}${line}${RESET}`;
-		if (line.startsWith("@@")) return `${CYAN}${line}${RESET}`;
-		return `${DIM}${line}${RESET}`;
-	});
-}
-
 /** A file change captured during a turn, for the `/diff` recap. */
 export interface TurnDiff {
 	tool: string; // "edit" | "write"
@@ -388,106 +204,10 @@ export function buildTurnDiffBlock(diffs: TurnDiff[], opts: { icons?: boolean } 
 	return [header, ...renderTurnDiffs(diffs, icons)];
 }
 
-/**
- * Build the expanded (C-o) continuation lines for a settled tool result:
- *   - bash: the full multi-line command input, then its output
- *   - edit/write: the colored line-numbered diff when present
- *   - otherwise: the raw result text
- * Each line is prefixed with the hanging INDENT.
- */
-function expandedLines(name: string, args: Record<string, unknown>, result: any): string[] {
-	const out: string[] = [];
-
-	// bash: show the full command (collapsed line 2 is truncated to one line).
-	if (name === "bash" && typeof args.command === "string") {
-		const cmdLines = args.command.replace(/\s+$/, "").split("\n");
-		cmdLines.forEach((cl, i) => {
-			const prefix = i === 0 ? `${CYAN}$ ${RESET}` : `${DIM}  ${RESET}`;
-			out.push(`${INDENT}${prefix}${CYAN}${cl}${RESET}`);
-		});
-	}
-
-	// Whole-file writes do not provide a useful diff. Show the actual written
-	// content instead of repeating the generic "Successfully wrote..." result.
-	if (name === "write" && typeof args.content === "string") {
-		if (args.content.length === 0) {
-			out.push(`${INDENT}${DIM}(empty file)${RESET}`);
-			return out;
-		}
-		const splitLines = args.content.split("\n");
-		const contentLines = args.content.endsWith("\n") ? splitLines.slice(0, -1) : splitLines;
-		const lineNumberWidth = String(contentLines.length).length;
-		contentLines.forEach((line, index) => {
-			const lineNumber = String(index + 1).padStart(lineNumberWidth, " ");
-			out.push(`${INDENT}${DIM}${lineNumber} ${RESET}${expandTabs(line)}`);
-		});
-		return out;
-	}
-
-	// Prefer the structured diff over the generic "Successfully replaced..." text.
-	const diff = result?.details?.diff as string | undefined;
-	if (diff && diff.trim()) {
-		for (const dl of colorizeDiff(diff)) out.push(`${INDENT}${dl}`);
-		return out;
-	}
-
-	const text = textFromResult(result).replace(/\s+$/, "");
-	if (text) for (const raw of text.split("\n")) out.push(`${INDENT}${DIM}${raw}${RESET}`);
-	return out;
-}
-
-/**
- * Build the rendered lines for one settled tool call. Shared by the live
- * renderResult and the demo generator so the demo shows REAL output, never
- * hand-typed ANSI. `args` includes the model's `reasoning` (stripped here).
- */
-export function buildToolBlock(
-	name: string,
-	args: Record<string, unknown>,
-	result: any,
-	opts: { isError?: boolean; isPartial?: boolean; expanded?: boolean; elapsedMs?: number; mode?: TidyMode; icons?: boolean } = {},
-): string[] {
-	const { isError = false, isPartial = false, expanded = false, elapsedMs, mode = "default", icons = true } = opts;
-	const { reasoning, rest } = stripReasoning(args ?? {});
-
-	// Settled success/error is already encoded by Pi's native row background.
-	// Only running calls need an inline state mark.
-	const runningPrefix = isPartial ? `${DIM}·${RESET} ` : "";
-	const duration = elapsedMs === undefined ? undefined : formatElapsed(elapsedMs);
-	const summary = isPartial
-		? `${DIM}${duration ?? "preparing"}${RESET}`
-		: `${summarize(name, result, isError, rest)}${duration === undefined ? "" : ` ${DIM}· ${duration}${RESET}`}`;
-
-	const { icon, color } = style(name);
-	const label = icons && BUILT_INS.has(name) ? icon : `${icons ? `${icon} ` : ""}${BOLD}${name}`;
-	const toolLabel = `${color}${label}${RESET}`;
-	const headline = oneLine(reasoning || argDetail(name, rest));
-	const detail = argDetail(name, rest);
-	// Keep the target on failures too; width fitting preserves the useful error
-	// tail while the command/path answers what actually failed.
-	const line2 = !detail
-		? `${DIM}→${RESET} ${summary}`
-		: `${DIM}${detail}${RESET} ${DIM}→${RESET} ${summary}`;
-	let lines: string[];
-	if (mode === "reasoning") {
-		lines = [`${runningPrefix}${toolLabel} ${headline} ${DIM}→${RESET} ${summary}`];
-	} else if (mode === "result") {
-		const resultDetail = !detail ? "" : ` ${DIM}${detail}${RESET}`;
-		lines = [`${runningPrefix}${toolLabel}${resultDetail} ${DIM}→${RESET} ${summary}`];
-	} else {
-		lines = [
-			`${runningPrefix}${toolLabel} ${headline}`,
-			line2,
-		];
-	}
-	if (expanded && !isPartial) lines.push(...expandedLines(name, rest, result));
-	return lines;
-}
-
 const DIFF_MSG_TYPE = "minimal-turn-diff";
 const TIDY_COMPLETIONS = [
 	"on", "off", "toggle", "status", "mode default", "mode reasoning", "mode result", "mode status",
-	"icons on", "icons off", "icons status",
+	"icons on", "icons off", "icons status", "lines status", "lines 500", "lines 0",
 	"pi-fff setup", "pi-fff status", "pi-fff teardown",
 ];
 
@@ -497,7 +217,11 @@ export interface TidyExtensionDependencies {
 	loadState?: typeof loadTidyState;
 	loadMode?: typeof loadTidyMode;
 	loadIcons?: typeof loadTidyIcons;
+	loadChill?: typeof loadTidyChill;
+	chillGraceMs?: number;
 	saveIcons?: typeof saveTidyIcons;
+	loadExpandedMaxLines?: typeof loadTidyExpandedMaxLines;
+	saveExpandedMaxLines?: typeof saveTidyExpandedMaxLines;
 	createIntegration?: (pi: ExtensionAPI, cwd: string) => PiFffIntegrationController;
 	decorateSource?: (source: SourceToolDefinition) => SourceToolDefinition;
 	isReplayCall?: (toolCallId: string) => boolean;
@@ -515,6 +239,11 @@ export function createTidyExtension(dependencies: TidyExtensionDependencies = {}
 		const tidyMode = (dependencies.loadMode ?? loadTidyMode)();
 		const tidyIcons = (dependencies.loadIcons ?? loadTidyIcons)();
 		const persistIcons = dependencies.saveIcons ?? saveTidyIcons;
+		// Read once at startup and changed only by `/tidy lines`, so renders never touch the disk.
+		let expandedMaxLines = (dependencies.loadExpandedMaxLines ?? loadTidyExpandedMaxLines)();
+		const persistExpandedMaxLines = dependencies.saveExpandedMaxLines ?? saveTidyExpandedMaxLines;
+		const cardSettings = { mode: tidyMode, icons: tidyIcons, expandedMaxLines };
+		const describeLines = (lines: number) => lines === 0 ? "every line" : `up to ${lines} lines`;
 		const integration = dependencies.createIntegration?.(pi, cwd)
 			?? createPiFffIntegrationController({ pi: pi as any, cwd });
 		let startupPlan: Awaited<ReturnType<PiFffIntegrationController["initialize"]>> | undefined;
@@ -546,7 +275,7 @@ export function createTidyExtension(dependencies: TidyExtensionDependencies = {}
 					const detail = tidyState.source === "environment" ? "PI_TIDY_TOOLS override"
 						: tidyState.source === "file" ? CONFIG_PATH : "default; no config file";
 					const status = (await integration.run("status", { enabled: tidyState.enabled })).status;
-					ctx.ui.notify(`pi-tidy-tools is ${tidyState.enabled ? "on" : "off"}, mode ${tidyMode}, icons ${tidyIcons ? "on" : "off"} (${detail}).\n${concisePiFffStatus(status)}.`, "info");
+					ctx.ui.notify(`pi-tidy-tools is ${tidyState.enabled ? "on" : "off"}, mode ${tidyMode}, icons ${tidyIcons ? "on" : "off"}, expanded output ${describeLines(expandedMaxLines)} (${detail}).\n${concisePiFffStatus(status)}.`, "info");
 					return;
 				}
 				if (action === "icons status") {
@@ -562,6 +291,23 @@ export function createTidyExtension(dependencies: TidyExtensionDependencies = {}
 					ctx.ui.notify(`pi-tidy-tools icons set to ${icons ? "on" : "off"}; reloading.`, "info");
 					await ctx.reload(); return;
 				}
+				if (action === "lines" || action === "lines status") {
+					ctx.ui.notify(`Expanded tool output shows ${describeLines(expandedMaxLines)}. Use /tidy lines <n>; 0 means no limit.`, "info");
+					return;
+				}
+				const linesMatch = action.match(/^lines (\d+)$/);
+				if (linesMatch) {
+					const lines = Number(linesMatch[1]);
+					if (!Number.isSafeInteger(lines)) { ctx.ui.notify("Use a whole number of lines; 0 means no limit.", "warning"); return; }
+					if (lines === expandedMaxLines) { ctx.ui.notify(`Expanded tool output already shows ${describeLines(lines)}.`, "info"); return; }
+					try { await persistExpandedMaxLines(lines); }
+					catch (error) { ctx.ui.notify(`Could not save ${CONFIG_PATH}: ${error instanceof Error ? error.message : String(error)}`, "error"); return; }
+					// Applies to the next render; no reload needed.
+					expandedMaxLines = lines;
+					cardSettings.expandedMaxLines = lines;
+					ctx.ui.notify(`Expanded tool output now shows ${describeLines(lines)}.`, "info");
+					return;
+				}
 				const modeMatch = action.match(/^mode (default|reasoning|result)$/);
 				if (modeMatch) {
 					const mode = modeMatch[1] as TidyMode;
@@ -572,7 +318,7 @@ export function createTidyExtension(dependencies: TidyExtensionDependencies = {}
 					await ctx.reload(); return;
 				}
 				if (action !== "on" && action !== "off" && action !== "toggle") {
-					ctx.ui.notify("Usage: /tidy on|off|toggle|status|mode default|reasoning|result|status|icons on|off|status|pi-fff setup|status|teardown", "warning"); return;
+					ctx.ui.notify("Usage: /tidy on|off|toggle|status|mode default|reasoning|result|status|icons on|off|status|lines <n>|status|pi-fff setup|status|teardown", "warning"); return;
 				}
 				if (tidyState.source === "environment") { ctx.ui.notify("PI_TIDY_TOOLS overrides persistent settings; change or unset it first.", "warning"); return; }
 				const enabled = action === "toggle" ? !tidyState.enabled : action === "on";
@@ -589,11 +335,55 @@ export function createTidyExtension(dependencies: TidyExtensionDependencies = {}
 			const notice = startupPlan.notice;
 			pi.on("session_start", (_event: unknown, ctx: any) => ctx.ui.notify(notice.message, notice.level));
 		}
+		const timeline = dependencies.timeline ?? new ToolTimeline();
+		// Older Pi hosts retain the built-in registrations, but cannot resolve foreign tools.
+		if (pi.registerToolRenderer) {
+			const runtime = tidyState.enabled ? cardRuntime(pi, timeline, dependencies.isReplayCall) : undefined;
+			const chill = new ChillState((dependencies.loadChill ?? loadTidyChill)(), timeline, dependencies.chillGraceMs);
+			const builtins = new Set(["read", "write", "edit", "bash", "grep", "find", "ls"]);
+			pi.registerToolRenderer((name, next) => {
+				const original = next();
+				if (!tidyState.enabled) return original;
+				const spec = specForTool({ name });
+				const renderers = spec ? cardRenderers(spec, runtime, original, cardSettings) : original;
+				return renderers && (spec || builtins.has(name)) ? chillRenderers(renderers, chill) : original;
+			});
+			if (tidyState.enabled) {
+				pi.registerCommand("chill", {
+					description: "Toggle finished tool folding for this session only",
+					handler: async (_args, ctx) => { ctx.ui.notify(`Chill mode ${chill.toggle() ? "on" : "off"} for this session.`, "info"); },
+				});
+				const restoreChill = (_event: unknown, ctx: any) => chill.restore(ctx.sessionManager.getBranch());
+				pi.on("session_start", restoreChill);
+				pi.on("session_tree", restoreChill);
+				let assistantTextSeen = false;
+				pi.on("message_start", (event) => {
+					if (event.message.role === "user") chill.boundary();
+					if (event.message.role === "assistant") {
+						assistantTextSeen = hasText(event.message);
+						if (assistantTextSeen) chill.boundary();
+					}
+				});
+				// Only assistant text closes a group. Tool results also carry text blocks.
+				const observeText = (event: { message: any }) => {
+					if (event.message?.role !== "assistant") return;
+					if (!assistantTextSeen && hasText(event.message)) { assistantTextSeen = true; chill.boundary(); }
+				};
+				pi.on("message_update", observeText);
+				pi.on("message_end", observeText);
+				pi.on("tool_execution_start", (event) => { if (!event.parentToolCallId) chill.start(event.toolCallId, event.toolName); });
+				pi.on("tool_execution_end", (event) => {
+					if (event.parentToolCallId) return;
+					timeline.finish(event.toolCallId, Date.now());
+					chill.finish(event.toolCallId, event.toolName, event.result, event.isError);
+				});
+				pi.on("session_shutdown", () => chill.clear());
+			}
+		}
 		if (!tidyState.enabled) return;
 
 		let currentTurn: TurnDiff[] = [], lastTurn: TurnDiff[] = [];
 		const pathByCallId = new Map<string, string>();
-		const timeline = dependencies.timeline ?? new ToolTimeline();
 		const elapsedTimerByCallId = new Map<string, ReturnType<typeof setInterval>>();
 		const ownedTools = new Set<string>();
 
@@ -628,7 +418,7 @@ export function createTidyExtension(dependencies: TidyExtensionDependencies = {}
 						name,
 						context?.args ?? {},
 						result,
-						{ isError, expanded: options?.expanded ?? false, elapsedMs: timing?.elapsedMs, mode, icons: tidyIcons },
+						{ isError, expanded: options?.expanded ?? false, elapsedMs: timing?.elapsedMs, mode, icons: tidyIcons, expandedMaxLines },
 						theme,
 						() => context?.invalidate?.(),
 					), () => timing, theme);
@@ -640,7 +430,7 @@ export function createTidyExtension(dependencies: TidyExtensionDependencies = {}
 			for (const timer of elapsedTimerByCallId.values()) clearInterval(timer);
 			elapsedTimerByCallId.clear();
 			const results = ctx.sessionManager.getBranch()
-				.filter((entry: any) => entry.type === "message" && entry.message?.role === "toolResult" && ownedTools.has(entry.message.toolName))
+				.filter((entry: any) => entry.type === "message" && entry.message?.role === "toolResult")
 				.map((entry: any) => entry.message);
 			timeline.restore(results);
 		};
@@ -687,7 +477,9 @@ export function createTidyExtension(dependencies: TidyExtensionDependencies = {}
 
 		const sourceTools: Record<string, SourceToolDefinition> = {
 			read: createReadTool(cwd) as SourceToolDefinition, write: createDiffingWriteTool(cwd) as SourceToolDefinition,
-			edit: createEditTool(cwd) as SourceToolDefinition, bash: createBashTool(cwd) as SourceToolDefinition,
+			edit: createEditTool(cwd) as SourceToolDefinition,
+			// Keep tidy's existing prompt contract, without Pi 1's extra bash guideline.
+			bash: { ...createBashTool(cwd), promptGuidelines: [] } as SourceToolDefinition,
 			grep: createGrepTool(cwd) as SourceToolDefinition, find: createFindTool(cwd) as SourceToolDefinition, ls: createLsTool(cwd) as SourceToolDefinition,
 		};
 		for (const [name, source] of Object.entries(sourceTools)) {

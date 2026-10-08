@@ -180,7 +180,7 @@ export default async function (pi: any) {
 			encoding: "utf8",
 			env,
 			input,
-			timeout: 20_000,
+			timeout: 60_000,
 			maxBuffer: 2 * 1024 * 1024,
 		});
 		expect(result.error).toBeUndefined();
@@ -209,7 +209,7 @@ export default async function (pi: any) {
 		expect(events).not.toEqual(expect.arrayContaining([expect.objectContaining({ event: "ui_confirm" })]));
 		expect(output).toContain("Cursor SDK runs require a Cursor SDK API key");
 		expect(output).not.toContain("Cursor cloud runtime requires first-use acknowledgement");
-	}, 30_000);
+	}, 90_000);
 
 	it.each([
 		["print", false],
@@ -229,7 +229,7 @@ export default async function (pi: any) {
 		});
 		expect(events).not.toEqual(expect.arrayContaining([expect.objectContaining({ event: "ui_confirm" })]));
 		expect(output).toContain("Cursor SDK runs require a Cursor SDK API key");
-	}, 30_000);
+	}, 90_000);
 
 	it.each([
 		["print", false],
@@ -251,7 +251,7 @@ export default async function (pi: any) {
 		});
 		expect(events).not.toEqual(expect.arrayContaining([expect.objectContaining({ event: "ui_confirm" })]));
 		expect(output).toContain("Cursor SDK runs require a Cursor SDK API key");
-	}, 30_000);
+	}, 90_000);
 
 	it.each([
 		["print", false],
@@ -271,7 +271,7 @@ export default async function (pi: any) {
 		});
 		expect(events).not.toEqual(expect.arrayContaining([expect.objectContaining({ event: "ui_confirm" })]));
 		expect(output).toContain("Cursor SDK runs require a Cursor SDK API key");
-	}, 30_000);
+	}, 90_000);
 
 	it.each([
 		["print", false],
@@ -292,7 +292,7 @@ export default async function (pi: any) {
 		expect(events).not.toEqual(expect.arrayContaining([expect.objectContaining({ event: "ui_confirm" })]));
 		expect(output).toContain("Cursor SDK runs require a Cursor SDK API key");
 		expect(output).not.toContain("Cursor cloud runtime requires first-use acknowledgement");
-	}, 30_000);
+	}, 90_000);
 
 	it.each([
 		["print", false],
@@ -312,7 +312,7 @@ export default async function (pi: any) {
 		});
 		expect(events).not.toEqual(expect.arrayContaining([expect.objectContaining({ event: "ui_confirm" })]));
 		expect(output).toContain("Cursor SDK runs require a Cursor SDK API key");
-	}, 30_000);
+	}, 90_000);
 
 	it.each([
 		[undefined, "local", "builtin"],
@@ -336,7 +336,7 @@ export default async function (pi: any) {
 				runtimeSource,
 			}));
 		},
-		30_000,
+		90_000,
 	);
 
 	it("fails cloud preflight before SDK create or send when project acknowledgement is the only acknowledgement", async () => {

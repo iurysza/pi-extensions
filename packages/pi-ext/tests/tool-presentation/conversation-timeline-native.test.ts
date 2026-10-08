@@ -61,7 +61,7 @@ test("real Pi lifecycle persists ordered clock markers and one final total witho
               void (async () => {
                 stream.push({ type: "start", partial });
                 await nextTick();
-                now += 60_000;
+                now += 600_000;
                 if (invocation === 0) {
                   partial.content.push({ type: "toolCall", id: "fixture-read", name: "read", arguments: { path: join(root, "input.txt"), reasoning: "inspect fixture" } });
                   stream.push({ type: "toolcall_start", contentIndex: 0, partial });
@@ -98,15 +98,15 @@ test("real Pi lifecycle persists ordered clock markers and one final total witho
     const entries = manager.getBranch();
     const meaningful = entries.filter((entry) => entry.type === "message" || entry.type === "custom");
     assert.deepEqual(meaningful.map((entry: any) => entry.type === "custom" ? entry.data.kind : entry.message.role), [
-      "minute", "user", "minute", "assistant", "toolResult", "minute", "assistant", "run-end",
+      "system", "minute", "user", "minute", "assistant", "toolResult", "minute", "assistant", "run-end",
     ]);
     const markers = entries.filter((entry: any) => entry.customType === CONVERSATION_TIMELINE_ENTRY).map((entry: any) => entry.data);
-    assert.deepEqual(markers.slice(0, 3).map((entry) => entry.at), [initial, initial + 60_000, initial + 120_000]);
-    assert.deepEqual(markers.at(-1), { kind: "run-end", startedAt: initial, at: initial + 120_000, elapsedMs: 120_000, outcome: "completed" });
+    assert.deepEqual(markers.slice(0, 3).map((entry) => entry.at), [initial, initial + 600_000, initial + 1_200_000]);
+    assert.deepEqual(markers.at(-1), { kind: "run-end", startedAt: initial, at: initial + 1_200_000, elapsedMs: 1_200_000, outcome: "completed" });
     assert.ok(publicEvents.indexOf("minute") < publicEvents.indexOf("message_start:user"));
     assert.ok(publicEvents.indexOf("minute", 1) < publicEvents.indexOf("message_update:assistant"));
     for (const context of contexts) {
-      assert.ok(JSON.parse(context).every((message: any) => ["user", "assistant", "toolResult"].includes(message.role)));
+      assert.ok(JSON.parse(context).every((message: any) => ["system", "user", "assistant", "toolResult"].includes(message.role)));
       assert.doesNotMatch(context, /"customType":"pi-conversation-timeline"|"kind":"run-end"|Completed in|"kind":"minute"/);
     }
     const result = entries.find((entry: any) => entry.message?.role === "toolResult") as any;

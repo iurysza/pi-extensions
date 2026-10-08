@@ -28,7 +28,7 @@ function printHelp() {
 
 Commands:
   doctor                     Run all preflight checks (no Cursor tokens)
-  run --target <names>       Run one or more comma-separated targets concurrently
+  run --target <names>       Run one or more comma-separated targets sequentially
   run --suite <name>         Run one suite on all or specified targets
   run --target <n> --suite <n>
 
@@ -242,14 +242,14 @@ async function main() {
 		}
 
 		const startedAt = new Date().toISOString();
-		const targetRuns = targets.map(async (targetName) => {
+		const results = [];
+		for (const targetName of targets) {
 			console.log(`\n=== Target: ${targetName} ===`);
 			const result = args.suite
 				? await runSuite(targetName, suites[0])
 				: await runTarget(targetName, suites);
-			return { targetName, result };
-		});
-		const results = await Promise.all(targetRuns);
+			results.push({ targetName, result });
+		}
 		const finishedAt = new Date().toISOString();
 		const latest = writeLatestPlatformSmokeIndex(config, results, {
 			startedAt,

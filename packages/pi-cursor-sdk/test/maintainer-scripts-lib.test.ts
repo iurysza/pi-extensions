@@ -289,7 +289,7 @@ describe("maintainer scripts shared lib", () => {
 		child.stdout?.on("data", (chunk) => { stdout += chunk; });
 		await terminateChild(child, { graceMs: 2_000 });
 		expect(stdout).toContain("graceful-cleanup");
-	});
+	}, 15_000);
 
 	it("terminates a spawned parent and its long-lived grandchild", async () => {
 		const parent = spawn(

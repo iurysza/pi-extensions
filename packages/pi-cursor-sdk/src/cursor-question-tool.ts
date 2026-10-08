@@ -1,5 +1,4 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import { arePiToolsDisabled } from "./cursor-active-tools.js";
 import { parseEnvBoolean } from "./cursor-env-boolean.js";
@@ -12,6 +11,13 @@ export const CURSOR_ASK_QUESTION_ENV = "PI_CURSOR_ASK_QUESTION";
 
 export function resolveCursorAskQuestionEnabled(env: Record<string, string | undefined> = process.env): boolean {
 	return parseEnvBoolean(env[CURSOR_ASK_QUESTION_ENV], true);
+}
+
+/** Package-namespaced event while `cursor_ask_question` awaits pi UI input. */
+export const CURSOR_ASK_QUESTION_BLOCKED_EVENT = "pi-cursor-sdk:ask-question:blocked";
+
+export interface CursorAskQuestionBlockedEventPayload {
+	active: boolean;
 }
 
 interface CursorQuestionOption {
@@ -43,7 +49,9 @@ interface CursorQuestionDetails {
 	cancelled: boolean;
 }
 
-interface CursorQuestionToolExtensionApi extends Pick<ExtensionAPI, "getActiveTools" | "registerTool" | "setActiveTools">, CursorModelLifecycleExtensionApi {}
+interface CursorQuestionToolExtensionApi
+	extends Pick<ExtensionAPI, "getActiveTools" | "registerTool" | "setActiveTools" | "events">,
+		CursorModelLifecycleExtensionApi {}
 
 type RawQuestionOption = string | { label?: string; value?: string; description?: string };
 
@@ -193,6 +201,13 @@ function syncCursorQuestionToolForModel(pi: Pick<ExtensionAPI, "getActiveTools" 
 	pi.setActiveTools([...activeToolNames]);
 }
 
+function emitCursorAskQuestionBlockedEvent(
+	pi: Pick<ExtensionAPI, "events">,
+	payload: CursorAskQuestionBlockedEventPayload,
+): void {
+	pi.events.emit(CURSOR_ASK_QUESTION_BLOCKED_EVENT, payload);
+}
+
 export function registerCursorQuestionTool(pi: CursorQuestionToolExtensionApi): void {
 	if (!resolveCursorAskQuestionEnabled()) return;
 
@@ -202,6 +217,7 @@ export function registerCursorQuestionTool(pi: CursorQuestionToolExtensionApi): 
 		description:
 			"Ask the user a clarifying question from Cursor. Use when user preferences materially affect the next step; provide options when possible.",
 		promptSnippet: "Ask the user a clarifying question through pi UI when material choices affect Cursor's next step",
+		executionMode: "sequential",
 		parameters: CursorAskQuestionParamsSchema,
 		promptGuidelines: [
 			"Use cursor_ask_question only when running a Cursor model and user input would materially change the plan, scope, platform, or implementation path.",
@@ -218,22 +234,24 @@ export function registerCursorQuestionTool(pi: CursorQuestionToolExtensionApi): 
 				);
 			}
 
-			const answers: CursorQuestionAnswer[] = [];
-			for (const question of questions) {
-				const answer = await askOneQuestion(question, ctx);
-				answers.push(answer);
-				if (answer.cancelled) break;
-			}
+			// Emit a package-namespaced blocked signal while the questionnaire
+			// awaits input so consumers (e.g. Herdr) can map it to blocked/working.
+			emitCursorAskQuestionBlockedEvent(pi, { active: true });
+			try {
+				const answers: CursorQuestionAnswer[] = [];
+				for (const question of questions) {
+					const answer = await askOneQuestion(question, ctx);
+					answers.push(answer);
+					if (answer.cancelled) break;
+				}
 
-			return {
-				content: [{ type: "text" as const, text: summarizeAnswers(answers) }],
-				details: buildDetails(questions, answers, true),
-			};
-		},
-		renderCall(args, theme) {
-			const questions = normalizeQuestions(args as CursorAskQuestionParams);
-			const label = questions[0]?.question ?? "Ask the user";
-			return new Text(theme.fg("toolTitle", theme.bold("cursor question ")) + theme.fg("muted", label), 0, 0);
+				return {
+					content: [{ type: "text" as const, text: summarizeAnswers(answers) }],
+					details: buildDetails(questions, answers, true),
+				};
+			} finally {
+				emitCursorAskQuestionBlockedEvent(pi, { active: false });
+			}
 		},
 	});
 

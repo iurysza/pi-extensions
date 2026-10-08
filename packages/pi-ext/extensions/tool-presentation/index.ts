@@ -2,6 +2,7 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { createCursorReplayBroker } from "./cursor-replay-broker.js";
 import { registerConversationTimeline } from "./conversation-timeline.js";
 import { ToolTimeline } from "./tidy/timeline.js";
+import { cardRuntime } from "./tidy/cards/renderers.js";
 import {
   createTidyExtension,
   type TidyExtensionDependencies,
@@ -29,7 +30,8 @@ export function wrapSourceForCursorReplay(
 export function createToolPresentation(dependencies: TidyExtensionDependencies = {}) {
   return async (pi: ExtensionAPI): Promise<void> => {
     const replay = createCursorReplayBroker(pi.events);
-    const timeline = dependencies.timeline ?? new ToolTimeline();
+    const timeline = cardRuntime(pi, dependencies.timeline ?? new ToolTimeline(), (id) =>
+      replay.isReplayCall(id) || dependencies.isReplayCall?.(id) === true).timeline;
     let enabled = false;
     const tidy = createTidyExtension({
       ...dependencies,

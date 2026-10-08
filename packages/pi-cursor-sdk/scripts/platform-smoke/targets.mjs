@@ -211,7 +211,7 @@ async function executePlatformBuild(config, targetName, suiteDir, slug, platform
 	console.log(`  executing build shell on ${targetName}...`);
 	const result = await runOnLease(targetName, warmup.leaseId, command, {
 		shell: true,
-		timeout: 600_000,
+		timeout: 900_000,
 		sync: leaseSession?.sync,
 		config,
 	});

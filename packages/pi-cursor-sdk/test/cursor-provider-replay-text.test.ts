@@ -36,7 +36,7 @@ import {
 import { streamCursor, __testUtils as cursorProviderTestUtils } from "../src/cursor-provider.js";
 import { estimateCursorPromptMessageTokens } from "../src/context.js";
 import { __testUtils as nativeToolDisplayTestUtils } from "../src/cursor-native-tool-display-state.js";
-import type { AssistantMessageEvent, Context } from "@earendil-works/pi-ai/compat";
+import type { AssistantMessageEvent, Context } from "@earendil-works/pi-ai";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

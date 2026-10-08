@@ -1,5 +1,51 @@
 # Changelog
 
+## 0.2.0 - 2026-08-06
+
+### Added
+
+- Add a dated, hash-verified evidence bundle for Cursor's persisted system messages and reconstructed tool guidance for Grok 4.5, Claude Opus/Fable 5, and GPT-5.6 Sol/Terra/Luna.
+
+### Changed
+
+- Require Pi 0.84.0 or later, pin the local Pi validation packages to exact 0.84.0 with TypeBox 1.3.7, move pi-ai imports from the temporary compatibility entrypoint to the supported root API, and update test harness contexts for Pi's scoped-model and native-provider registration types.
+- Bound Vitest concurrency to four workers so process and filesystem contract tests remain reliable on high-core platform-smoke hosts.
+- Refresh the 34-model Cursor fallback catalog and checkpoint-derived context-window snapshot from the live `@cursor/sdk` 1.0.23 runtime.
+
+### Security
+
+- Refresh vulnerable transitive releases within their existing ranges: bundled Hono, fast-uri, and ip-address plus development-only PostCSS and protobufjs. The remaining production audit findings are confined to the pinned Cursor SDK → ConnectRPC → undici chain, which has no compatible fix.
+
+### Fixed
+
+- Normalize checkpoint context-window keys to current selectable model identities, collapse redundant default `:fast`/`:slow` aliases, reject conflicting equivalent selections, remove stale or ambiguous aliases, and reuse base-model context evidence for unobserved equivalent aliases.
+- Give Windows platform-build checks the same 15-second Vitest scheduling headroom as the full Windows test run, while preserving normal local test timeouts.
+- Pass live PTY smoke prompts as direct Node argv through Pi's interactive initial-message contract, isolate unrelated startup probes with `PI_OFFLINE=1`, and keep final markers out of prompt echoes.
+- Run required platform targets sequentially so concurrent VM/container load and Cursor API calls cannot starve otherwise healthy smoke lanes.
+
+## 0.1.62 - 2026-07-29
+
+### Added
+
+- Emit `pi-cursor-sdk:ask-question:blocked` (`{ active: boolean }`) while `cursor_ask_question` awaits pi UI input, and clear it in `finally`. Consumers (e.g. Herdr) can subscribe and map it to blocked/working; listening is out of scope for this package.
+- Record each distinct local Cursor agent whose send is initiated once per native pi session in a non-resumable `cursor-sdk-agent-lineage` custom entry, including failed/cancelled runs and when local resume is disabled.
+
+### Fixed
+
+- Suppress Cursor SDK `DOMException [AbortError]` while any provider turn or session guard is active (stall detector / inter-turn timers), and treat installed SDK `RetriableError: Connection stalled repeatedly` as a retryable network failure (#194, #197).
+- Map observed local Cursor SDK prompt usage into pi-additive components (`input = inputTokens - cacheRead - cacheWrite`) with `totalTokens = inputTokens + outputTokens`, reject invalid cache partitions, and floor approximate occupancy at the last compatible same-model in-window assistant measurement; cloud raw usage remains display-only (#196).
+- Omit invariant Pi system instructions from incremental local Cursor prompts; bootstrap/rebootstrap still send the current system section, and system-prompt changes still force context-divergence bootstrap (#192).
+- Capture `pi --list-models cursor` fully before searching for `composer-2.5` in `smoke:live`, so large catalogs no longer SIGPIPE the prereq under `pipefail`.
+- Isolate ambient Git `HOME` and `XDG_CONFIG_HOME` in cloud local-state tests so host `url.*.insteadof` rewrites cannot poison remote-identity probes.
+
+### Security
+
+- Raise `@modelcontextprotocol/sdk` to exact `1.30.0` and `@hono/node-server` to exact `2.0.12`, and ship both as a published `bundledDependencies` closure so hostile host trees cannot force MCP onto vulnerable `@hono/node-server` `<2.0.5` (GHSA-frvp-7c67-39w9). Residual `npm audit --omit=dev` findings are the Cursor SDK → ConnectRPC → undici chain with no compatible fix.
+
+### Changed
+
+- Tighten Cursor Cloud AGENTS.md setup notes: durable Node/PATH/smoke prerequisites only; Linux-only checks are partial evidence and do not replace `smoke:platform:all`.
+
 ## 0.1.61 - 2026-07-22
 
 ### Added

@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Pi topology</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+:root { --bg:#14161c; --panel:#1b1e26; --line:#2d3240; --fg:#d8dce6; --dim:#8b92a5; --acc:#7aa2f7; --ok:#9ece6a; --warn:#e0af68; --bad:#f7768e; --par:#bb9af7; --loop:#e0af68; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--fg); font:13px/1.45 ui-sans-serif,system-ui,sans-serif; display:grid; grid-template-columns:260px 1fr 380px; height:100vh; }
+aside, main, #side { overflow:auto; }
+aside { background:var(--panel); border-right:1px solid var(--line); padding:12px; }
+#side { background:var(--panel); border-left:1px solid var(--line); padding:12px; }
+main { padding:16px 20px 60px; }
+h1 { font-size:13px; margin:0 0 4px; letter-spacing:.04em; text-transform:uppercase; color:var(--dim); }
+h2 { font-size:11px; text-transform:uppercase; color:var(--dim); margin:16px 0 4px; letter-spacing:.06em; }
+.path { color:var(--dim); font-size:11px; word-break:break-all; }
+.wf { padding:5px 8px; border-radius:6px; cursor:pointer; display:flex; justify-content:space-between; gap:6px; }
+.wf:hover { background:#232734; } .wf.sel { background:#2a3150; }
+.wf small { color:var(--dim); } .tag { font-size:10px; padding:0 5px; border-radius:8px; border:1px solid var(--line); color:var(--warn); }
+button { background:#262b3a; color:var(--fg); border:1px solid var(--line); border-radius:5px; padding:3px 9px; cursor:pointer; font:inherit; }
+button:hover { border-color:var(--acc); } button.primary { background:var(--acc); color:#10131a; border-color:var(--acc); } button.danger:hover { border-color:var(--bad); color:var(--bad); }
+input, select, textarea { width:100%; background:#10131a; color:var(--fg); border:1px solid var(--line); border-radius:5px; padding:5px 7px; font:12px ui-monospace,Menlo,monospace; }
+textarea { min-height:220px; resize:vertical; white-space:pre; }
+label { display:block; color:var(--dim); font-size:11px; margin:10px 0 3px; }
+.row { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+.flow { display:flex; flex-direction:column; align-items:stretch; gap:8px; }
+.step { border:1px solid var(--line); background:var(--panel); border-radius:8px; padding:7px 10px; cursor:pointer; position:relative; min-width:0; }
+.step:hover { border-color:#4a5270; } .step.sel { border-color:var(--acc); box-shadow:0 0 0 1px var(--acc); }
+.step.agent { border-left:4px solid var(--acc); } .step.code { border-style:dashed; color:var(--dim); font:12px ui-monospace,Menlo,monospace; }
+.step.phase { background:transparent; border:0; border-top:1px solid var(--line); border-radius:0; color:var(--ok); text-transform:uppercase; font-size:11px; letter-spacing:.08em; padding:6px 0 0; }
+.step.ret { border-left:4px solid var(--ok); } .step.log { color:var(--dim); }
+.step .t { font-weight:600; } .step .sub { color:var(--dim); font-size:12px; margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.chip { display:inline-block; font-size:10.5px; padding:0 6px; margin:2px 3px 0 0; border-radius:8px; background:#232734; color:var(--dim); }
+.chip.bind { color:var(--ok); } .chip.schema { color:var(--par); } .chip.use { color:var(--acc); }
+.box { border:1px solid var(--line); border-radius:10px; padding:8px; position:relative; }
+.box > .cap { font-size:11px; text-transform:uppercase; letter-spacing:.06em; margin:-2px 0 6px; cursor:pointer; }
+.box.parallel { border-color:var(--par); } .box.parallel > .cap { color:var(--par); }
+.box.loop { border-color:var(--loop); border-style:dashed; } .box.loop > .cap { color:var(--loop); }
+.box.if { border-color:#565f89; } .box.if > .cap { color:var(--dim); }
+.fan { display:flex; gap:8px; align-items:stretch; } .fan > * { flex:1 1 0; min-width:0; }
+.arrow { text-align:center; color:var(--dim); line-height:.6; font-size:12px; }
+.msg { padding:6px 10px; border-radius:6px; margin-bottom:10px; } .msg.err { background:#3a2029; color:var(--bad); } .msg.ok { background:#1f3225; color:var(--ok); } .msg.warn { background:#3a3220; color:var(--warn); }
+.empty { color:var(--dim); margin-top:40px; text-align:center; }
+.tabs { display:flex; gap:4px; margin-bottom:12px; } .tabs button.on { border-color:var(--acc); color:var(--acc); }
+pre.schema { margin:0; white-space:pre-wrap; font:11px ui-monospace,Menlo,monospace; color:var(--dim); }
+</style>
+</head>
+<body>
+<aside>
+  <h1>Workflows</h1>
+  <div class="path" id="cwd"></div>
+  <div id="list"></div>
+  <div style="margin-top:14px" class="row"><button id="new" class="primary">+ New workflow</button></div>
+</aside>
+<main>
+  <div id="notice"></div>
+  <div id="head"></div>
+  <div id="canvas"><div class="empty">Pick a workflow on the left.</div></div>
+</main>
+<div id="side"><div class="empty">Click a box to edit it.</div></div>
+
+<script>
+const token = new URLSearchParams(location.hash.slice(1)).get('token') || sessionStorage.getItem('topo-token') || '';
+if (token) { sessionStorage.setItem('topo-token', token); history.replaceState(null, '', location.pathname); }
+
+const $ = (id) => document.getElementById(id);
+const state = { list: null, cur: null, tab: 'graph', selId: null, agentTypes: [] };
+
+function el(tag, attrs = {}, ...kids) {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === 'class') n.className = v; else if (k.startsWith('on')) n.addEventListener(k.slice(2), v);
+    else if (v !== false && v != null) n.setAttribute(k, v === true ? '' : v);
+  }
+  for (const kid of kids.flat()) if (kid != null && kid !== false) n.append(kid.nodeType ? kid : document.createTextNode(String(kid)));
+  return n;
+}
+
+async function api(path, body) {
+  const res = await fetch('/api/' + path, {
+    method: body ? 'POST' : 'GET',
+    headers: { 'x-topology-token': token, ...(body ? { 'content-type': 'application/json' } : {}) },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const data = await res.json().catch(() => ({ error: 'Bad response' }));
+  if (!res.ok) { const e = new Error(data.error || res.statusText); e.status = res.status; throw e; }
+  return data;
+}
+
+function notice(text, kind = 'err') {
+  const n = $('notice'); n.replaceChildren(text ? el('div', { class: 'msg ' + kind }, text) : '');
+  if (text && kind === 'ok') setTimeout(() => { if (n.textContent === text) n.replaceChildren(); }, 2500);
+}
+
+async function loadList() {
+  const data = await api('workflows');
+  state.list = data; state.agentTypes = data.agentTypes;
+  $('cwd').textContent = data.cwd;
+  const scopes = [['project', 'This project · .pi/workflows'], ['agents', 'This project · .agents/workflows'], ['user', 'User · ~/.pi/agent/workflows']];
+  $('list').replaceChildren(...scopes.map(([scope, title]) => {
+    const items = data.workflows.filter((w) => w.scope === scope);
+    return el('div', {}, el('h2', {}, title),
+      items.length ? items.map((w) => el('div', { class: 'wf' + (isCur(w) ? ' sel' : ''), title: w.description, onclick: () => open(w) },
+        el('span', {}, w.name), el('span', {},
+          w.shadowedBy ? el('span', { class: 'tag', title: 'Shadowed by ' + w.shadowedBy + '; the runner will not use this copy' }, 'shadowed') : null,
+          !w.runnable ? el('span', { class: 'tag' }, 'no meta') : null)))
+      : el('small', { class: 'path' }, 'none'));
+  }));
+}
+const isCur = (w) => state.cur && state.cur.scope === w.scope && state.cur.name === w.name;
+
+async function open(ref) {
+  try {
+    state.cur = await api(`workflow?scope=${ref.scope}&name=${encodeURIComponent(ref.name)}`);
+    state.selId = null; notice('');
+    render(); loadList();
+  } catch (e) { notice(e.message); }
+}
+
+// ---- edit plumbing -------------------------------------------------------
+async function applyEdits(edits) {
+  const c = state.cur;
+  try {
+    const next = await api('edit', { scope: c.scope, name: c.name, hash: c.hash, edits });
+    state.cur = next; render(); notice('Saved', 'ok');
+  } catch (e) {
+    notice(e.message + (e.status === 409 ? ' ' : ''));
+    if (e.status === 409) { notice(el('span', {}, e.message + ' '), 'err'); $('notice').firstChild.append(el('button', { onclick: () => open(c) }, 'Reload')); }
+  }
+}
+const q = (s) => "'" + String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n') + "'";
+const src = () => state.cur.source;
+
+function propEdit(step, key, raw) {
+  // raw is the JS source for the value, or '' to leave unchanged
+  const p = step.props[key];
+  if (p) return { start: p.valueStart, end: p.valueEnd, text: raw };
+  const entry = `${key}: ${raw}`;
+  if (step.opts) return step.opts.lastPropEnd != null
+    ? { start: step.opts.lastPropEnd, end: step.opts.lastPropEnd, text: ', ' + entry }
+    : { start: step.opts.start + 1, end: step.opts.start + 1, text: ' ' + entry + ' ' };
+  const at = step.prompt ? step.prompt.end : null;
+  return at == null ? null : { start: at, end: at, text: `, { ${entry} }` };
+}
+
+function siblings(id) {
+  let found = null;
+  const walk = (list, parent) => {
+    list.forEach((s, i) => { if (s.id === id) found = { list, i, par: !!parent }; });
+    for (const s of list) {
+      if (s.kind === 'loop' || s.kind === 'if') { walk(s.steps); if (s.elseSteps) walk(s.elseSteps); }
+      if (s.kind === 'parallel') walk(s.branches, true);
+    }
+  };
+  walk(state.cur.model.steps); return found;
+}
+function findStep(id) { const f = siblings(id); return f && f.list[f.i]; }
+
+function removeRange(step, par) {
+  const s = src(); let { start, end } = step;
+  if (par) { // branches sit in an array literal: eat the separating comma too
+    let j = end; while (/\s/.test(s[j] || "")) j++;
+    if (s[j] === ",") end = j + 1; else { let k = start - 1; while (/\s/.test(s[k] || "")) k--; if (s[k] === ",") start = k; }
+  }
+  return { start, end, text: "" };
+}
+
+function move(id, dir) {
+  const f = siblings(id); if (!f) return;
+  const a = f.list[f.i], b = f.list[f.i + dir]; if (!b) return;
+  const s = src();
+  const [x, y] = dir > 0 ? [a, b] : [b, a]; // x precedes y
+  applyEdits([{ start: x.start, end: x.end, text: s.slice(y.start, y.end) }, { start: y.start, end: y.end, text: s.slice(x.start, x.end) }]);
+}
+function remove(id) {
+  const f = siblings(id); if (!f) return;
+  const step = f.list[f.i];
+  if (!confirm('Delete this step?')) return;
+  state.selId = null; applyEdits([removeRange(step, f.par)]);
+}
+function newVar() { return 'r' + Math.floor(Math.random() * 9000 + 1000); }
+function addAgentAfter(id) {
+  const step = findStep(id); if (!step) return;
+  const t = state.agentTypes.includes('general-purpose') ? 'general-purpose' : state.agentTypes[0];
+  const code = `${step.indent}const ${newVar()} = await agent(\n${step.indent}  \`Describe the task here\`,\n${step.indent}  { agentType: ${q(t)}, label: 'new-agent' },\n${step.indent})\n`;
+  applyEdits([{ start: step.end, end: step.end, text: code }]);
+}
+function addBranch(id) {
+  const par = findStep(id); if (!par || !par.branches.length) return;
+  const last = par.branches[par.branches.length - 1];
+  applyEdits([{ start: last.end, end: last.end, text: `,\n  () => agent(\`Describe the task here\`, { agentType: 'general-purpose', label: 'new-branch' })` }]);
+}
+function addPhaseAfter(id) {
+  const step = findStep(id); if (!step) return;
+  applyEdits([{ start: step.end, end: step.end, text: `${step.indent}phase('New phase')\n` }]);
+}
+
+// ---- rendering ----------------------------------------------------------
+function binds(model) {
+  const set = new Set();
+  const walk = (list) => list.forEach((s) => { if (s.bind) set.add(s.bind); if (s.steps) walk(s.steps); if (s.elseSteps) walk(s.elseSteps); if (s.branches) walk(s.branches); });
+  walk(model.steps); return set;
+}
+
+function stepNode(s, known) {
+  const sel = state.selId === s.id;
+  const click = (e) => { e.stopPropagation(); state.selId = s.id; render(); };
+  const uses = s.refs.filter((r) => known.has(r) && r !== s.bind);
+  const chips = [s.bind ? el('span', { class: 'chip bind' }, '→ ' + s.bind) : null, ...uses.map((u) => el('span', { class: 'chip use' }, '← ' + u))];
+  switch (s.kind) {
+    case 'phase': return el('div', { class: 'step phase' + (sel ? ' sel' : ''), onclick: click }, 'phase · ' + s.title);
+    case 'agent': return el('div', { class: 'step agent' + (sel ? ' sel' : ''), onclick: click },
+      el('div', { class: 't' }, s.label || '(agent)'),
+      el('div', {}, s.agentType ? el('span', { class: 'chip' }, s.agentType) : null, s.schema ? el('span', { class: 'chip schema' }, 'schema ' + s.schema) : null, chips),
+      el('div', { class: 'sub' }, s.prompt ? s.prompt.text.replace(/\s+/g, ' ') : ''));
+    case 'parallel': return el('div', { class: 'box parallel' + (sel ? ' sel' : '') },
+      el('div', { class: 'cap', onclick: click }, 'parallel ' + (s.bind ? '→ ' + s.bind : '')),
+      el('div', { class: 'fan' }, s.branches.map((b) => stepNode(b, known))));
+    case 'loop': return el('div', { class: 'box loop' + (sel ? ' sel' : '') },
+      el('div', { class: 'cap', onclick: click }, '↻ ' + s.header), flow(s.steps, known));
+    case 'if': return el('div', { class: 'box if' }, el('div', { class: 'cap', onclick: click }, 'if (' + s.test + ')'), flow(s.steps, known),
+      s.elseSteps.length ? [el('div', { class: 'cap' }, 'else'), flow(s.elseSteps, known)] : null);
+    case 'return': return el('div', { class: 'step ret' + (sel ? ' sel' : ''), onclick: click }, el('span', { class: 't' }, 'return '), el('span', { class: 'sub' }, s.text.replace(/^return\s*/, '')));
+    case 'log': return el('div', { class: 'step log' + (sel ? ' sel' : ''), onclick: click }, s.text);
+    default: return el('div', { class: 'step code' + (sel ? ' sel' : ''), onclick: click, title: 'Plain JavaScript, edit in the Source tab' }, s.text);
+  }
+}
+function flow(steps, known) {
+  const out = []; let i = 0;
+  const push = (n) => { if (out.length) out.push(el('div', { class: 'arrow' }, '↓')); out.push(n); };
+  while (i < steps.length) {
+    let j = i; while (j < steps.length && steps[j].kind === 'code' && steps[j].id !== state.selId) j++;
+    if (j - i >= 2) {
+      const run = steps.slice(i, j);
+      push(el('details', { class: 'step code' }, el('summary', {}, run.length + ' lines of setup code'),
+        run.map((r) => el('div', { onclick: (e) => { e.stopPropagation(); state.selId = r.id; render(); }, style: 'cursor:pointer;padding:2px 0' }, r.text))));
+      i = j;
+    } else { push(stepNode(steps[i], known)); i++; }
+  }
+  return el('div', { class: 'flow' }, out);
+}
+
+function render() {
+  const c = state.cur;
+  if (!c) return;
+  const m = c.model;
+  $('head').replaceChildren(...[
+    el('div', { class: 'row', style: 'justify-content:space-between' },
+      el('div', {}, el('h1', {}, c.scope + ' / ' + c.name + '.js'), el('div', { style: 'font-size:15px;font-weight:600' }, m.meta?.name || c.name),
+        el('div', { class: 'path' }, m.meta?.description || '')),
+      el('div', { class: 'row' }, el('button', { class: 'danger', onclick: delWorkflow }, 'Delete file'))),
+    m.meta && m.meta.name !== c.name ? el('div', { class: 'msg warn' }, `meta.name "${m.meta.name}" differs from the file name. The runner resolves workflows by file name.`) : null,
+    ...m.warnings.map((w) => el('div', { class: 'msg warn' }, w)),
+    el('div', { class: 'tabs', style: 'margin-top:10px' },
+      ['graph', 'source'].map((t) => el('button', { class: state.tab === t ? 'on' : '', onclick: () => { state.tab = t; render(); } }, t === 'graph' ? 'Topology' : 'Source')))].filter(Boolean));
+
+  if (state.tab === 'source') {
+    const ta = el('textarea', { style: 'min-height:70vh' }); ta.value = c.source;
+    $('canvas').replaceChildren(ta, el('div', { class: 'row', style: 'margin-top:8px' }, el('button', { class: 'primary', onclick: async () => {
+      try { state.cur = await api('save', { scope: c.scope, name: c.name, hash: c.hash, source: ta.value }); render(); notice('Saved', 'ok'); } catch (e) { notice(e.message); }
+    } }, 'Save source')));
+  } else {
+    const known = binds(m);
+    $('canvas').replaceChildren(
+      m.schemas.length ? el('div', { class: 'row', style: 'margin-bottom:10px' }, m.schemas.map((s) => el('span', { class: 'chip schema', title: s.src }, 'schema ' + s.name))) : '',
+      flow(m.steps, known));
+  }
+  renderSide();
+}
+
+function field(label, node) { return [el('label', {}, label), node]; }
+function renderSide() {
+  const side = $('side'); const s = state.selId && state.cur ? findStep(state.selId) : null;
+  if (!s) { side.replaceChildren(el('div', { class: 'empty' }, 'Click a box to edit it.')); return; }
+  const kids = [el('h1', {}, s.kind)];
+  const f = siblings(s.id);
+  kids.push(el('div', { class: 'row', style: 'margin:6px 0' },
+    el('button', { onclick: () => move(s.id, -1), disabled: !f || f.i === 0 }, '↑ Up'),
+    el('button', { onclick: () => move(s.id, 1), disabled: !f || f.i === f.list.length - 1 }, '↓ Down'),
+    el('button', { class: 'danger', onclick: () => remove(s.id) }, 'Delete')));
+
+  if (s.kind === 'agent') {
+    const label = el('input'); label.value = s.label;
+    const type = el('select', {}, el('option', { value: '' }, '(none)'), ...state.agentTypes.map((t) => el('option', { value: t }, t)));
+    if (s.agentType && !state.agentTypes.includes(s.agentType)) type.append(el('option', { value: s.agentType }, s.agentType));
+    type.value = s.agentType;
+    const schemaSel = el('select', {}, el('option', { value: '' }, '(none)'), ...state.cur.model.schemas.map((x) => el('option', { value: x.name }, x.name)));
+    schemaSel.value = s.schema;
+    const prompt = el('textarea'); prompt.value = s.prompt ? s.prompt.text : '';
+    kids.push(...field('Label', label), ...field('Agent type', type), ...field('Output schema', schemaSel));
+    kids.push(...field(s.prompt?.mode === 'expr' ? 'Prompt (JS expression)' : 'Prompt template (use ${var} to pass earlier results)', prompt));
+    kids.push(el('div', { class: 'row', style: 'margin-top:10px' }, el('button', { class: 'primary', onclick: () => {
+      const edits = [];
+      if (s.prompt && prompt.value !== s.prompt.text) edits.push({ start: s.prompt.editStart, end: s.prompt.editEnd, text: prompt.value });
+      const apply = (key, val, raw) => { if (val === (s[key] || '')) return; if (!val) return; const e = propEdit(s, key, raw); if (e) edits.push(e); };
+      apply('label', label.value, q(label.value)); apply('agentType', type.value, q(type.value)); apply('schema', schemaSel.value, schemaSel.value);
+      // clearing a value removes the property
+      for (const [key, val] of [['label', label.value], ['agentType', type.value], ['schema', schemaSel.value]]) {
+        const p = s.props[key]; if (p && !val) {
+          let end = p.end, st = p.start; const t = src();
+          let j = end; while (/\s/.test(t[j] || '')) j++; if (t[j] === ',') end = j + 1; else { let k = st - 1; while (/\s/.test(t[k] || '')) k--; if (t[k] === ',') st = k; }
+          edits.push({ start: st, end, text: '' });
+        }
+      }
+      if (!edits.length) return notice('No changes', 'warn');
+      applyEdits(edits);
+    } }, 'Apply'), !s.branch ? el('button', { onclick: () => addAgentAfter(s.id) }, '+ Agent after') : null));
+    if (!s.branch) kids.push(el('div', { class: 'row', style: 'margin-top:6px' }, el('button', { onclick: () => addPhaseAfter(s.id) }, '+ Phase after')));
+  } else if (s.kind === 'parallel') {
+    kids.push(el('div', { class: 'row' }, el('button', { onclick: () => addBranch(s.id) }, '+ Branch'), el('button', { onclick: () => addAgentAfter(s.id) }, '+ Agent after')));
+  } else if (s.kind === 'phase') {
+    const t = el('input'); t.value = s.title;
+    kids.push(...field('Phase title', t), el('div', { class: 'row', style: 'margin-top:10px' },
+      el('button', { class: 'primary', onclick: () => applyEdits([{ start: s.start, end: s.end, text: `${s.indent}phase(${q(t.value)})\n` }]) }, 'Apply'),
+      el('button', { onclick: () => addAgentAfter(s.id) }, '+ Agent after')));
+  } else {
+    kids.push(el('div', { class: 'path', style: 'margin-top:8px' }, s.kind === 'code' ? 'Plain JavaScript. Edit it in the Source tab.' : 'Edit this in the Source tab.'),
+      el('div', { class: 'row', style: 'margin-top:8px' }, el('button', { onclick: () => addAgentAfter(s.id) }, '+ Agent after')));
+    if (s.text) kids.push(el('pre', { class: 'schema', style: 'margin-top:10px' }, s.text));
+  }
+  side.replaceChildren(...kids);
+}
+
+async function delWorkflow() {
+  const c = state.cur; if (!c || !confirm(`Delete ${c.scope}/${c.name}.js from disk?`)) return;
+  try { await api('delete', { scope: c.scope, name: c.name }); state.cur = null; $('head').replaceChildren(); $('canvas').replaceChildren(el('div', { class: 'empty' }, 'Deleted.')); $('side').replaceChildren(); loadList(); }
+  catch (e) { notice(e.message); }
+}
+
+$('new').onclick = async () => {
+  const name = prompt('Workflow name (letters, digits, - _ .)'); if (!name) return;
+  const scope = prompt('Where? project (.pi/workflows), agents (.agents/workflows) or user', 'project'); if (!scope) return;
+  try { const wf = await api('create', { scope, name }); await loadList(); await open(wf); } catch (e) { notice(e.message); }
+};
+
+loadList().catch((e) => notice(e.message === 'Missing or wrong token' ? 'Open this page from the /topology command; the link carries a one-time token.' : e.message));
+</script>
+</body>
+</html>

@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Run report: tidy owns every tool card</title>
+<style>
+:root{--bg:#14161f;--panel:#1c1f2b;--line:#2b3042;--fg:#d6dbef;--dim:#8b93b3;--ok:#7ed491;--warn:#f0c674;--bad:#f27a8a;--acc:#7aa2f7}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 ui-sans-serif,system-ui,sans-serif}
+main{max-width:920px;margin:0 auto;padding:32px 20px 80px}
+h1{font-size:28px;margin:0 0 4px}h2{font-size:20px;margin:44px 0 12px;border-bottom:1px solid var(--line);padding-bottom:6px}
+code,pre{font:13px ui-monospace,Menlo,monospace}code{background:#262a3a;padding:1px 5px;border-radius:4px}
+pre{background:#10121a;border:1px solid var(--line);padding:12px;border-radius:8px;overflow:auto}
+.hero{display:flex;gap:20px;align-items:center;background:var(--panel);border:1px solid var(--line);border-left:6px solid var(--ok);border-radius:10px;padding:20px;margin:18px 0}
+.badge{font:700 22px ui-monospace,monospace;background:var(--ok);color:#10281a;padding:10px 18px;border-radius:8px}
+.dim{color:var(--dim)}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px}
+.card b{display:block;font-size:24px}
+.flow{display:flex;flex-wrap:wrap;gap:6px;align-items:stretch}
+.step{flex:1 1 120px;background:var(--panel);border:1px solid var(--line);border-top:3px solid var(--acc);border-radius:6px;padding:8px;font-size:13px;cursor:pointer}
+.step:hover{background:#242839}.step small{display:block;color:var(--dim);margin-top:4px;display:none}.step.open small{display:block}
+.tag{display:inline-block;font:600 11px ui-monospace,monospace;padding:2px 7px;border-radius:99px;margin-right:6px}
+.t-ok{background:#1d3a28;color:var(--ok)}.t-warn{background:#3d3418;color:var(--warn)}.t-bad{background:#401c24;color:var(--bad)}
+details{background:var(--panel);border:1px solid var(--line);border-radius:8px;margin:8px 0;padding:10px 14px}summary{cursor:pointer;font-weight:600}
+table{border-collapse:collapse;width:100%;font-size:14px}td,th{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left}
+.callout{border-left:4px solid var(--warn);background:#2a2616;padding:12px 14px;border-radius:6px;margin:12px 0}
+ul{padding-left:20px}
+</style></head><body><main>
+<h1>Tidy owns every tool card</h1>
+<div class="dim">Build run report · branch <code>feat/tool-cards</code> · Pi 1.0.4 · 2026-10-07</div>
+
+<div class="hero"><div class="badge">PASSED</div>
+<div>QA passed against the approved plan. Tidy now draws every spec'd tool through one <code>registerToolRenderer</code> resolver, other packages carry no card code, and <code>/chill</code> folds finished calls. One caveat: the review round did not review anything (see Attempts).</div></div>
+
+<div class="grid">
+<div class="card"><b>2,134</b>workspace tests passed (3 skipped)</div>
+<div class="card"><b>351</b>presentation tests (+14, −2 adopter)</div>
+<div class="card"><b>17 / 17</b>replay screenshots captured</div>
+<div class="card"><b>13</b>packages pass pack checks</div>
+</div>
+
+<h2>What changed</h2>
+<p>Before: each package attached card code to its own tools with <code>ownedCard(...)</code>. After: tidy registers one resolver. If a spec matches the tool name (exact, or <code>mcp__&lt;server&gt;__&lt;tool&gt;</code>), it returns the card. Otherwise, or when tidy is off, it returns <code>next()</code> unchanged.</p>
+<pre>resolver(name, next):
+  if !tidy.enabled      -&gt; next()
+  spec = specForTool(name)
+  if spec               -&gt; cardRenderers(spec, cardRuntime)   // expanded falls back to next() renderers
+  else                  -&gt; next()</pre>
+<p><b>Chill mode</b> (<code>/chill</code>, per session, default off via <code>chill</code> in <code>~/.pi/agent/pi-tidy-tools.json</code>): finished calls between text turns fold into <code>Worked · N tools · duration</code> plus a red failure count. <code>Working</code> shows while a call runs. <code>Ctrl+O</code> shows everything. Stored messages and results never change.</p>
+
+<h2>Plan</h2>
+<p class="dim">Click a step for detail.</p>
+<div class="flow">
+<div class="step" onclick="this.classList.toggle('open')"><b>1 Pi 1.0.4</b><small>pi-ext devDeps (coding-agent, tui, ai, agent-core) to 1.0.4. cursor-sdk stays on 0.80.9. One root lockfile.</small></div>
+<div class="step" onclick="this.classList.toggle('open')"><b>2 Resolver</b><small>Single resolver in tidy. <code>card/</code> moved to <code>tidy/cards/</code>. Built-in <code>decorate</code> registrations kept.</small></div>
+<div class="step" onclick="this.classList.toggle('open')"><b>3 Remove wiring</b><small>Dropped <code>ownedCard</code> from optmem, wtf, cursor-sdk, cmux, session-query, session-store, handoff. Deleted adopter and <code>./tool-cards</code> export.</small></div>
+<div class="step" onclick="this.classList.toggle('open')"><b>4 Chill</b><small><code>tidy/chill.ts</code>, config flag, <code>/chill</code>. Folding happens inside the resolver.</small></div>
+<div class="step" onclick="this.classList.toggle('open')"><b>5 Tests</b><small>Resolver tests (fake pi), chill tests, chill-off byte identity over 46 fixtures at widths 20/80/120.</small></div>
+<div class="step" onclick="this.classList.toggle('open')"><b>6 Visual</b><small>Isolated Pi 1.0.4, offline, Tokyo Night, real third-party extensions, termctrl.</small></div>
+<div class="step" onclick="this.classList.toggle('open')"><b>7 Report</b><small><code>report.md</code> with coverage, versions, tests, screenshots, gaps.</small></div>
+</div>
+
+<h2>Attempts</h2>
+<details open><summary><span class="tag t-warn">ATTEMPT 1</span>Passed QA; the review loop was empty</summary>
+<table>
+<tr><th>Stage</th><th>Output</th></tr>
+<tr><td>Coder</td><td>Said it cannot trigger <code>/reload</code>; run it in the parent session.</td></tr>
+<tr><td>Reviewer A</td><td>Same <code>/reload</code> note. No code finding.</td></tr>
+<tr><td>Reviewer B</td><td>Same <code>/reload</code> note. No code finding.</td></tr>
+<tr><td>Agreed fixes</td><td>None. The merge step said nothing was actually reviewed and the round must not count as approval.</td></tr>
+<tr><td>Fresh coder</td><td>Repeated the <code>/reload</code> note. No changes.</td></tr>
+<tr><td>QA</td><td><span class="tag t-ok">PASS</span>See evidence below.</td></tr>
+</table>
+<p>The implementation itself is the 7 commits already on the branch (<code>f95a07c</code> to <code>ea5b64a</code>). The attempt log records no code edits in this run.</p></details>
+
+<h2>Review findings</h2>
+<table>
+<tr><th>#</th><th>Finding</th><th>Status</th></tr>
+<tr><td>1</td><td>Reviewer A: run <code>/reload</code> in the parent session.</td><td><span class="tag t-warn">DROPPED</span>Not a code finding.</td></tr>
+<tr><td>2</td><td>Reviewer B: same note.</td><td><span class="tag t-warn">DROPPED</span>Duplicate of 1.</td></tr>
+</table>
+<div class="callout"><b>Be careful here.</b> Zero findings does not mean zero issues. Neither reviewer examined the diff. The only independent check on the change is QA.</div>
+
+<h2>QA evidence</h2>
+<ul>
+<li><code>npm ci &amp;&amp; npm run check</code> in the worktree passed: <code>Pack checks passed (13 publishable workspaces)</code>. <code>npm ls</code> showed coding-agent, pi-tui, pi-ai and pi-agent-core all at 1.0.4.</li>
+<li><code>replay-gallery.mjs</code> ran on isolated Pi 1.0.4 with termctrl, across 5 sessions: collapsed, <code>Ctrl+O</code> expanded, and <code>/chill</code>. All 17 screenshots exist. Chill output included <code>Worked · 11 tools · unknown duration · 5 failed</code>. QA opened <code>v2-collapsed-1.png</code>, <code>v2-expanded-4.png</code>, <code>v2-chill-4.png</code> and the cards, expanded renderers and failure count looked right. No model prompt was sent. No termctrl sessions remained.</li>
+<li><code>git diff --check</code> passed. QA changed no implementation files.</li>
+</ul>
+<table>
+<tr><th>Tests</th><th>Passed</th><th>Skipped</th></tr>
+<tr><td>presentation</td><td>351</td><td>0</td></tr><tr><td>Cursor SDK</td><td>1,408</td><td>2</td></tr>
+<tr><td>OptMem</td><td>82</td><td>1</td></tr><tr><td>WTF</td><td>3</td><td>0</td></tr><tr><td>all workspaces</td><td>2,134</td><td>3</td></tr></table>
+<p>Screenshots: <code>~/dev/personal/tools/agents2/ai-artifacts/tool-ui-inventory/gallery/v2-*.png</code></p>
+<p class="dim">QA correction: its first run used the agents2 directory and failed an unrelated lint (<code>src/doctor-observe.ts:58</code>, <code>anti-slop(no-runtime-typeof)</code>). It reran from the worktree and passed. agents2 tracked status was unchanged.</p>
+
+<h2>Docs updated</h2>
+<ul>
+<li><code>packages/pi-ext/README.md</code>: Tool Presentation row, resolver paragraph, <code>/chill</code> usage, link to the spec. <em>Uncommitted edit.</em></li>
+<li><code>ai-artifacts/specs/tool-cards.md</code> and <code>report.md</code> were already current from commit <code>ea5b64a</code>; no change needed.</li>
+</ul>
+
+<h2>Open</h2>
+<ul>
+<li><span class="tag t-bad">DECIDE</span>Real review. Run <code>/reload</code> in the parent session, then rerun both reviewers on the worktree. Until then the change has only QA behind it.</li>
+<li><span class="tag t-warn">UNVERIFIED</span>Live-running tool states, connected MCP servers, remote web providers, native dialogs and plan-review UI.</li>
+<li><span class="tag t-warn">UNVERIFIED</span>Terminal image attachments sit outside renderer components and may stay visible after their card folds in chill mode.</li>
+<li><span class="tag t-warn">NOTE</span>Gallery labels still say "spec preview only"; page 5 is constructor-backed, not historical.</li>
+<li><span class="tag t-warn">NOTE</span><code>npm ci</code> reports 29 vulnerabilities (1 critical). Not addressed; out of scope.</li>
+<li><span class="tag t-warn">NOTE</span>The live install must move to Pi 1.0.4 to get the resolver and <code>/chill</code>; Iury's main session does that.</li>
+<li><span class="tag t-warn">PLAN QUESTION</span><code>Ctrl+O</code> expands everything (default taken), not just single calls.</li>
+</ul>
+</main></body></html>

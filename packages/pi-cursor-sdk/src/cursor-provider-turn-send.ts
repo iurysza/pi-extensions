@@ -7,6 +7,7 @@ import {
 import { CursorLiveRunAbortError } from "./cursor-live-run-coordinator.js";
 import { cursorLiveRuns } from "./cursor-provider-live-run-drain.js";
 import { consumeCursorLocalForceOverride } from "./cursor-runtime-state.js";
+import { recordCursorSessionAgentLineage } from "./cursor-session-agent-lineage.js";
 import type { installCursorSdkProcessErrorGuard } from "./cursor-sdk-process-error-guard.js";
 import type {
 	CursorProviderTurnRunnerParams,
@@ -113,7 +114,12 @@ export async function sendCursorProviderTurn(sendParams: SendCursorProviderTurnP
 		if (prepared.runtimeTarget === "local" && consumeCursorLocalForceOverride(prepared.localForce)) {
 			sendOptions.local = { force: true };
 		}
-		const run = await agent.send(payload, sendOptions);
+		const runPromise = agent.send(payload, sendOptions);
+		// Record at send initiation (promise created), including later reject/cancel paths.
+		if (prepared.runtimeTarget === "local") {
+			recordCursorSessionAgentLineage(agent.agentId);
+		}
+		const run = await runPromise;
 		sdkRun = run;
 		if (prepared.runtimeTarget === "cloud" && !recordCursorCloudLifecycleSafely({ agentId: run.agentId, runId: run.id }, resolvedApiKey)) {
 			const cancellationConfirmed = await requestBoundedCloudRunCancellation(run);

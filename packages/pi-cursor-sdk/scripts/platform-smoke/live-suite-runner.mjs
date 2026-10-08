@@ -19,7 +19,6 @@ import { getScenario, renderPrompt } from "./scenarios.mjs";
 
 const DEFAULT_MODEL = "cursor/composer-2-5";
 const DEFAULT_WAIT_MS = 240_000;
-const READY_WAIT_MS = 45_000;
 const SESSION_JSONL_WAIT_MS = 60_000;
 const COLS = 150;
 const ROWS = 45;
@@ -242,25 +241,10 @@ function stripANSI(text) {
 	return text.replace(/\x1b\[[0-9;?]*[ -/]*[@-~]/g, "").replace(/\x1b\][^\x07]*(?:\x07|\x1b\\)/g, "");
 }
 
-function psQuote(value) {
-	return `'${String(value).replace(/'/g, "''")}'`;
-}
-
-function shellQuote(value) {
-	return `'${String(value).replace(/'/g, `'\\''`)}'`;
-}
-
-function ptySpawnCommand(piCli, args) {
-	if (process.platform !== "win32") {
-		return {
-			file: "/bin/bash",
-			args: ["-lc", ["exec", shellQuote(piCli), ...args.map(shellQuote)].join(" ")],
-		};
-	}
-	return {
-		file: "powershell.exe",
-		args: ["-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", ["&", psQuote(piCli), ...args.map(psQuote)].join(" ")],
-	};
+function ptySpawnCommand(args) {
+	const cliEntry = resolve(process.cwd(), "node_modules", "@earendil-works", "pi-coding-agent", "dist", "cli.js");
+	if (!existsSync(cliEntry)) throw new Error(`Pi CLI entry not found: ${cliEntry}`);
+	return { file: process.execPath, args: [cliEntry, ...args] };
 }
 
 async function waitForSessionJsonl(sessionDir, finalMarker, startedAt, events) {
@@ -285,7 +269,7 @@ async function waitForSessionJsonl(sessionDir, finalMarker, startedAt, events) {
 	return files;
 }
 
-async function runPtyPi({ artifactDir, piCli, piArgs, env, cwd, sessionDir, prompt, finalMarker, waitMs, abortMode, scenario }) {
+async function runPtyPi({ artifactDir, ptyCommand, env, cwd, sessionDir, finalMarker, waitMs, abortMode, scenario }) {
 	let pty;
 	try {
 		pty = await import("node-pty");
@@ -297,8 +281,7 @@ async function runPtyPi({ artifactDir, piCli, piArgs, env, cwd, sessionDir, prom
 	let plain = "";
 	const events = [];
 	const startedAt = Date.now();
-	const { file, args } = ptySpawnCommand(piCli, piArgs);
-	writeFileSync(join(artifactDir, "pty-spawn-command.json"), JSON.stringify({ file, args, cwd, fileExists: existsSync(file), cwdExists: existsSync(cwd) }, null, 2));
+	const { file, args } = ptyCommand;
 	let child;
 	try {
 		child = pty.spawn(file, args, {
@@ -322,15 +305,7 @@ async function runPtyPi({ artifactDir, piCli, piArgs, env, cwd, sessionDir, prom
 		events.push({ type: "exit", elapsedMs: Date.now() - startedAt, code: event.exitCode, signal: event.signal });
 	});
 
-	const readyStartedAt = Date.now();
-	while (!/(?:composer-2-5|escape interrupt|ctrl\+c\/ctrl\+d)/i.test(plain) && Date.now() - readyStartedAt < READY_WAIT_MS) {
-		await delay(500);
-	}
-	events.push({ type: "ready_wait_finished", elapsedMs: Date.now() - startedAt, ready: /(?:composer-2-5|escape interrupt|ctrl\+c\/ctrl\+d)/i.test(plain) });
-	child.write(`\x1b[200~${prompt}\x1b[201~\r`);
-	events.push({ type: "prompt_sent", elapsedMs: Date.now() - startedAt, bytes: prompt.length });
-	await delay(1_000);
-	const responseStartOffset = plain.length;
+	const responseStartOffset = 0;
 	events.push({ type: "response_watch_started", elapsedMs: Date.now() - startedAt, offset: responseStartOffset });
 
 	let observed = false;
@@ -572,6 +547,7 @@ async function main() {
 		const suiteEnv = {
 			...process.env,
 			...scenario.env,
+			PI_OFFLINE: "1",
 			...(args.suite === "cursor-abort-cleanup" ? { PLATFORM_ABORT_MARKER: "SHOULD_NOT_PRINT" } : {}),
 			PI_CODING_AGENT_DIR: agentDir,
 			PI_CURSOR_SDK_EVENT_DEBUG_DIR: debugDir,
@@ -581,21 +557,21 @@ async function main() {
 		if (args.suite === "cursor-abort-cleanup") writeProcessSnapshot(logDir, "process-before", platform);
 		const prompt = renderPrompt(scenario, platform);
 		writeFileSync(join(artifactDir, "prompt.txt"), prompt);
-		const piArgs = ["--approve", "--cursor-no-fast", "--cursor-mode", "agent", "--model", args.model, "--session-dir", sessionDir, "--session-id", `platform-${args.suite}-${Date.now()}`];
+		const piArgs = ["--approve", "--cursor-no-fast", "--cursor-mode", "agent", "--model", args.model, "--session-dir", sessionDir, "--session-id", `platform-${args.suite}-${Date.now()}`, prompt];
+		const ptyCommand = ptySpawnCommand(piArgs);
 		writeFileSync(join(artifactDir, "pi-command.json"), JSON.stringify({
-			piCli,
-			args: piArgs,
+			...ptyCommand,
 			cwd: workspaceDir,
-			env: Object.fromEntries(Object.entries(suiteEnv).filter(([key]) => key.startsWith("PI_CURSOR_") || key === "PI_CODING_AGENT_DIR" || key === "TERM")),
+			fileExists: existsSync(ptyCommand.file),
+			cwdExists: existsSync(workspaceDir),
+			env: Object.fromEntries(Object.entries(suiteEnv).filter(([key]) => key.startsWith("PI_CURSOR_") || key === "PI_CODING_AGENT_DIR" || key === "PI_OFFLINE" || key === "TERM")),
 		}, null, 2));
 		const ptyResult = await runPtyPi({
 			artifactDir,
-			piCli,
-			piArgs,
+			ptyCommand,
 			env: suiteEnv,
 			cwd: workspaceDir,
 			sessionDir,
-			prompt,
 			finalMarker: scenario.finalMarker,
 			waitMs: args.waitMs,
 			abortMode: args.suite === "cursor-abort-cleanup",

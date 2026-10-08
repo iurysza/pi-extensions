@@ -106,7 +106,7 @@ Rendering is host-side. Targets capture the real ANSI stream; the macOS host ren
 
 ## Target session model
 
-Each target opens one Crabbox target session, syncs once, runs all suites for that target under one coherent target run id, collects artifacts, and stops/releases the target. The release-gate entrypoint runs required targets concurrently; each target still runs its own suites in order and fails fast within that target. Platform smoke disables Crabbox git-seed sync (`CRABBOX_SYNC_GIT_SEED=false`) so every run tests the current local checkout and uncommitted smoke-runner changes rather than a remote Git seed.
+Each target opens one Crabbox target session, syncs once, runs all suites for that target under one coherent target run id, collects artifacts, and stops/releases the target. The release-gate entrypoint runs required targets sequentially to prevent shared host, VM/container, and Cursor API contention; each target runs its own suites in order and fails fast within that target. Platform smoke disables Crabbox git-seed sync (`CRABBOX_SYNC_GIT_SEED=false`) so every run tests the current local checkout and uncommitted smoke-runner changes rather than a remote Git seed.
 
 ```text
 start target session
@@ -135,13 +135,13 @@ start target session
 end target session
 ```
 
-The target session fails fast. The release-gate path warms one Crabbox lease per target, performs one fresh sync, runs suites in order on that target, and stops that target after the first failure. Different targets run concurrently to keep wall time bounded by the slowest platform instead of the sum of all platforms. Per-suite commands remain available for diagnosis, but they are intentionally not the normal release path because repeated warmup/sync/install cycles make releases too slow.
+The target session fails fast. The release-gate path handles one target at a time: it warms one Crabbox lease, performs one fresh sync, runs suites in order, and stops that target after the first failure before starting the next target. Total wall time is therefore additive across required targets; this avoids nondeterministic worker loss and live-run stalls from competing VM/container load and concurrent Cursor API calls. Per-suite commands remain available for diagnosis, but they are intentionally not the normal release path because repeated warmup/sync/install cycles make releases too slow.
 
 Runtime budget is part of the contract:
 
 - `smoke:platform:doctor` never calls Cursor.
-- `platform-build` runs once per target and is the only suite that performs the full local CI/build/typecheck/package gate.
-- Live suites reuse the target checkout and prepared `node_modules` when run after `platform-build`; they do not repeat `npm ci` in a target-session release run.
+- `platform-build` runs once per target and is the only suite that performs the full local CI/build/typecheck/package gate. Its Windows VM invocation raises only Vitest's default per-test timeout to 15 seconds for host-contention headroom; normal `npm test` keeps the 5-second default, and explicit longer integration-test timeouts still apply.
+- Live suites reuse the target checkout and prepared `node_modules` when run after `platform-build`; they do not repeat `npm ci` in a target-session release run. Their interactive Pi process sets `PI_OFFLINE=1` to skip unrelated startup catalog/update probes; the scenario's explicit Cursor provider turn remains live. The PTY launches Pi's JavaScript entry with direct Node argv so multiline prompts remain one positional message on every target.
 - Live and local-resume suites share one target-local packed-install prep directory per target-session release run. The first such suite runs `npm pack` and `npm install --no-save <tarball>` once. Visual/abort suites install that packed path with `pi install --approve -l`; local-resume lanes pass the same packed package path to their source-tree smoke harness instead of loading the checkout extension.
 - Visual coverage is batched into one native prompt, one focused HTTP/1.1 transport prompt, one bridge prompt, and one abort/cleanup prompt per target. Do not split the card matrices into one prompt per card.
 - The gate is fail-fast by target to avoid burning Cursor calls after a platform has already failed.

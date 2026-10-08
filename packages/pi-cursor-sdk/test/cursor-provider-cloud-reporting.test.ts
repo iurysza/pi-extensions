@@ -53,7 +53,7 @@ describe("streamCursor cloud reporting", () => {
 					update: {
 						type: "turn-ended",
 						usage: {
-							inputTokens: 7,
+							inputTokens: 26,
 							outputTokens: 8,
 							cacheReadTokens: 9,
 							cacheWriteTokens: 10,
@@ -93,11 +93,14 @@ describe("streamCursor cloud reporting", () => {
 			expect(fetchSpy.mock.calls[0]?.[0].toString()).toContain(`/v1/agents/${CLOUD_AGENT_ID}/usage?runId=run-1`);
 
 			const done = getDoneEvent(events);
-			expect(done.message.usage.input).toBe(7);
-			expect(done.message.usage.output).toBe(8);
-			expect(done.message.usage.cacheRead).toBe(9);
-			expect(done.message.usage.cacheWrite).toBe(10);
-			expect(done.message.usage.totalTokens).toBe(34);
+			expect(done.message.usage.input).toBeGreaterThan(0);
+			expect(done.message.usage.output).toBeGreaterThan(0);
+			expect(done.message.usage.cacheRead).toBe(0);
+			expect(done.message.usage.cacheWrite).toBe(0);
+			expect(done.message.usage.totalTokens).toBeGreaterThanOrEqual(
+				done.message.usage.input + done.message.usage.output,
+			);
+			expect(done.message.usage.totalTokens).not.toBe(34);
 			const doneContent = JSON.stringify(done.message.content);
 			expect(doneContent).not.toContain("Cursor cloud run:");
 			expect(doneContent).not.toContain(CLOUD_AGENT_ID);

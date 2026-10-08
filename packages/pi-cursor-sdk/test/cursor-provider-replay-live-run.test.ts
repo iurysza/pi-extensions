@@ -38,7 +38,7 @@ import { __testUtils as sessionAgentTestUtils } from "../src/cursor-session-agen
 import { __testUtils as cursorSessionScopeTestUtils } from "../src/cursor-session-scope.js";
 import { estimateCursorPromptMessageTokens } from "../src/context.js";
 import { __testUtils as nativeToolDisplayTestUtils } from "../src/cursor-native-tool-display-state.js";
-import type { Context } from "@earendil-works/pi-ai/compat";
+import type { Context } from "@earendil-works/pi-ai";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -304,11 +304,11 @@ describe("streamCursor native replay live run", () => {
 		expect(firstDone.message.content.map((block) => block.type)).toEqual(["text", "toolCall"]);
 		expect(firstDone.message.content[0]).toEqual({ type: "text", text: "I am checking files." });
 		expect(firstDone.message.usage).toMatchObject({
-			input: 25_432,
+			input: 25_432 - 24_000 - 123,
 			output: 612,
 			cacheRead: 24_000,
 			cacheWrite: 123,
-			totalTokens: 25_432 + 612 + 24_000 + 123,
+			totalTokens: 25_432 + 612,
 		});
 		expect(toolCall!.name).toBe("read");
 		expect(hasEventType(firstEvents, "toolcall_delta")).toBe(true);
@@ -525,7 +525,7 @@ describe("streamCursor native replay live run", () => {
 		expect(hasEventType(events, "toolcall_start")).toBe(false);
 		expect(collectThinkingDeltas(events)).toContain("Cursor subagent");
 		expect(done.reason).toBe("stop");
-		expect(done.message.usage).toMatchObject({ input: 31_000, output: 700, cacheRead: 30_000, cacheWrite: 0, totalTokens: 61_700 });
+		expect(done.message.usage).toMatchObject({ input: 1_000, output: 700, cacheRead: 30_000, cacheWrite: 0, totalTokens: 31_700 });
 	});
 
 	it("does not replay queued live-run tools that became inactive after the run started", async () => {

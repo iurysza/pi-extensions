@@ -1,5 +1,5 @@
 import type { MockedFunction } from "vitest";
-import type { ImageContent, TextContent } from "@earendil-works/pi-ai/compat";
+import type { ImageContent, JsonValue, TextContent } from "@earendil-works/pi-ai";
 import type {
 	ExtensionAPI,
 	ExtensionCommandContext,
@@ -25,7 +25,7 @@ import type {
 } from "@earendil-works/pi-coding-agent";
 import type { TSchema } from "typebox";
 
-export type RegisteredTool = ToolDefinition<TSchema, unknown, unknown>;
+export type RegisteredTool = ToolDefinition<TSchema, JsonValue, unknown>;
 
 export type ExtensionContextOverrides = Omit<Partial<ExtensionContext>, "sessionManager" | "ui"> & {
 	sessionManager?: Partial<ExtensionContext["sessionManager"]>;
@@ -197,8 +197,7 @@ export interface EventHarness {
 }
 
 export interface PiHarness extends EventHarness {
-	events: ExtensionAPI["events"];
-	registerProvider: MockFn<ExtensionAPI["registerProvider"]>;
+	registerProvider: ExtensionAPI["registerProvider"];
 	registerFlag: MockFn<ExtensionAPI["registerFlag"]>;
 	registerCommand: MockFn<ExtensionAPI["registerCommand"]>;
 	registerTool: MockFn<ExtensionAPI["registerTool"]> & ExtensionAPI["registerTool"];
@@ -208,6 +207,8 @@ export interface PiHarness extends EventHarness {
 	sendMessage: MockFn<ExtensionAPI["sendMessage"]>;
 	getFlag: MockFn<ExtensionAPI["getFlag"]>;
 	appendEntry: MockFn<ExtensionAPI["appendEntry"]>;
+	events: ExtensionAPI["events"];
+	_eventsEmitted: Array<{ channel: string; data: unknown }>;
 	runCommand: (
 		name: string,
 		args?: string,
@@ -220,7 +221,6 @@ export interface PiHarness extends EventHarness {
 }
 
 export interface BridgePiHarness extends EventHarness {
-	events: ExtensionAPI["events"];
 	getActiveTools: MockFn<ExtensionAPI["getActiveTools"]>;
 	getAllTools: MockFn<ExtensionAPI["getAllTools"]>;
 	setActiveTools: MockFn<ExtensionAPI["setActiveTools"]>;

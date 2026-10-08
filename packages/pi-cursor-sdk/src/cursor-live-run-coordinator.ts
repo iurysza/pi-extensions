@@ -1,4 +1,4 @@
-import type { Context, ToolResultMessage } from "@earendil-works/pi-ai/compat";
+import type { Context, ToolResultMessage } from "@earendil-works/pi-ai";
 import type { SDKAgent } from "@cursor/sdk";
 import {
 	consumeCursorLiveToolResults,

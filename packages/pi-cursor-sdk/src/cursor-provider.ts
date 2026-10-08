@@ -3,10 +3,11 @@ import {
 	type AssistantMessage,
 	type AssistantMessageEventStream,
 	type Context,
+	type TranscriptContext,
 	createAssistantMessageEventStream,
 	type Model,
 	type SimpleStreamOptions,
-} from "@earendil-works/pi-ai/compat";
+} from "@earendil-works/pi-ai";
 import {
 	cursorLiveRuns,
 	DEFAULT_CURSOR_NATIVE_REPLAY_IDLE_DISPOSE_MS,
@@ -16,6 +17,7 @@ import {
 	resetCursorNativeReplayIdleDisposeMs,
 	setCursorNativeReplayIdleDisposeMs,
 } from "./cursor-provider-live-run-drain.js";
+import { toCursorContext } from "./cursor-context-adapter.js";
 import { disposeAllSessionCursorAgents } from "./cursor-session-agent.js";
 import { attachCursorSdkEventDebugPiStreamTap, type CursorSdkEventDebugSink } from "./cursor-sdk-event-debug.js";
 import { installCursorSdkProcessErrorGuard } from "./cursor-sdk-process-error-guard.js";
@@ -47,9 +49,10 @@ function makeInitialMessage(model: Model<Api>): AssistantMessage {
 
 export function streamCursor(
 	model: Model<Api>,
-	context: Context,
+	transcript: Context | TranscriptContext,
 	options?: SimpleStreamOptions,
 ): AssistantMessageEventStream {
+	const context = toCursorContext(transcript);
 	const stream = createAssistantMessageEventStream();
 	const sdkEventDebugRef: { current?: CursorSdkEventDebugSink } = {};
 	attachCursorSdkEventDebugPiStreamTap(stream, sdkEventDebugRef);

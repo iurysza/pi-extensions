@@ -70,6 +70,25 @@ export function loadTidyMode(configPath = CONFIG_PATH): TidyMode {
 	return "default";
 }
 
+/** Chill is opt-in. Session toggles never write this setting. */
+export function loadTidyChill(configPath = CONFIG_PATH): boolean {
+	try { return JSON.parse(readFileSync(configPath, "utf8"))?.chill === true; }
+	catch { return false; }
+}
+
+/** Expanded output rows after wrapping. 500 keeps one card at about 2 ms per redraw. */
+export const DEFAULT_EXPANDED_MAX_LINES = 500;
+
+/** A whole number of rows; 0 means no limit. Anything else is not a setting. */
+export function parseExpandedMaxLines(value: unknown): number | undefined {
+	return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : undefined;
+}
+
+export function loadTidyExpandedMaxLines(configPath = CONFIG_PATH): number {
+	try { return parseExpandedMaxLines(JSON.parse(readFileSync(configPath, "utf8"))?.expandedMaxLines) ?? DEFAULT_EXPANDED_MAX_LINES; }
+	catch { return DEFAULT_EXPANDED_MAX_LINES; }
+}
+
 async function updateConfig(update: Record<string, unknown>, configPath: string): Promise<void> {
 	let current: Record<string, unknown> = {};
 	try {
@@ -101,4 +120,8 @@ export async function saveTidyMode(mode: TidyMode, configPath = CONFIG_PATH): Pr
 
 export async function saveTidyIcons(icons: boolean, configPath = CONFIG_PATH): Promise<void> {
 	await updateConfig({ icons }, configPath);
+}
+
+export async function saveTidyExpandedMaxLines(expandedMaxLines: number, configPath = CONFIG_PATH): Promise<void> {
+	await updateConfig({ expandedMaxLines }, configPath);
 }

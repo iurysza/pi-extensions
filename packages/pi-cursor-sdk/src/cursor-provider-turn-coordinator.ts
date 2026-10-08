@@ -1,4 +1,4 @@
-import type { AssistantMessage, AssistantMessageEventStream } from "@earendil-works/pi-ai/compat";
+import type { AssistantMessage, AssistantMessageEventStream } from "@earendil-works/pi-ai";
 import type { InteractionUpdate } from "@cursor/sdk";
 import type { CursorLiveRun } from "./cursor-live-run-coordinator.js";
 import { cursorLiveRuns } from "./cursor-provider-live-run-drain.js";

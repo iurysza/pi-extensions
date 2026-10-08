@@ -4,8 +4,12 @@ import type {
 	ModelParameterValue,
 	ModelSelection,
 } from "@cursor/sdk";
-import type { ProviderModelConfig } from "@earendil-works/pi-coding-agent";
-import type { ModelThinkingLevel, ThinkingLevelMap } from "@earendil-works/pi-ai/compat";
+import type { ProviderModelConfig as PiProviderModelConfig } from "@earendil-works/pi-coding-agent";
+
+/** Cursor registers chat models only; Pi 1.0 widened the config to a chat | image union. */
+type ProviderModelConfig = Extract<PiProviderModelConfig, { reasoning: boolean }>;
+import type { ModelThinkingLevel, ThinkingLevelMap } from "@earendil-works/pi-ai";
+import { getCursorModelSelectionIdentities } from "../shared/cursor-model-selection-identities.mjs";
 import { loadContextWindowCache } from "./context-window-cache.js";
 import { loadCursorSdk } from "./cursor-sdk-runtime.js";
 import { resolveCursorApiKey, resolveCursorRuntimeApiKey } from "./cursor-api-key.js";
@@ -176,13 +180,6 @@ function getParamValue(params: ModelParameterValue[], id: string): string | unde
 	return params.find((param) => param.id === id)?.value;
 }
 
-function encodePiModelId(modelId: string, context?: string, fastOverride?: boolean): string {
-	const contextQualified = context ? `${modelId}@${context}` : modelId;
-	if (fastOverride === true) return `${contextQualified}:fast`;
-	if (fastOverride === false) return `${contextQualified}:slow`;
-	return contextQualified;
-}
-
 function getModelName(item: ModelListItem, context?: string, alias?: string, fastOverride?: boolean): string {
 	const displayName = item.displayName || item.id;
 	const qualifiers: string[] = [];
@@ -193,18 +190,17 @@ function getModelName(item: ModelListItem, context?: string, alias?: string, fas
 	return context ? `${baseName} @ ${context}` : baseName;
 }
 
-function getFastOverrideBasePiModelId(piModelId: string): string {
-	return piModelId.replace(/:(?:fast|slow)$/, "");
-}
-
-function getContextWindow(contextWindowCache: Map<string, number>, piModelId: string, context?: string, baseModelId?: string): number {
-	const fastOverrideBasePiModelId = getFastOverrideBasePiModelId(piModelId);
-	const contextWindowOverride =
-		contextWindowCache.get(piModelId) ??
-		(fastOverrideBasePiModelId !== piModelId ? contextWindowCache.get(fastOverrideBasePiModelId) : undefined);
-
+function getContextWindow(
+	contextWindowCache: Map<string, number>,
+	selectionKeys: readonly string[],
+	context?: string,
+	baseModelId?: string,
+): number {
+	for (const key of new Set(selectionKeys)) {
+		const contextWindow = contextWindowCache.get(key);
+		if (contextWindow !== undefined) return contextWindow;
+	}
 	return (
-		contextWindowOverride ??
 		(context ? parseContextWindow(context) : undefined) ??
 		(baseModelId ? contextWindowCache.get(baseModelId) : undefined) ??
 		contextWindowCache.get("default") ??
@@ -219,6 +215,7 @@ function toMetadata(
 	defaultParams: ModelParameterValue[],
 	context: string | undefined,
 	contextWindowCache: Map<string, number>,
+	contextWindowKeys: readonly string[],
 	fastOverride?: boolean,
 ): CursorModelMetadata {
 	const thinkingLevelMap = getThinkingLevelMap(item);
@@ -230,7 +227,7 @@ function toMetadata(
 		displayName: item.displayName || item.id,
 		defaultParams: cloneParams(defaultParams),
 		...(context ? { context } : {}),
-		contextWindow: getContextWindow(contextWindowCache, piModelId, context, item.id),
+		contextWindow: getContextWindow(contextWindowCache, contextWindowKeys, context, item.id),
 		supportsFast: getParameter(item, "fast") !== undefined,
 		defaultFast: fastValue === "true",
 		...(fastOverride !== undefined ? { fastOverride } : {}),
@@ -259,78 +256,27 @@ function toModelConfig(metadata: CursorModelMetadata, name: string): ProviderMod
 	};
 }
 
-function getContextValues(item: ModelListItem): string[] {
-	return getParameter(item, "context")?.values.map((value) => value.value) ?? [];
-}
-
-function getAmbiguousAliases(items: ModelListItem[]): Set<string> {
-	const aliasOwners = new Map<string, Set<string>>();
-	for (const item of items) {
-		for (const rawAlias of item.aliases ?? []) {
-			const alias = rawAlias.trim();
-			if (!alias || alias === item.id) continue;
-			const owners = aliasOwners.get(alias) ?? new Set<string>();
-			owners.add(item.id);
-			aliasOwners.set(alias, owners);
-		}
-	}
-	return new Set([...aliasOwners.entries()].filter(([, owners]) => owners.size > 1).map(([alias]) => alias));
-}
-
-function getModelIds(item: ModelListItem, reservedBaseModelIds: Set<string>, ambiguousAliases: Set<string>): string[] {
-	const ids = [item.id];
-	for (const rawAlias of item.aliases ?? []) {
-		const alias = rawAlias.trim();
-		if (!alias || alias === item.id || ids.includes(alias) || reservedBaseModelIds.has(alias) || ambiguousAliases.has(alias)) continue;
-		ids.push(alias);
-	}
-	return ids;
-}
-
-function toModelConfigs(
-	item: ModelListItem,
-	usedPiModelIds: Set<string>,
-	reservedBaseModelIds: Set<string>,
-	ambiguousAliases: Set<string>,
-	contextWindowCache: Map<string, number>,
-): ProviderModelConfig[] {
-	const defaultParams = getDefaultParams(item);
-	const contextValues = getContextValues(item);
-	const contexts = contextValues.length > 0 ? contextValues : [undefined];
-	const configs: ProviderModelConfig[] = [];
-
-	const fastOverrides = getParameter(item, "fast") === undefined ? [undefined] : [undefined, true, false];
-
-	for (const selectionModelId of getModelIds(item, reservedBaseModelIds, ambiguousAliases)) {
-		const alias = selectionModelId === item.id ? undefined : selectionModelId;
-		for (const context of contexts) {
-			const contextParams = context ? replaceParam(defaultParams, "context", context) : defaultParams;
-			for (const fastOverride of fastOverrides) {
-				const params = fastOverride === undefined ? contextParams : replaceParam(contextParams, "fast", fastOverride ? "true" : "false");
-				const piModelId = encodePiModelId(selectionModelId, context, fastOverride);
-				if (usedPiModelIds.has(piModelId)) continue;
-				usedPiModelIds.add(piModelId);
-				const metadata = toMetadata(item, piModelId, selectionModelId, params, context, contextWindowCache, fastOverride);
-				metadataByPiModelId.set(piModelId, metadata);
-				configs.push(toModelConfig(metadata, getModelName(item, context, alias, fastOverride)));
-			}
-		}
-	}
-
-	return configs;
-}
-
-function sortModelsByBaseId(items: ModelListItem[]): ModelListItem[] {
-	return [...items].sort((a, b) => a.id.localeCompare(b.id));
-}
-
 function registerModelItems(items: ModelListItem[]): ProviderModelConfig[] {
 	metadataByPiModelId.clear();
-	const usedPiModelIds = new Set<string>();
-	const reservedBaseModelIds = new Set(items.map((item) => item.id));
-	const ambiguousAliases = getAmbiguousAliases(items);
 	const contextWindowCache = loadContextWindowCache();
-	return sortModelsByBaseId(items).flatMap((item) => toModelConfigs(item, usedPiModelIds, reservedBaseModelIds, ambiguousAliases, contextWindowCache));
+	return getCursorModelSelectionIdentities(items).map(({ model: item, selectionModelId, context, fastOverride, piModelId, contextWindowKey, baseContextWindowKey }) => {
+		const defaultParams = getDefaultParams(item);
+		const contextParams = context ? replaceParam(defaultParams, "context", context) : defaultParams;
+		const params = fastOverride === undefined ? contextParams : replaceParam(contextParams, "fast", fastOverride ? "true" : "false");
+		const metadata = toMetadata(
+			item,
+			piModelId,
+			selectionModelId,
+			params,
+			context,
+			contextWindowCache,
+			[piModelId, contextWindowKey, baseContextWindowKey],
+			fastOverride,
+		);
+		metadataByPiModelId.set(piModelId, metadata);
+		const alias = selectionModelId === item.id ? undefined : selectionModelId;
+		return toModelConfig(metadata, getModelName(item, context, alias, fastOverride));
+	});
 }
 
 export function getCursorModelMetadata(modelId: string): CursorModelMetadata | undefined {

@@ -11,11 +11,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import {
+  DEFAULT_EXPANDED_MAX_LINES,
+  loadTidyExpandedMaxLines,
   loadTidyIcons,
   loadTidyMode,
   loadTidyState,
   parseEnabled,
   saveTidyEnabled,
+  saveTidyExpandedMaxLines,
   saveTidyIcons,
   saveTidyMode,
 } from "../../../extensions/tool-presentation/tidy/config.js";
@@ -256,5 +259,28 @@ test("a failed atomic rename rejects and removes its temporary file", async () =
     } finally {
       Date.now = originalNow;
     }
+  });
+});
+
+test("expandedMaxLines defaults to 500 and accepts only whole numbers from 0", async () => {
+  await withTempConfig(async (configPath) => {
+    assert.equal(DEFAULT_EXPANDED_MAX_LINES, 500);
+    assert.equal(loadTidyExpandedMaxLines(configPath), 500);
+    for (const value of [0, 1, 2000]) {
+      await writeFile(configPath, JSON.stringify({ expandedMaxLines: value }));
+      assert.equal(loadTidyExpandedMaxLines(configPath), value);
+    }
+    for (const contents of ["not json", JSON.stringify({ expandedMaxLines: -1 }), JSON.stringify({ expandedMaxLines: 1.5 }), JSON.stringify({ expandedMaxLines: "200" })]) {
+      await writeFile(configPath, contents);
+      assert.equal(loadTidyExpandedMaxLines(configPath), 500, contents);
+    }
+  });
+});
+
+test("saveTidyExpandedMaxLines keeps other settings", async () => {
+  await withTempConfig(async (configPath) => {
+    await writeFile(configPath, JSON.stringify({ icons: false, mode: "result" }));
+    await saveTidyExpandedMaxLines(120, configPath);
+    assert.deepEqual(JSON.parse(await readFile(configPath, "utf8")), { icons: false, mode: "result", expandedMaxLines: 120 });
   });
 });

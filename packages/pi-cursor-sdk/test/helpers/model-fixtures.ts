@@ -1,5 +1,7 @@
-import type { Api, Model } from "@earendil-works/pi-ai/compat";
+import type { Api, Model } from "@earendil-works/pi-ai";
 import type { ProviderModelConfig } from "@earendil-works/pi-coding-agent";
+
+type ProviderChatModelConfig = Extract<ProviderModelConfig, { reasoning: boolean }>;
 
 export function makeModel(id = "test-model"): Model<"cursor-sdk"> {
 	return {
@@ -39,8 +41,8 @@ export function makeHarnessModel<TApi extends Api>(
 
 export function makeProviderModelConfig(
 	id: string,
-	overrides: Partial<ProviderModelConfig> = {},
-): ProviderModelConfig {
+	overrides: Partial<ProviderChatModelConfig> = {},
+): ProviderChatModelConfig {
 	return {
 		id,
 		name: id,

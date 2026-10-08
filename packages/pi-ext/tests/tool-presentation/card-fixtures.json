@@ -1,0 +1,1350 @@
+[
+  {
+    "name": "add_directory",
+    "state": "success",
+    "source": {
+      "session": "2026-06-12T12-43-13-165Z_019ebbdb-9f8d-7ac3-8003-e3c3400bc0f0.jsonl",
+      "line": 8,
+      "scrubbed": true
+    },
+    "args": {
+      "path": "/tmp/tool-cards/example.md",
+      "reason": "Example"
+    },
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Example output"
+        }
+      ],
+      "details": {
+        "directory": "/tmp/tool-cards/example.md",
+        "hasAgentsMd": false,
+        "hasClaudeMd": false,
+        "skillCount": 1,
+        "skillNames": [
+          "Example"
+        ],
+        "extensionCount": 0
+      },
+      "isError": false
+    }
+  },
+  {
+    "name": "ask_user",
+    "state": "success",
+    "source": {
+      "session": "2026-06-12T12-43-13-165Z_019ebbdb-9f8d-7ac3-8003-e3c3400bc0f0.jsonl",
+      "line": 47,
+      "scrubbed": true
+    },
+    "args": {
+      "context": "Example",
+      "question": "Example",
+      "options": [
+        {
+          "title": "Example",
+          "description": "Example"
+        },
+        {
+          "title": "Example",
+          "description": "Example"
+        },
+        {
+          "title": "Example",
+          "description": "Example"
+        }
+      ],
+      "allowFreeform": true,
+      "allowComment": true
+    },
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Example output"
+        }
+      ],
+      "details": {
+        "question": "Example",
+        "context": "Example",
+        "options": [
+          {
+            "title": "Example",
+            "description": "Example"
+          },
+          {
+            "title": "Example",
+            "description": "Example"
+          },
+          {
+            "title": "Example",
+            "description": "Example"
+          }
+        ],
+        "response": {
+          "kind": "selection",
+          "selections": [
+            "Example"
+          ]
+        },
+        "cancelled": false
+      },
+      "isError": false
+    }
+  },
+  {
+    "name": "create_visual_artifact",
+    "state": "success",
+    "source": {
+      "session": "2026-06-12T12-43-13-165Z_019ebbdb-9f8d-7ac3-8003-e3c3400bc0f0.jsonl",
+      "line": 147,
+      "scrubbed": true
+    },
+    "args": {
+      "title": "Example",
+      "description": "Example",
+      "nodes": [
+        {},
+        {},
+        {}
+      ]
+    },
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Example output"
+        }
+      ],
+      "details": {
+        "path": "/tmp/tool-cards/example.md",
+        "url": "https://example.com/docs"
+      },
+      "isError": false
+    }
+  },
+  {
+    "name": "handoff",
+    "state": "success",
+    "source": {
+      "session": "2026-06-03T15-11-40-631Z_019e8e0a-4e57-72de-8a96-815c5d07db86.jsonl",
+      "line": 198,
+      "scrubbed": true
+    },
+    "args": {
+      "goal": "Example"
+    },
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Example output"
+        }
+      ],
+      "details": {
+        "goal": "Example",
+        "tab": false
+      },
+      "isError": false
+    }
+  },
+  {
+    "name": "fetch_content",
+    "state": "success",
+    "source": {
+      "session": "2026-06-22T14-11-27-288Z_019eefab-ffb8-79ce-bd75-18d163a9d25d.jsonl",
+      "line": 10,
+      "scrubbed": true
+    },
+    "args": {
+      "url": "https://example.com/docs",
+      "prompt": "Example"
+    },
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Example output"
+        }
+      ],
+      "details": {
+        "urlCount": 1,
+        "successful": 1,
+        "totalChars": 3000,
+        "title": "Example",
+        "responseId": "example-id",
+        "imageCount": 0
+      },
+      "isError": false
+    }
+  },
+  {
+    "name": "get_search_content",
+    "state": "success",
+    "source": {
+      "session": "2026-06-22T14-11-27-288Z_019eefab-ffb8-79ce-bd75-18d163a9d25d.jsonl",
+      "line": 30,
+      "scrubbed": true
+    },
+    "args": {
+      "responseId": "example-id",
+      "urlIndex": "Example"
+    },
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Example output"
+        }
+      ],
+      "details": {
+        "title": "Example",
+        "contentLength": 9241
+      },
+      "isError": false
+    }
+  },
+  {
+    "name": "fetch_content",
+    "state": "error",
+    "source": {
+      "session": "2026-06-22T14-11-27-288Z_019eefab-ffb8-79ce-bd75-18d163a9d25d.jsonl",
+      "line": 34,
+      "scrubbed": true
+    },
+    "args": {
+      "prompt": "Example",
+      "model": "Example"
+    },
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Example error"
+        }
+      ],
+      "details": {
+        "error": "Example"
+      },
+      "isError": false
+    }
+  },
+  {
+    "name": "web_search",
+    "state": "success",
+    "source": {
+      "session": "2026-06-22T14-11-27-288Z_019eefab-ffb8-79ce-bd75-18d163a9d25d.jsonl",
+      "line": 35,
+      "scrubbed": true
+    },
+    "args": {
+      "query": "Example"
+    },
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Example output"
+        }
+      ],
+      "details": {
+        "queries": [
+          "Example"
+        ],
+        "queryCount": 1,
+        "successfulQueries": 1,
+        "totalResults": 5
+      },
+      "isError": false
+    }
+  },
+  {
+    "name": "ask_user",
+    "state": "error",
+    "source": {
+      "session": "2026-06-28T11-16-04-727Z_019f0df1-97f7-793b-91e9-b7a27efd34ba.jsonl",
+      "line": 168,
+      "scrubbed": true
+    },
+    "args": {
+      "context": "Example",
+      "question": "Example",
+      "options": [
+        {
+          "title": "Example",
+          "description": "Example"
+        },
+        {
+          "title": "Example",
+          "description": "Example"
+        }
+      ],
+      "allowFreeform": true,
+      "allowComment": true
+    },
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Example error"
+        }
+      ],
+      "details": {
+        "question": "Example",
+        "context": "Example",
+        "options": [
+          {
+            "title": "Example",
+            "description": "Example"
+          },
+          {
+            "title": "Example",
+            "description": "Example"
+          }
+        ],
+        "response": null,
+        "cancelled": true
+      },
+      "isError": false
+    }
+  },
+  {
+    "name": "session_query",
+    "state": "success",
+    "source": {
+      "session": "2026-06-18T12-32-46-707Z_019edab8-3873-73ba-8b68-90fc3b432acc.jsonl",
+      "line": 75,
+      "scrubbed": true
+    },
+    "args": {
+      "sessionPath": "/tmp/tool-cards/example.md",
+      "question": "Example"
+    },
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "**Query:** Example\n\n---\n\nExample answer."
+        }
+      ],
+      "details": {
+        "detailed": false,
+        "messageCount": 337
+      },
+      "isError": false
+    }
+  },
+  {
+    "name": "add_directory",
+    "state": "error",
+    "source": {
+      "session": "2026-07-13T21-35-36-848Z_019f5d68-2f90-7225-8730-e3619a710ee9.jsonl",
+      "line": 274,
+      "scrubbed": true
+    },
+    "args": {
+      "path": "/tmp/tool-cards/example.md",
+      "reason": "Example"
+    },
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Example error"
+        }
+      ],
+      "details": {},
+      "isError": true
+    }
+  },
+  {
+    "name": "get_search_content",
+    "state": "error",
+    "source": {
+      "session": "2026-07-13T13-22-34-609Z_019f5ba4-cbf1-7900-9ebe-ea4e98fe1eda.jsonl",
+      "line": 126,
+      "scrubbed": true
+    },
+    "args": {
+      "responseId": "example-id",
+      "queryIndex": 0
+    },
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Example error"
+        }
+      ],
+      "details": {
+        "error": "Example"
+      },
+      "isError": false
+    }
+  },
+  {
+    "name": "search_external_files",
+    "state": "success",
+    "source": {
+      "session": "2026-07-14T21-33-26-953Z_019f628c-9029-7ca4-83e7-95cbb69c1600.jsonl",
+      "line": 64,
+      "scrubbed": true
+    },
+    "args": {
+      "pattern": "Example",
+      "maxResults": 100
+    },
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Example output"
+        }
+      ],
+      "details": {
+        "totalFound": 15,
+        "dirCount": 1
+      },
+      "isError": false
+    }
+  },
+  {
+    "name": "create_visual_artifact",
+    "state": "error",
+    "source": {
+      "session": "2026-07-12T09-33-31-700Z_019f55ac-bcb3-7409-aae3-fd1420a38d19.jsonl",
+      "line": 146,
+      "scrubbed": true
+    },
+    "args": {
+      "title": "Example",
+      "description": "Example",
+      "nodes": [
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {}
+      ]
+    },
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Example error"
+        }
+      ],
+      "details": {},
+      "isError": true
+    }
+  },
+  {
+    "name": "search_sessions",
+    "state": "success",
+    "source": {
+      "session": "2026-07-13T19-45-56-659Z_019f5d03-c7b3-7f2e-aae9-b20389367561.jsonl",
+      "line": 7,
+      "scrubbed": true
+    },
+    "args": {
+      "query": "Example",
+      "limit": 10
+    },
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Example output"
+        }
+      ],
+      "details": {
+        "resultCount": 3
+      },
+      "isError": false
+    }
+  },
+  {
+    "name": "session_query",
+    "state": "error",
+    "source": {
+      "session": "2026-09-20T19-32-46-820Z_2cab921f-3944-4ab0-bdf6-8deea2ecc33f.jsonl",
+      "line": 377,
+      "scrubbed": true
+    },
+    "args": {
+      "sessionPath": "/tmp/tool-cards/example.md",
+      "question": "Example",
+      "detailed": true
+    },
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Error: Session file not found: /tmp/example.jsonl"
+        }
+      ],
+      "details": {
+        "cancelled": true
+      },
+      "isError": false
+    }
+  },
+  {
+    "name": "memo_note",
+    "state": "success",
+    "source": {
+      "session": "2026-10-05T12-23-19-498Z_01a10c04-bcc9-74bf-8d84-e9b2b9edf392.jsonl",
+      "line": 225,
+      "scrubbed": true
+    },
+    "args": {
+      "line": "Example"
+    },
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Saved as #0."
+        }
+      ],
+      "details": null,
+      "isError": false
+    }
+  },
+  {
+    "name": "memo_note",
+    "state": "error",
+    "source": {
+      "session": "2026-10-05T12-23-19-498Z_01a10c04-bcc9-74bf-8d84-e9b2b9edf392.jsonl",
+      "line": 360,
+      "scrubbed": true
+    },
+    "args": {
+      "line": "Example"
+    },
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Too long: 284 bytes, limit 280. Accented characters cost 2 bytes. Compress it further."
+        }
+      ],
+      "details": {},
+      "isError": true
+    }
+  },
+  {
+    "name": "memo_nap",
+    "state": "success",
+    "source": {
+      "session": "2026-10-05T12-23-19-498Z_01a10c04-bcc9-74bf-8d84-e9b2b9edf392.jsonl",
+      "line": 364,
+      "scrubbed": true
+    },
+    "args": {
+      "range": "0-1",
+      "line": "Example"
+    },
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "0-1 saved.\nNothing left to compress."
+        }
+      ],
+      "details": null,
+      "isError": false
+    }
+  },
+  {
+    "name": "wtf",
+    "state": "success",
+    "source": {
+      "session": "2026-07-27T20-53-14-199Z_019fa55a-6b57-7258-8f3f-7f1f3f87d99b.jsonl",
+      "line": 167,
+      "scrubbed": true
+    },
+    "args": {
+      "note": "Example"
+    },
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Recorded workflow friction in /tmp/example.md"
+        }
+      ],
+      "details": {
+        "path": "/tmp/tool-cards/example.md"
+      },
+      "isError": false
+    }
+  },
+  {
+    "name": "Agent",
+    "state": "success",
+    "source": {
+      "session": "2026-10-03T16-59-06-207Z_01a102b4-805f-726e-ad94-25263c52af39.jsonl",
+      "line": 68,
+      "scrubbed": true
+    },
+    "args": {
+      "description": "Example",
+      "subagent_type": "Example",
+      "name": "example",
+      "run_in_background": true,
+      "prompt": "Example"
+    },
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Example output"
+        }
+      ],
+      "details": {
+        "modelName": "Example",
+        "tags": [
+          "Example",
+          "Example"
+        ],
+        "toolUses": 0,
+        "tokens": "1k",
+        "durationMs": 0,
+        "status": "background",
+        "agentId": "example-id"
+      },
+      "isError": false
+    }
+  },
+  {
+    "name": "get_subagent_result",
+    "state": "success",
+    "source": {
+      "session": "2026-10-03T16-59-06-207Z_01a102b4-805f-726e-ad94-25263c52af39.jsonl",
+      "line": 76,
+      "scrubbed": true
+    },
+    "args": {
+      "reasoning": "Example",
+      "agent_id": "Example"
+    },
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "[redacted]\nType: Agent | Status: completed | Tool uses: 26 | 231.7k token | Context: 54% | Duration: 530.4s\n[redacted]\n[redacted]\n[redacted]\n[redacted]\n[redacted]\n[redacted]\n[redacted]\n[redacted]\n[redacted]\n[redacted]\n[redacted]\n[redacted]\n[redacted]\n[redacted]\n[redacted]\n[redacted]\n[redacted]\n[redacted]\n[redacted]\n[redacted]\n[redacted]\n[redacted]\n[redacted]\n[redacted]\n[redacted]\n[redacted]\n[redacted]\n[redacted]"
+        }
+      ],
+      "details": null,
+      "isError": false
+    }
+  },
+  {
+    "name": "steer_subagent",
+    "state": "success",
+    "source": {
+      "session": "2026-10-03T16-59-06-207Z_01a102b4-805f-726e-ad94-25263c52af39.jsonl",
+      "line": 89,
+      "scrubbed": true
+    },
+    "args": {
+      "reasoning": "Example",
+      "agent_id": "Example",
+      "message": "Example"
+    },
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Message sent."
+        }
+      ],
+      "details": null,
+      "isError": false
+    }
+  },
+  {
+    "name": "codemode",
+    "state": "success",
+    "source": {
+      "session": "2026-10-05T09-16-45-053Z_01a10b59-ec7d-7112-bb11-701fa8eeb9ad.jsonl",
+      "line": 10,
+      "scrubbed": true
+    },
+    "args": {
+      "code": "// verify cards\ntext('Example output');"
+    },
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Script completed\nExample output"
+        }
+      ],
+      "details": {
+        "calls": [
+          {
+            "id": "example-id",
+            "name": "read",
+            "args": "{\"path\":\"example.ts\"}",
+            "status": "ok",
+            "durationMs": 195.06533399999898
+          },
+          {
+            "id": "example-id",
+            "name": "read",
+            "args": "{\"path\":\"example.ts\"}",
+            "status": "ok",
+            "durationMs": 6.805124999998952
+          },
+          {
+            "id": "example-id",
+            "name": "read",
+            "args": "{\"path\":\"example.ts\"}",
+            "status": "ok",
+            "durationMs": 5.737167000002955
+          },
+          {
+            "id": "example-id",
+            "name": "read",
+            "args": "{\"path\":\"example.ts\"}",
+            "status": "ok",
+            "durationMs": 4.53516700000182
+          },
+          {
+            "id": "example-id",
+            "name": "read",
+            "args": "{\"path\":\"example.ts\"}",
+            "status": "ok",
+            "durationMs": 4.587332999999489
+          }
+        ]
+      },
+      "isError": false
+    }
+  },
+  {
+    "name": "source_check",
+    "state": "success",
+    "source": {
+      "session": "2026-09-03T09-41-29-814Z_654a1654-9408-4c50-839d-16dabc4ffc3f.jsonl",
+      "line": 261,
+      "scrubbed": true
+    },
+    "args": {
+      "claim": "Example",
+      "queries": [
+        "Example"
+      ],
+      "fetchContent": true,
+      "numResults": 5
+    },
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Example output"
+        }
+      ],
+      "details": {
+        "artifact": {
+          "sources": [
+            {
+              "rank": 1,
+              "url": "https://example.com/docs",
+              "title": "Example",
+              "snippet": "Example"
+            },
+            {
+              "rank": 2,
+              "url": "https://example.com/docs",
+              "title": "Example",
+              "snippet": "Example"
+            }
+          ],
+          "passages": [
+            {
+              "source_url": "https://example.com/docs",
+              "text": "Example"
+            },
+            {
+              "source_url": "https://example.com/docs",
+              "text": "Example"
+            }
+          ]
+        },
+        "sourceCount": 5,
+        "passageCount": 14
+      },
+      "isError": false
+    }
+  },
+  {
+    "name": "choose_visual_artifact_direction",
+    "state": "success",
+    "source": {
+      "session": "2026-08-14T10-31-51-677Z_019fffd4-007d-7f1c-9fdb-db9603086058.jsonl",
+      "line": 11,
+      "scrubbed": true
+    },
+    "args": {
+      "question": "Example",
+      "directions": [
+        {
+          "title": "Example",
+          "description": "Example",
+          "instruction": "Example"
+        },
+        {
+          "title": "Example",
+          "description": "Example",
+          "instruction": "Example"
+        },
+        {
+          "title": "Example",
+          "description": "Example",
+          "instruction": "Example"
+        }
+      ]
+    },
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Example output"
+        }
+      ],
+      "details": {
+        "question": "Example",
+        "directions": [
+          {
+            "title": "Example",
+            "description": "Example",
+            "instruction": "Example"
+          },
+          {
+            "title": "Example",
+            "description": "Example",
+            "instruction": "Example"
+          },
+          {
+            "title": "Example",
+            "description": "Example",
+            "instruction": "Example"
+          }
+        ],
+        "selected": {
+          "title": "Example",
+          "description": "Example",
+          "instruction": "Example"
+        },
+        "cancelled": false
+      },
+      "isError": false
+    }
+  },
+  {
+    "name": "wtf",
+    "state": "error",
+    "source": {
+      "session": "2026-07-28T17-34-25-022Z_019fa9ca-c0fe-7ce5-b394-6eb1a58c2c29.jsonl",
+      "line": 159,
+      "scrubbed": true
+    },
+    "args": {
+      "note": "Example"
+    },
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Failed to record workflow friction: EACCES"
+        }
+      ],
+      "details": {
+        "error": true
+      },
+      "isError": false
+    }
+  },
+  {
+    "name": "web_search",
+    "state": "error",
+    "source": {
+      "session": "2026-05-01T10-50-41-120Z_019de329-8060-70ea-a520-8cb86b4db7d3.jsonl",
+      "line": 74,
+      "scrubbed": true
+    },
+    "args": {
+      "queries": [
+        "Example",
+        "Example",
+        "Example"
+      ]
+    },
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Example error"
+        }
+      ],
+      "details": {
+        "error": "Example",
+        "cancelled": true
+      },
+      "isError": false
+    }
+  },
+  {
+    "name": "plannotator_submit_plan",
+    "state": "success",
+    "source": {
+      "session": "2026-05-01T19-54-36-530Z_019de51b-7a72-727c-9775-baf60f9c9b53.jsonl",
+      "line": 184,
+      "scrubbed": true
+    },
+    "args": {
+      "filePath": "/tmp/tool-cards/example.md"
+    },
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Example output"
+        }
+      ],
+      "details": {
+        "approved": true,
+        "feedback": "Example"
+      },
+      "isError": false
+    }
+  },
+  {
+    "name": "choose_visual_artifact_direction",
+    "state": "error",
+    "source": {
+      "session": "2026-09-02T06-56-12-749Z_01a060e7-65cd-7239-9ed5-148a047eb8c0.jsonl",
+      "line": 7,
+      "scrubbed": true
+    },
+    "args": {
+      "question": "Example",
+      "directions": [
+        {
+          "title": "Example",
+          "description": "Example",
+          "instruction": "Example"
+        },
+        {
+          "title": "Example",
+          "description": "Example",
+          "instruction": "Example"
+        },
+        {
+          "title": "Example",
+          "description": "Example",
+          "instruction": "Example"
+        }
+      ]
+    },
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Example error"
+        }
+      ],
+      "details": {
+        "question": "Example",
+        "directions": [
+          {
+            "title": "Example",
+            "description": "Example",
+            "instruction": "Example"
+          },
+          {
+            "title": "Example",
+            "description": "Example",
+            "instruction": "Example"
+          },
+          {
+            "title": "Example",
+            "description": "Example",
+            "instruction": "Example"
+          }
+        ],
+        "selected": null,
+        "cancelled": true
+      },
+      "isError": false
+    }
+  },
+  {
+    "name": "web_enable",
+    "state": "success",
+    "source": {
+      "session": "2026-10-05T14-41-43-556Z_01a10c83-7284-760c-a5c6-09308b8c040e.jsonl",
+      "line": 14,
+      "scrubbed": true
+    },
+    "args": {},
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Example output"
+        }
+      ],
+      "details": {
+        "enabled": [
+          "Example",
+          "Example",
+          "Example",
+          "Example"
+        ]
+      },
+      "isError": false
+    }
+  },
+  {
+    "name": "cursor_activate_skill",
+    "state": "success",
+    "source": {
+      "session": "2026-09-18T12-57-38-213Z_01a0b498-0aa4-774c-ab4a-b68651f315b9.jsonl",
+      "line": 28,
+      "scrubbed": true
+    },
+    "args": {
+      "name": "example"
+    },
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Example output"
+        }
+      ],
+      "details": {
+        "name": "example",
+        "filePath": "/tmp/tool-cards/example.md",
+        "baseDir": "/tmp/tool-cards/example.md",
+        "resources": []
+      },
+      "isError": false
+    }
+  },
+  {
+    "name": "SubagentWorkflow",
+    "state": "success",
+    "source": {
+      "session": "2026-10-04T08-22-09-423Z_01a10601-950f-7080-9c5b-7300bfabefa3.jsonl",
+      "line": 15,
+      "scrubbed": true
+    },
+    "args": {
+      "name": "example",
+      "args": {
+        "task": "Example",
+        "slug": "Example"
+      }
+    },
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Example output"
+        }
+      ],
+      "details": {
+        "taskId": "example-id"
+      },
+      "isError": false
+    }
+  },
+  {
+    "name": "cursor_ask_question",
+    "state": "success",
+    "source": {
+      "session": "2026-09-23T20-43-49-369Z_16fab777-8ca8-4bc2-949e-7a076df42f46.jsonl",
+      "line": 360,
+      "scrubbed": true
+    },
+    "args": {
+      "question": "Example",
+      "options": [
+        {
+          "label": "Example",
+          "value": "Example",
+          "description": "Example"
+        },
+        {
+          "label": "Example",
+          "value": "Example",
+          "description": "Example"
+        },
+        {
+          "label": "Example",
+          "value": "Example",
+          "description": "Example"
+        }
+      ],
+      "allowCustom": true
+    },
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Example output"
+        }
+      ],
+      "details": {
+        "questions": [
+          {
+            "id": "example-id",
+            "question": "Example",
+            "options": [
+              {
+                "label": "Example",
+                "value": "Example",
+                "description": "Example"
+              },
+              {
+                "label": "Example",
+                "value": "Example",
+                "description": "Example"
+              },
+              {
+                "label": "Example",
+                "value": "Example",
+                "description": "Example"
+              }
+            ],
+            "allowCustom": true
+          }
+        ],
+        "answers": [
+          {
+            "id": "example-id",
+            "question": "Example",
+            "answer": "Example",
+            "value": "Example",
+            "wasCustom": false,
+            "cancelled": false
+          }
+        ],
+        "uiAvailable": true,
+        "cancelled": false
+      },
+      "isError": false
+    }
+  },
+  {
+    "name": "cursor_ask_question",
+    "state": "error",
+    "source": {
+      "session": "2026-09-23T20-44-02-838Z_01a0d002-d996-74be-a79e-6e1c2d263452.jsonl",
+      "line": 430,
+      "scrubbed": true
+    },
+    "args": {
+      "question": "Example",
+      "options": [
+        {
+          "label": "Example",
+          "value": "Example",
+          "description": "Example"
+        },
+        {
+          "label": "Example",
+          "value": "Example",
+          "description": "Example"
+        }
+      ]
+    },
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Example error"
+        }
+      ],
+      "details": {
+        "questions": [
+          {
+            "id": "example-id",
+            "question": "Example",
+            "options": [
+              {
+                "label": "Example",
+                "value": "Example",
+                "description": "Example"
+              },
+              {
+                "label": "Example",
+                "value": "Example",
+                "description": "Example"
+              }
+            ],
+            "allowCustom": true
+          }
+        ],
+        "answers": [
+          {
+            "id": "example-id",
+            "question": "Example",
+            "answer": null,
+            "wasCustom": true,
+            "cancelled": true
+          }
+        ],
+        "uiAvailable": true,
+        "cancelled": true
+      },
+      "isError": false
+    }
+  },
+  {
+    "name": "mcp__notion__search",
+    "state": "success",
+    "source": {
+      "session": "2026-09-23T22-39-20-435Z_aaa10814-d97e-4f39-855b-e4f941bff064.jsonl",
+      "line": 604,
+      "scrubbed": true
+    },
+    "args": {
+      "tool": "Example",
+      "args": {
+        "query": "Example"
+      }
+    },
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "[redacted single-line result]"
+        }
+      ],
+      "details": {
+        "mode": "Example",
+        "mcpResult": {
+          "content": [
+            {
+              "type": "text",
+              "text": "Example"
+            }
+          ],
+          "structuredContent": {
+            "results": [
+              {
+                "similarity": 0.8962640762329102,
+                "id": "example-id",
+                "url": "https://example.com/docs",
+                "title": "Example",
+                "text": "Example"
+              },
+              {
+                "similarity": 0.8921815752983093,
+                "id": "example-id",
+                "url": "https://example.com/docs",
+                "title": "Example",
+                "text": "Example"
+              }
+            ]
+          }
+        },
+        "server": "Example",
+        "tool": "Example",
+        "canonicalTool": "Example"
+      },
+      "isError": false
+    }
+  },
+  {
+    "name": "codemode",
+    "state": "error",
+    "source": {
+      "session": "2026-10-02T13-39-59-153Z_01a0fcd7-d830-752e-bda1-2db899d18241.jsonl",
+      "line": 69,
+      "scrubbed": true
+    },
+    "args": {
+      "code": "// verify cards\ntext('Example output');"
+    },
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Script completed\nExample output"
+        }
+      ],
+      "details": {
+        "calls": [
+          {
+            "id": "example-id",
+            "name": "read",
+            "args": "{\"path\":\"example.ts\"}",
+            "status": "ok",
+            "durationMs": 85.04504200001247
+          }
+        ]
+      },
+      "isError": true
+    }
+  },
+  {
+    "name": "handoff",
+    "state": "error",
+    "source": {
+      "session": "2026-06-22T09-14-05-586Z_019eee9b-c192-786c-8ea1-24004135a00e.jsonl",
+      "line": 152,
+      "scrubbed": true
+    },
+    "args": {
+      "goal": "Example"
+    },
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Example error"
+        }
+      ],
+      "details": {
+        "error": true
+      },
+      "isError": false
+    }
+  },
+  {
+    "name": "memo_recall",
+    "state": "success",
+    "source": {
+      "session": "2026-10-05T17-45-34-948Z_01a10d2b-c5e4-744d-9f84-001e8e141397.jsonl",
+      "line": 14,
+      "scrubbed": true
+    },
+    "args": {
+      "regex": "Example"
+    },
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "#31 [redacted memory]\n#47 [redacted memory]\n#62 [redacted memory]\n3 matches."
+        }
+      ],
+      "details": null,
+      "isError": false
+    }
+  }
+]
