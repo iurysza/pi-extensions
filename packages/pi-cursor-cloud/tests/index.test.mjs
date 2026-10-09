@@ -124,6 +124,13 @@ test('command spawn preserves multiline prompt and command send does not live-st
   assert.match(h.messages.at(-1).content, /ID\s+NAME/);
 });
 
+test('command spawn accepts repo, ref, model and name flags before the prompt', async t => {
+  const h = harness(t);
+  await h.commands.get('cloud').handler('spawn --repo https://github.com/x/y --ref dev --model m1 --name docs Read --repo literally', h.ctx);
+  assert.deepEqual(h.handles[0].options, { repo: 'https://github.com/x/y', ref: 'dev', model: 'm1', name: 'docs' });
+  assert.equal(h.handles[0].runs[0].prompt, 'Read --repo literally');
+});
+
 test('failure emits a terminal message and non-interactive tools still work', async t => {
   const h = harness(t, { mode: 'json' });
   await h.execute('cursor_cloud_spawn', { prompt: 'Task' });

@@ -49,6 +49,7 @@ IDs are the first 8 characters after `bc-`. Full IDs and unique prefixes also wo
 /cloud
 /cloud list
 /cloud spawn Read-only. Review the docs and suggest corrections.
+/cloud spawn --repo https://github.com/owner/repo --ref main --name docs Read-only. Review the docs.
 /cloud send <id> Explain the most important correction.
 /cloud cancel <id>
 /cloud delete <id>

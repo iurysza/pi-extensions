@@ -26,6 +26,20 @@ export interface Dependencies {
   repo?: typeof resolveRepo;
 }
 
+/** Leading flags (--repo, --ref, --model, --name) then the prompt. */
+export function parseSpawnArgs(input: string): Spawn {
+  const params: Spawn = { prompt: "" };
+  let rest = input.trimStart();
+  for (;;) {
+    const flag = /^--(repo|ref|model|name)(?:=|\s+)(\S+)\s*/.exec(rest);
+    if (!flag) break;
+    params[flag[1] as "repo" | "ref" | "model" | "name"] = flag[2];
+    rest = rest.slice(flag[0].length);
+  }
+  params.prompt = rest;
+  return params;
+}
+
 /** The extension owns only agents it creates. SDK handles never enter state or tool results. */
 export function registerCloudExtension(pi: ExtensionAPI, dependencies: Dependencies = {}) {
   const client = dependencies.client ?? createCloudClient();
@@ -195,7 +209,7 @@ export function registerCloudExtension(pi: ExtensionAPI, dependencies: Dependenc
   });
 
   pi.registerCommand("cloud", {
-    description: "Cloud subagents: list, spawn <prompt>, send <id> <prompt>, cancel <id>, delete <id>",
+    description: "Cloud subagents: list, spawn [--repo <url>] [--ref <ref>] [--model <id>] [--name <n>] <prompt>, send <id> <prompt>, cancel <id>, delete <id>",
     async handler(args, ctx) {
       try {
         const match = /^(\S+)(?:\s+([\s\S]*))?$/.exec(args.trim());
@@ -203,14 +217,14 @@ export function registerCloudExtension(pi: ExtensionAPI, dependencies: Dependenc
         const rest = match?.[2] ?? "";
         let text: string;
         if (action === "list" && !rest) text = formatList(state, now());
-        else if (action === "spawn") text = await spawn({ prompt: rest }, ctx);
+        else if (action === "spawn") text = await spawn(parseSpawnArgs(rest), ctx);
         else if (action === "send") {
           const parts = /^(\S+)\s+([\s\S]+)$/.exec(rest);
           if (!parts) throw new Error("Usage: /cloud send <id> <prompt>");
           text = send(parts[1], parts[2], ctx);
         } else if (action === "cancel" && rest && !/\s/.test(rest)) text = await cancel(rest, ctx);
         else if (action === "delete" && rest && !/\s/.test(rest)) text = await remove(rest, ctx);
-        else throw new Error("Usage: /cloud [list | spawn <prompt> | send <id> <prompt> | cancel <id> | delete <id>]");
+        else throw new Error("Usage: /cloud [list | spawn [--repo <url>] [--ref <ref>] [--model <id>] [--name <n>] <prompt> | send <id> <prompt> | cancel <id> | delete <id>]");
         if (!stopped) pi.sendMessage({ customType: "cursor-cloud-command", content: text, display: true });
       } catch (error) { ctx.ui.notify(error instanceof Error ? error.message : "Cloud command failed.", "error"); }
     },
