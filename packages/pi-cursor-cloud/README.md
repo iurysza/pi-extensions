@@ -64,6 +64,7 @@ With Leader Key loaded, Cursor commands appear at `Ctrl+X → o More → c Curso
 
 ```text
 s Spawn cloud agent…   l List cloud agents   f Follow up…
+s Spawn cloud agent…   l List cloud agents   o Open in browser…
 p Plan mode            a Agent mode          q Toggle fast
 r Runtime → l Local / c Cloud
 z More → c Cancel…  d Delete…  h Recorded cloud runs
