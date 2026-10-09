@@ -4,6 +4,7 @@ import { Type } from "typebox";
 import { createCloudClient, type CloudClient, type CloudHandle, type CloudRun } from "./cloud-client.js";
 import { cleanText, formatCompletion, formatList, singleLine } from "./render.js";
 import { resolveRepo } from "./repo.js";
+import { COMMAND_MENU_COLLECT, cursorMenu } from "./menu.js";
 import { elapsedMs, isActive, reduce, shortId, type CloudAgent, type Event, type State } from "./state.js";
 import { createWidget } from "./widget.js";
 
@@ -208,6 +209,32 @@ export function registerCloudExtension(pi: ExtensionAPI, dependencies: Dependenc
     },
   });
 
+  class Cancelled extends Error {}
+
+  /** Menu entries run commands without arguments, so ask for whatever is missing. */
+  async function ask(ctx: ExtensionContext, title: string): Promise<string> {
+    if (!ctx.hasUI) throw new Error("This /cloud command needs arguments outside the interactive UI.");
+    const text = (await ctx.ui.input(title))?.trim();
+    if (!text) throw new Cancelled("Cancelled.");
+    return text;
+  }
+  async function pick(ctx: ExtensionContext, title: string, fits: (agent: CloudAgent) => boolean): Promise<string> {
+    if (!ctx.hasUI) throw new Error("This /cloud command needs an agent id outside the interactive UI.");
+    const options = state.filter(fits).map(a => ({ id: a.id, label: `${shortId(a.id)}  ${a.name}  · ${a.status.type}` }));
+    if (!options.length) throw new Error("No cloud agents fit this action.");
+    const label = await ctx.ui.select(title, options.map(o => o.label));
+    const chosen = options.find(o => o.label === label);
+    if (!chosen) throw new Cancelled("Cancelled.");
+    return chosen.id;
+  }
+
+  pi.events?.on(COMMAND_MENU_COLLECT, (data: unknown) => {
+    if (!data || typeof data !== "object" || (data as { version?: unknown }).version !== 1) return;
+    const names = new Set(pi.getCommands().filter(c => c.source === "extension").map(c => c.name));
+    const menu = cursorMenu(name => names.has(name));
+    if (menu) (data as { add(group: unknown): void }).add(menu);
+  });
+
   pi.registerCommand("cloud", {
     description: "Cloud subagents: list, spawn [--repo <url>] [--ref <ref>] [--model <id>] [--name <n>] <prompt>, send <id> <prompt>, cancel <id>, delete <id>",
     async handler(args, ctx) {
@@ -217,16 +244,19 @@ export function registerCloudExtension(pi: ExtensionAPI, dependencies: Dependenc
         const rest = match?.[2] ?? "";
         let text: string;
         if (action === "list" && !rest) text = formatList(state, now());
-        else if (action === "spawn") text = await spawn(parseSpawnArgs(rest), ctx);
-        else if (action === "send") {
-          const parts = /^(\S+)\s+([\s\S]+)$/.exec(rest);
-          if (!parts) throw new Error("Usage: /cloud send <id> <prompt>");
-          text = send(parts[1], parts[2], ctx);
-        } else if (action === "cancel" && rest && !/\s/.test(rest)) text = await cancel(rest, ctx);
-        else if (action === "delete" && rest && !/\s/.test(rest)) text = await remove(rest, ctx);
+        else if (action === "spawn") {
+          const params = parseSpawnArgs(rest);
+          if (!params.prompt.trim()) params.prompt = await ask(ctx, "Cloud agent prompt");
+          text = await spawn(params, ctx);
+        } else if (action === "send") {
+          const parts = /^(\S+)(?:\s+([\s\S]+))?$/.exec(rest);
+          const id = parts?.[1] ?? await pick(ctx, "Follow up which cloud agent?", a => !isActive(a));
+          text = send(id, parts?.[2] ?? await ask(ctx, `Follow-up for ${shortId(find(id).id)}`), ctx);
+        } else if (action === "cancel" && !/\s/.test(rest)) text = await cancel(rest || await pick(ctx, "Cancel which cloud run?", isActive), ctx);
+        else if (action === "delete" && !/\s/.test(rest)) text = await remove(rest || await pick(ctx, "Delete which cloud agent?", a => !isActive(a)), ctx);
         else throw new Error("Usage: /cloud [list | spawn [--repo <url>] [--ref <ref>] [--model <id>] [--name <n>] <prompt> | send <id> <prompt> | cancel <id> | delete <id>]");
         if (!stopped) pi.sendMessage({ customType: "cursor-cloud-command", content: text, display: true });
-      } catch (error) { ctx.ui.notify(error instanceof Error ? error.message : "Cloud command failed.", "error"); }
+      } catch (error) { ctx.ui.notify(error instanceof Error ? error.message : "Cloud command failed.", error instanceof Cancelled ? "info" : "error"); }
     },
   });
   pi.registerMessageRenderer(MESSAGE_TYPE, (message, { expanded }, theme) => {

@@ -55,6 +55,22 @@ IDs are the first 8 characters after `bc-`. Full IDs and unique prefixes also wo
 /cloud delete <id>
 ```
 
+Run `spawn`, `send`, `cancel` or `delete` without arguments in the interactive UI and the command asks for the prompt or lets you pick the agent. Cancelling a prompt spends nothing.
+
+## Leader Key menu
+
+With Leader Key loaded, Cursor commands appear at `Ctrl+X → o More → c Cursor`:
+
+```text
+s Spawn cloud agent…   l List cloud agents   f Follow up…
+p Plan mode            a Agent mode          q Toggle fast
+r Runtime → l Local / c Cloud
+z More → c Cancel…  d Delete…  h Recorded cloud runs
+         x Maintenance → refresh models/config, HTTP/1.1, clean resumes, show tools
+```
+
+The `cursor-mode`, `cursor-runtime`, `cursor-fast` and maintenance entries come from `pi-cursor-sdk`. The menu only lists commands that are loaded.
+
 `/cloud list` includes every undeleted agent started by this extension instance, even after it leaves the widget. Deletion is restricted to those agents. Cancel a running agent and wait for its terminal result before deleting it.
 
 ## Example flow

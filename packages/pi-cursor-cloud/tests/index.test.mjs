@@ -6,7 +6,8 @@ const deferred = () => { let resolve, reject; const promise = new Promise((yes, 
 const flush = () => new Promise(resolve => setImmediate(resolve));
 const outcome = (type = 'finished') => ({ type, result: { text: 'Docs checked.', durationMs: 28000, branches: [{ repoUrl: 'repo', branch: 'cursor/docs', prUrl: 'https://github.com/a/b/pull/1' }] } });
 
-function harness(t, { mode = 'tui', pendingSend = false, createGate, deleteGate } = {}) {
+function harness(t, { mode = 'tui', pendingSend = false, createGate, deleteGate, inputs = [], picks = [], commandNames = [] } = {}) {
+  const busListeners = new Map(), asked = [];
   const tools = new Map(), commands = new Map(), events = new Map(), renderers = new Map();
   const messages = [], notices = [], widgets = [], statuses = [], handles = [], deleted = [];
   let renders = 0;
@@ -16,6 +17,8 @@ function harness(t, { mode = 'tui', pendingSend = false, createGate, deleteGate 
     registerMessageRenderer: (name, renderer) => renderers.set(name, renderer),
     on: (name, callback) => events.set(name, callback),
     sendMessage: (message, options) => messages.push({ ...message, options }),
+    events: { on: (name, fn) => busListeners.set(name, fn) },
+    getCommands: () => commandNames.map(name => ({ name, source: 'extension' })),
   };
   const theme = { fg: (_c, s) => s, bold: s => s };
   let component;
@@ -23,6 +26,8 @@ function harness(t, { mode = 'tui', pendingSend = false, createGate, deleteGate 
     setWidget: (name, factory, options) => { widgets.push({ name, factory, options }); component = factory?.({ requestRender: () => renders++ }, theme); },
     setStatus: (name, text) => statuses.push({ name, text }),
     notify: (text, level) => notices.push({ text, level }),
+    input: async title => { asked.push(title); return inputs.shift(); },
+    select: async (title, options) => { asked.push({ title, options }); const i = picks.shift(); return i === undefined ? undefined : options[i]; },
   } };
   const client = {
     async create(options) {
@@ -50,7 +55,7 @@ function harness(t, { mode = 'tui', pendingSend = false, createGate, deleteGate 
   t.after(() => events.get('session_shutdown')({}, ctx));
   const execute = (name, params) => tools.get(name).execute('call-id', params, undefined, undefined, ctx);
   const status = async id => JSON.parse((await execute('cursor_cloud_status', { id })).content[0].text);
-  return { execute, status, handles, messages, notices, widgets, statuses, deleted, commands, events, ctx, renderers,
+  return { execute, status, handles, busListeners, asked, messages, notices, widgets, statuses, deleted, commands, events, ctx, renderers,
     lines: width => component?.render(width) ?? [], renderCount: () => renders };
 }
 
@@ -212,4 +217,41 @@ test('an agent created during shutdown is closed without sending a paid prompt',
   await assert.rejects(spawn, /No prompt was sent/);
   assert.equal(h.handles[0].closed, true);
   assert.equal(h.handles[0].runs.length, 0);
+});
+
+test('menu entries without arguments ask for the prompt and the agent', async t => {
+  const h = harness(t, { inputs: ['Check docs', 'Now the tests'], picks: [0] });
+  const run = (args) => h.commands.get('cloud').handler(args, h.ctx);
+  await run('spawn --name docs');
+  assert.equal(h.asked[0], 'Cloud agent prompt');
+  assert.equal(h.handles[0].runs[0].prompt, 'Check docs');
+  assert.equal(h.handles[0].options.name, 'docs');
+  h.handles[0].runs[0].done.resolve(outcome());
+  await flush(); await flush();
+  await run('send');
+  assert.match(h.asked[1].options[0], /00000001 +docs/);
+  assert.equal(h.handles[0].runs[1].prompt, 'Now the tests');
+});
+
+test('cancelled prompts and empty pickers stop without spending', async t => {
+  const h = harness(t);
+  await h.commands.get('cloud').handler('spawn', h.ctx);
+  assert.equal(h.handles.length, 0);
+  assert.deepEqual(h.notices.at(-1), { text: 'Cancelled.', level: 'info' });
+  await h.commands.get('cloud').handler('cancel', h.ctx);
+  assert.match(h.notices.at(-1).text, /No cloud agents fit/);
+});
+
+test('contributes a Cursor menu with only loaded commands', t => {
+  const h = harness(t, { commandNames: ['cloud', 'cursor-mode'] });
+  const added = [];
+  h.busListeners.get('command-menu:collect:v1')({ version: 1, add: g => added.push(g) });
+  assert.equal(added.length, 1);
+  assert.equal(added[0].key, 'c');
+  const flat = JSON.stringify(added[0]);
+  assert.match(flat, /"name":"cloud","args":"spawn"/);
+  assert.match(flat, /cursor-mode/);
+  assert.doesNotMatch(flat, /cursor-runtime|cursor-fast|Maintenance/);
+  h.busListeners.get('command-menu:collect:v1')({ version: 2, add: g => added.push(g) });
+  assert.equal(added.length, 1);
 });
