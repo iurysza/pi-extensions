@@ -49,6 +49,9 @@ export function renderWidget(state: State, theme: WidgetTheme, width: number, fr
   return lines.map(line => truncateToWidth(line, width));
 }
 
+/** Cursor web page for a cloud agent. Full id, e.g. bc-1234…. */
+export const agentUrl = (id: string): string => `https://cursor.com/agents/${id}`;
+
 export function formatCompletion(agent: CloudAgent): string {
   if (!("result" in agent.status)) return `Cloud agent ${shortId(agent.id)} is ${agent.status.type}.`;
   const { result } = agent.status;
@@ -56,11 +59,12 @@ export function formatCompletion(agent: CloudAgent): string {
   const header = `Cloud agent ${singleLine(agent.name)} (${shortId(agent.id)}) ${label} · ${duration(result.durationMs)}`;
   const error = agent.status.type === "failed" ? `Error: ${cleanText(agent.status.error)}` : "";
   const branches = result.branches.map(b => [b.repoUrl, b.branch && `branch: ${b.branch}`, b.prUrl && `PR: ${b.prUrl}`].filter(Boolean).join(" · "));
-  return [header, error, cleanText(result.text) || "No result text.", ...branches.map(cleanText)].filter(Boolean).join("\n\n");
+  return [header, error, cleanText(result.text) || "No result text.", ...branches.map(cleanText), `Open: ${agentUrl(agent.id)}`].filter(Boolean).join("\n\n");
 }
 
 export function formatList(state: State, now: number): string {
   if (!state.length) return "No cloud agents started in this process.";
-  return ["ID        NAME                  STATUS      ELAPSED  REPO", ...state.map(a =>
-    `${shortId(a.id).padEnd(10)}${singleLine(a.name).slice(0, 20).padEnd(22)}${a.status.type.padEnd(12)}${duration(elapsedMs(a, now)).padEnd(9)}${a.repo}`)].join("\n");
+  return ["ID        NAME                  STATUS      ELAPSED  REPO", ...state.flatMap(a => [
+    `${shortId(a.id).padEnd(10)}${singleLine(a.name).slice(0, 20).padEnd(22)}${a.status.type.padEnd(12)}${duration(elapsedMs(a, now)).padEnd(9)}${a.repo}`,
+    `          ${agentUrl(a.id)}`])].join("\n");
 }

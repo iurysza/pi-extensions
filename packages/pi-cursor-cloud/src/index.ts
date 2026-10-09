@@ -2,7 +2,7 @@ import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-a
 import { Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import { createCloudClient, type CloudClient, type CloudHandle, type CloudRun } from "./cloud-client.js";
-import { cleanText, formatCompletion, formatList, singleLine } from "./render.js";
+import { agentUrl, cleanText, formatCompletion, formatList, singleLine } from "./render.js";
 import { resolveRepo } from "./repo.js";
 import { COMMAND_MENU_COLLECT, cursorMenu } from "./menu.js";
 import { elapsedMs, isActive, reduce, shortId, type CloudAgent, type Event, type State } from "./state.js";
@@ -131,7 +131,7 @@ export function registerCloudExtension(pi: ExtensionAPI, dependencies: Dependenc
       startedAt: now(), status: { type: "starting" }, activity: "starting…", text: "", tools: 0, toolCallIds: [] };
     dispatch({ type: "spawned", agent });
     startRun(agent, handle, params.prompt);
-    return `Cloud agent ${shortId(handle.id)} (${name}) runs in the background. Results arrive later as a follow-up message. It sees ${repo} at ${ref}, not local uncommitted files.`;
+    return `Cloud agent ${shortId(handle.id)} (${name}) runs in the background. Results arrive later as a follow-up message. It sees ${repo} at ${ref}, not local uncommitted files. Open: ${agentUrl(handle.id)}`;
   }
 
   function send(id: string, prompt: string, ctx: ExtensionContext): string {
@@ -200,7 +200,7 @@ export function registerCloudExtension(pi: ExtensionAPI, dependencies: Dependenc
     parameters: Type.Object({ id: Type.Optional(idSchema) }),
     async execute(_id, params) {
       const agents = params.id ? [find(params.id)] : state;
-      const rows = agents.map(a => ({ id: shortId(a.id), name: a.name, status: a.status.type, repo: a.repo,
+      const rows = agents.map(a => ({ id: shortId(a.id), url: agentUrl(a.id), name: a.name, status: a.status.type, repo: a.repo,
         ref: a.ref, model: a.model, elapsedMs: elapsedMs(a, now()), tools: a.tools, activity: cleanText(a.activity),
         text: "result" in a.status ? a.status.result.text : a.text,
         error: a.status.type === "failed" ? a.status.error : undefined,

@@ -54,5 +54,10 @@ test('long prompts leave space for elapsed and tool statistics', () => {
 
 test('completion includes duration result and branch or PR metadata', () => {
   const a = { ...make(), status: { type: 'idle', endedAt: 29000, result: { text: 'Docs checked.', durationMs: 28000, branches: [{ repoUrl: 'https://github.com/owner/repo', branch: 'cursor/docs', prUrl: 'https://github.com/owner/repo/pull/1' }] } } };
-  assert.equal(formatCompletion(a), 'Cloud agent docs (12345678) finished · 0:28\n\nDocs checked.\n\nhttps://github.com/owner/repo · branch: cursor/docs · PR: https://github.com/owner/repo/pull/1');
+  assert.equal(formatCompletion(a), 'Cloud agent docs (12345678) finished · 0:28\n\nDocs checked.\n\nhttps://github.com/owner/repo · branch: cursor/docs · PR: https://github.com/owner/repo/pull/1\n\nOpen: https://cursor.com/agents/' + a.id);
+});
+
+test('agent links point at the Cursor web page for the full id', async () => {
+  const { agentUrl } = await import('../src/render.js');
+  assert.equal(agentUrl('bc-34f7b2b2-8439'), 'https://cursor.com/agents/bc-34f7b2b2-8439');
 });
