@@ -1,0 +1,234 @@
+import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import { Text } from "@earendil-works/pi-tui";
+import { Type } from "typebox";
+import { createCloudClient, type CloudClient, type CloudHandle, type CloudRun } from "./cloud-client.js";
+import { cleanText, formatCompletion, formatList, singleLine } from "./render.js";
+import { resolveRepo } from "./repo.js";
+import { elapsedMs, isActive, reduce, shortId, type CloudAgent, type Event, type State } from "./state.js";
+import { createWidget } from "./widget.js";
+
+const MESSAGE_TYPE = "cursor-cloud-completion";
+const DEFAULT_MODEL = "composer-2-5";
+const promptSchema = Type.String({ minLength: 1, description: "Task for the cloud agent" });
+const idSchema = Type.String({ minLength: 1, description: "Short cloud agent ID or unique prefix" });
+const spawnSchema = Type.Object({
+  prompt: promptSchema,
+  repo: Type.Optional(Type.String()),
+  ref: Type.Optional(Type.String()),
+  model: Type.Optional(Type.String()),
+  name: Type.Optional(Type.String()),
+});
+type Spawn = { prompt: string; repo?: string; ref?: string; model?: string; name?: string };
+interface Job { ready: Promise<CloudRun> }
+export interface Dependencies {
+  client?: CloudClient;
+  now?: () => number;
+  repo?: typeof resolveRepo;
+}
+
+/** The extension owns only agents it creates. SDK handles never enter state or tool results. */
+export function registerCloudExtension(pi: ExtensionAPI, dependencies: Dependencies = {}) {
+  const client = dependencies.client ?? createCloudClient();
+  const now = dependencies.now ?? Date.now;
+  const repoDefaults = dependencies.repo ?? resolveRepo;
+  let state: State = [];
+  let stopped = false;
+  const handles = new Map<string, CloudHandle>();
+  const jobs = new Map<string, Job>();
+  const deleting = new Set<string>();
+  const widget = createWidget(() => state, now);
+
+  function dispatch(event: Event) {
+    if (stopped) return;
+    state = reduce(state, event);
+    widget.update();
+  }
+
+  function find(id: string): CloudAgent {
+    const prefix = id.trim().replace(/^bc-/, "");
+    if (!prefix) throw new Error("A cloud agent ID is required.");
+    const matches = state.filter(a => a.id.replace(/^bc-/, "").startsWith(prefix));
+    if (matches.length !== 1) throw new Error(matches.length ? "Ambiguous cloud agent ID. Use a longer prefix." : "Unknown cloud agent. Only agents started in this process are available.");
+    return matches[0];
+  }
+
+  function checkSession(ctx: ExtensionContext) {
+    if (stopped) throw new Error("This cloud extension session has shut down.");
+    widget.attach(ctx);
+  }
+
+  function requirePrompt(prompt: string) {
+    if (!prompt.trim()) throw new Error("A non-empty prompt is required.");
+  }
+
+  function notifyCompletion(id: string) {
+    if (stopped) return;
+    const agent = state.find(a => a.id === id);
+    if (!agent) return;
+    pi.sendMessage({ customType: MESSAGE_TYPE, content: formatCompletion(agent), display: true,
+      details: { id: shortId(id), name: agent.name, status: agent.status.type } },
+    { deliverAs: "followUp", triggerTurn: true });
+  }
+
+  function startRun(agent: CloudAgent, handle: CloudHandle, prompt: string) {
+    // Send is reserved in the reducer before awaiting the SDK, so concurrent follow-ups cannot race.
+    const job: Job = { ready: Promise.resolve().then(() => handle.send(prompt, event => {
+      if (jobs.get(agent.id) === job) dispatch({ ...event, id: agent.id });
+    })) };
+    jobs.set(agent.id, job);
+    void (async () => {
+      try {
+        const run = await job.ready;
+        if (stopped || jobs.get(agent.id) !== job) return;
+        dispatch({ type: "running", id: agent.id, runId: run.id });
+        const completion = await run.wait();
+        if (stopped || jobs.get(agent.id) !== job) return;
+        const current = find(agent.id);
+        const result = { ...completion.result,
+          durationMs: completion.result.durationMs || elapsedMs(current, now()),
+          text: completion.result.text || current.text };
+        dispatch({ ...completion, result, id: agent.id, now: now() });
+      } catch (error) {
+        if (stopped || jobs.get(agent.id) !== job) return;
+        // The client translates SDK failures into credential-free messages.
+        const current = find(agent.id);
+        dispatch({ type: "error", id: agent.id, now: now(),
+          error: error instanceof Error ? error.message : "Cursor Cloud run failed.",
+          result: { text: current.text, durationMs: elapsedMs(current, now()), branches: [] } });
+      }
+      if (!stopped) {
+        try { notifyCompletion(agent.id); }
+        catch { /* State and result remain available through cursor_cloud_status. */ }
+      }
+    })();
+  }
+
+  async function spawn(params: Spawn, ctx: ExtensionContext): Promise<string> {
+    checkSession(ctx);
+    requirePrompt(params.prompt);
+    const { repo, ref } = await repoDefaults(ctx.cwd, params.repo, params.ref);
+    const model = params.model?.trim() || DEFAULT_MODEL;
+    const name = singleLine(params.name?.trim() || `cloud-${state.length + 1}`);
+    const handle = await client.create({ repo, ref, model, name });
+    if (stopped) { handle.close(); throw new Error("Session shut down while creating the cloud agent. No prompt was sent."); }
+    handles.set(handle.id, handle);
+    const agent: CloudAgent = { id: handle.id, name, description: params.prompt, repo, ref, model,
+      startedAt: now(), status: { type: "starting" }, activity: "starting…", text: "", tools: 0, toolCallIds: [] };
+    dispatch({ type: "spawned", agent });
+    startRun(agent, handle, params.prompt);
+    return `Cloud agent ${shortId(handle.id)} (${name}) runs in the background. Results arrive later as a follow-up message. It sees ${repo} at ${ref}, not local uncommitted files.`;
+  }
+
+  function send(id: string, prompt: string, ctx: ExtensionContext): string {
+    checkSession(ctx);
+    requirePrompt(prompt);
+    const agent = find(id);
+    if (deleting.has(agent.id)) throw new Error("Cloud agent deletion is in progress. Start a new agent instead.");
+    if (isActive(agent)) throw new Error("Agent already has an active run. Wait until it is idle before sending a follow-up.");
+    const handle = handles.get(agent.id);
+    if (!handle) throw new Error("Cloud agent handle is unavailable. Start a new agent.");
+    dispatch({ type: "followUp", id: agent.id, prompt, now: now() });
+    startRun(find(agent.id), handle, prompt);
+    return `Follow-up sent to ${shortId(agent.id)} in the background. Results arrive later.`;
+  }
+
+  async function cancel(id: string, ctx: ExtensionContext): Promise<string> {
+    checkSession(ctx);
+    const agent = find(id);
+    if (!isActive(agent)) return `Cloud agent ${shortId(agent.id)} is already ${agent.status.type}.`;
+    const job = jobs.get(agent.id);
+    if (!job) throw new Error("No active cloud run is available to cancel.");
+    const run = await job.ready;
+    if (stopped) throw new Error("Session shut down. Cloud run was not cancelled.");
+    await run.cancel();
+    return `Cancellation requested for ${shortId(agent.id)}. Its final result arrives later.`;
+  }
+
+  async function remove(id: string, ctx: ExtensionContext): Promise<string> {
+    checkSession(ctx);
+    const agent = find(id);
+    if (isActive(agent)) throw new Error("Cancel the active run and wait for completion before deleting this agent.");
+    if (deleting.has(agent.id)) throw new Error("Cloud agent deletion is already in progress.");
+    deleting.add(agent.id);
+    try {
+      await client.delete(agent.id);
+      try { handles.get(agent.id)?.close(); } catch { /* Remote deletion succeeded; local close is best-effort. */ }
+      handles.delete(agent.id);
+      jobs.delete(agent.id);
+      dispatch({ type: "removed", id: agent.id });
+      return `Deleted cloud agent ${shortId(agent.id)}.`;
+    } finally { deleting.delete(agent.id); }
+  }
+
+  const textResult = (text: string) => ({ content: [{ type: "text" as const, text }], details: undefined });
+  pi.registerTool({
+    name: "cursor_cloud_spawn", label: "Spawn cloud subagent",
+    description: "Run a Cursor Cloud subagent in the BACKGROUND. Returns immediately after creating the agent; results arrive later as a follow-up message. Cloud agents cannot see local uncommitted files. Each run costs real money at Cursor Max Mode pricing. Defaults to the current GitHub origin and an origin-tracked current branch, otherwise main.",
+    parameters: spawnSchema, executionMode: "sequential",
+    async execute(_id, params, _signal, _update, ctx) { return textResult(await spawn(params, ctx)); },
+  });
+  pi.registerTool({
+    name: "cursor_cloud_send", label: "Send cloud follow-up",
+    description: "Send a follow-up to an idle cloud subagent in the background. Not live steering: sending during an active run is rejected. Results arrive later. Each follow-up costs money.",
+    parameters: Type.Object({ id: idSchema, prompt: promptSchema }), executionMode: "sequential",
+    async execute(_id, params, _signal, _update, ctx) { return textResult(send(params.id, params.prompt, ctx)); },
+  });
+  pi.registerTool({
+    name: "cursor_cloud_cancel", label: "Cancel cloud run",
+    description: "Cancel an active cloud subagent run started by this process. Does not delete the agent.",
+    parameters: Type.Object({ id: idSchema }), executionMode: "sequential",
+    async execute(_id, params, _signal, _update, ctx) { return textResult(await cancel(params.id, ctx)); },
+  });
+  pi.registerTool({
+    name: "cursor_cloud_status", label: "Cloud subagent status",
+    description: "Read current state, last activity, and result text for cloud subagents started in this process. Omit id to list all.",
+    parameters: Type.Object({ id: Type.Optional(idSchema) }),
+    async execute(_id, params) {
+      const agents = params.id ? [find(params.id)] : state;
+      const rows = agents.map(a => ({ id: shortId(a.id), name: a.name, status: a.status.type, repo: a.repo,
+        ref: a.ref, model: a.model, elapsedMs: elapsedMs(a, now()), tools: a.tools, activity: cleanText(a.activity),
+        text: "result" in a.status ? a.status.result.text : a.text,
+        error: a.status.type === "failed" ? a.status.error : undefined,
+        branches: "result" in a.status ? a.status.result.branches : [] }));
+      return textResult(JSON.stringify(rows, null, 2));
+    },
+  });
+
+  pi.registerCommand("cloud", {
+    description: "Cloud subagents: list, spawn <prompt>, send <id> <prompt>, cancel <id>, delete <id>",
+    async handler(args, ctx) {
+      try {
+        const match = /^(\S+)(?:\s+([\s\S]*))?$/.exec(args.trim());
+        const action = match?.[1] ?? "list";
+        const rest = match?.[2] ?? "";
+        let text: string;
+        if (action === "list" && !rest) text = formatList(state, now());
+        else if (action === "spawn") text = await spawn({ prompt: rest }, ctx);
+        else if (action === "send") {
+          const parts = /^(\S+)\s+([\s\S]+)$/.exec(rest);
+          if (!parts) throw new Error("Usage: /cloud send <id> <prompt>");
+          text = send(parts[1], parts[2], ctx);
+        } else if (action === "cancel" && rest && !/\s/.test(rest)) text = await cancel(rest, ctx);
+        else if (action === "delete" && rest && !/\s/.test(rest)) text = await remove(rest, ctx);
+        else throw new Error("Usage: /cloud [list | spawn <prompt> | send <id> <prompt> | cancel <id> | delete <id>]");
+        if (!stopped) pi.sendMessage({ customType: "cursor-cloud-command", content: text, display: true });
+      } catch (error) { ctx.ui.notify(error instanceof Error ? error.message : "Cloud command failed.", "error"); }
+    },
+  });
+  pi.registerMessageRenderer(MESSAGE_TYPE, (message, { expanded }, theme) => {
+    const text = typeof message.content === "string" ? cleanText(message.content) : "Cloud agent completed.";
+    const [header, ...body] = text.split("\n");
+    return new Text(theme.fg("accent", theme.bold(header)) + "\n" + (expanded ? body.join("\n") : body.join("\n").slice(0, 1200)), 0, 0);
+  });
+  pi.on("session_start", (_event, ctx) => { widget.attach(ctx); });
+  pi.on("session_shutdown", () => {
+    stopped = true;
+    widget.dispose();
+    // Closing detaches listeners. Never cancel work on Cursor's infrastructure during shutdown.
+    for (const handle of handles.values()) { try { handle.close(); } catch { /* Best-effort local cleanup. */ } }
+    handles.clear();
+    jobs.clear();
+  });
+}
+
+export default function cursorCloudExtension(pi: ExtensionAPI) { registerCloudExtension(pi); }
