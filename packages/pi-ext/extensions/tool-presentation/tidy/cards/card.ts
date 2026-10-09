@@ -1,5 +1,5 @@
 import type { Theme } from "@earendil-works/pi-coding-agent";
-import { truncateToWidth, visibleWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
+import { getCapabilities, truncateToWidth, visibleWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
 import { DEFAULT_EXPANDED_MAX_LINES, type TidyMode } from "../config.js";
 import { BOLD, CYAN, DIM, GREEN, MAGENTA, RED, RESET, grepResultCounts, nonEmptyLineCount, shortPath, style } from "../render.js";
 import { stripReasoning } from "../tool-composition.js";
@@ -19,6 +19,15 @@ function oneLine(s: string): string {
 export function fitToolLine(line: string, width: number): string {
 	const max = Math.max(1, width);
 	if (visibleWidth(line) <= max) return line;
+	// Reserve a trailing card link before shortening the target or summary.
+	const linkIndex = line.lastIndexOf(" · \x1b]8;;");
+	if (linkIndex >= 0) {
+		const suffix = line.slice(linkIndex);
+		const link = suffix.slice(3);
+		const space = max - visibleWidth(suffix);
+		if (space > 0) return `${fitToolLine(line.slice(0, linkIndex), space)}${suffix}`;
+		return truncateToWidth(link, max, "…");
+	}
 	const arrowIndex = line.indexOf("→");
 	if (arrowIndex < 0) return truncateToWidth(line, max, "…");
 
@@ -71,8 +80,10 @@ export interface CardParts { head: string[]; body: string[]; tail: string[] }
 
 /** Wrap one body line, keeping the hanging indent on continuation rows. */
 function wrapBodyLine(line: string, max: number): string[] {
-	const indented = line.startsWith(INDENT) && max > INDENT.length;
-	const rows = indented ? wrapTextWithAnsi(line.slice(INDENT.length), max - INDENT.length).map((row) => `${INDENT}${row}`) : wrapTextWithAnsi(line, max);
+	const rail = line.match(/^  (?:\x1b\[[0-9;]*m)*│ ?/)?.[0];
+	const prefix = rail ?? INDENT;
+	const indented = line.startsWith(prefix) && max > visibleWidth(prefix);
+	const rows = indented ? wrapTextWithAnsi(line.slice(prefix.length), max - visibleWidth(prefix)).map((row) => `${prefix}${row}`) : wrapTextWithAnsi(line, max);
 	// Guard against characters the wrapper measures differently, such as tabs.
 	return rows.map((row) => truncateToWidth(row, max, ""));
 }
@@ -350,9 +361,11 @@ export function cardParts({ spec, args = {}, result = {} }: CardModel, opts: Car
 	else if (isError && (piError || result.isError || result.details?.error)) fact = spec.errorSummary?.(result, rest) ?? errorText(result).split("\n")[0];
 	else fact = spec.summary(result, rest);
 	if (!spec.legacy) fact = truncateToWidth(singleLine(fact), 48, "…");
-	const summary = spec.legacy
+	const cardLink = !isPartial && getCapabilities().hyperlinks ? spec.link?.(result, rest) : undefined;
+	const linkSuffix = cardLink ? ` · \x1b]8;;${cardLink.url}\x07${cardLink.label}\x1b]8;;\x07` : "";
+	const summary = (spec.legacy
 		? isPartial ? `${DIM}${duration ?? "preparing"}${RESET}` : `${summarize(spec.label, result, isError, rest)}${duration === undefined ? "" : ` ${DIM}· ${duration}${RESET}`}`
-		: `${isPartial ? DIM : isError ? RED : GREEN}${fact || (isPartial ? duration ?? "preparing" : isError ? "error" : "done")}${RESET}${duration === undefined || (isPartial && !fact) ? "" : ` ${DIM}· ${duration}${RESET}`}`;
+		: `${isPartial ? DIM : isError ? RED : GREEN}${fact || (isPartial ? duration ?? "preparing" : isError ? "error" : "done")}${RESET}${duration === undefined || (isPartial && !fact) ? "" : ` ${DIM}· ${duration}${RESET}`}`) + linkSuffix;
 
 	const { icon, color } = spec;
 	const label = icons && (!spec.legacy || BUILT_INS.has(spec.label)) ? icon : `${icons && spec.legacy ? `${icon} ` : ""}${BOLD}${spec.label}`;

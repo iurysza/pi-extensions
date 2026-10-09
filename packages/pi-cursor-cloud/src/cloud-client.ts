@@ -1,4 +1,4 @@
-import { Agent, type SDKAgent, type SendOptions, type RunResult } from "@cursor/sdk";
+import { Agent, Cursor, type SDKAgent, type SendOptions, type RunResult } from "@cursor/sdk";
 import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -22,6 +22,7 @@ export interface CloudHandle {
   close(): void;
 }
 export interface CloudClient {
+  models(): Promise<{ id: string; displayName?: string }[]>;
   create(options: SpawnOptions): Promise<CloudHandle>;
   delete(id: string): Promise<void>;
 }
@@ -130,6 +131,11 @@ function wrapHandle(agent: SDKAgent, key: string): CloudHandle {
 
 export function createCloudClient(getKey: () => Promise<string> = readApiKey): CloudClient {
   return {
+    async models() {
+      const apiKey = await getKey();
+      try { return (await Cursor.models.list({ apiKey })).map(({ id, displayName }) => ({ id, displayName })); }
+      catch (error) { throw new Error(cloudError(error, "model listing")); }
+    },
     async create(options) {
       const apiKey = await getKey();
       try {

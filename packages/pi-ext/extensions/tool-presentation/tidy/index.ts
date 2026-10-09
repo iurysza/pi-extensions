@@ -91,6 +91,7 @@ import { buildToolBlock, cardParts, ExpandedCard, WidthAwareLines, TimelineTool,
 import { builtinSpec } from "./cards/specs/builtins.js";
 import { cardRenderers, cardRuntime, specForTool } from "./cards/index.js";
 import { ChillState, chillRenderers, hasText } from "./chill.js";
+import { registerMessageCards } from "./message-cards.js";
 export { buildToolBlock, fitToolLine, formatElapsed } from "./cards/card.js";
 
 export { withReasoning } from "./tool-composition.js";
@@ -349,6 +350,7 @@ export function createTidyExtension(dependencies: TidyExtensionDependencies = {}
 				return renderers && (spec || builtins.has(name)) ? chillRenderers(renderers, chill) : original;
 			});
 			if (tidyState.enabled) {
+				registerMessageCards(pi, chill, cardSettings);
 				pi.registerCommand("chill", {
 					description: "Toggle finished tool folding for this session only",
 					handler: async (_args, ctx) => { ctx.ui.notify(`Chill mode ${chill.toggle() ? "on" : "off"} for this session.`, "info"); },
@@ -358,6 +360,7 @@ export function createTidyExtension(dependencies: TidyExtensionDependencies = {}
 				pi.on("session_tree", restoreChill);
 				let assistantTextSeen = false;
 				pi.on("message_start", (event) => {
+					if (event.message.role === "custom" && event.message.display) chill.completeMessage(event.message);
 					if (event.message.role === "user") chill.boundary();
 					if (event.message.role === "assistant") {
 						assistantTextSeen = hasText(event.message);

@@ -1,13 +1,21 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { mkdtempSync, rmSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { Text } from '@earendil-works/pi-tui';
 import { registerCloudExtension } from '../src/index.js';
 
 const deferred = () => { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no; }); return { promise, resolve, reject }; };
 const flush = () => new Promise(resolve => setImmediate(resolve));
 const outcome = (type = 'finished') => ({ type, result: { text: 'Docs checked.', durationMs: 28000, branches: [{ repoUrl: 'repo', branch: 'cursor/docs', prUrl: 'https://github.com/a/b/pull/1' }] } });
 
-function harness(t, { mode = 'tui', pendingSend = false, createGate, deleteGate, inputs = [], picks = [], commandNames = [] } = {}) {
+function harness(t, { mode = 'tui', pendingSend = false, createGate, deleteGate, inputs = [], picks = [], commandNames = [], models = [], modelsError = false, savedModel } = {}) {
   const busListeners = new Map(), asked = [];
+  const root = mkdtempSync(join(tmpdir(), 'cloud-test-'));
+  const configPath = join(root, 'pi-cursor-cloud.json');
+  if (savedModel) writeFileSync(configPath, JSON.stringify({ defaultModel: savedModel }));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
   const tools = new Map(), commands = new Map(), events = new Map(), renderers = new Map();
   const messages = [], notices = [], widgets = [], statuses = [], handles = [], deleted = [], opened = [];
   let renders = 0;
@@ -17,7 +25,7 @@ function harness(t, { mode = 'tui', pendingSend = false, createGate, deleteGate,
     registerMessageRenderer: (name, renderer) => renderers.set(name, renderer),
     on: (name, callback) => events.set(name, callback),
     sendMessage: (message, options) => messages.push({ ...message, options }),
-    events: { on: (name, fn) => busListeners.set(name, fn) },
+    events: { on: (name, fn) => busListeners.set(name, fn), emit: (name, data) => busListeners.get(name)?.(data) },
     exec: async (command, args) => { opened.push({ command, args }); return { code: 0, stdout: '', stderr: '' }; },
     getCommands: () => commandNames.map(name => ({ name, source: 'extension' })),
   };
@@ -31,6 +39,7 @@ function harness(t, { mode = 'tui', pendingSend = false, createGate, deleteGate,
     select: async (title, options) => { asked.push({ title, options }); const i = picks.shift(); return i === undefined ? undefined : options[i]; },
   } };
   const client = {
+    async models() { if (modelsError) throw new Error('Model listing failed'); return models; },
     async create(options) {
       if (createGate) await createGate.promise;
       const handle = { id: `bc-${String(handles.length + 1).padStart(8, '0')}-uuid`, options, runs: [], closed: false,
@@ -51,12 +60,12 @@ function harness(t, { mode = 'tui', pendingSend = false, createGate, deleteGate,
     },
     async delete(id) { deleted.push(id); if (deleteGate) await deleteGate.promise; },
   };
-  registerCloudExtension(pi, { client, now: () => 29000, repo: async (_cwd, repo, ref) => ({ repo: repo ?? 'https://github.com/a/b', ref: ref ?? 'main' }) });
+  registerCloudExtension(pi, { client, configPath, now: () => 29000, repo: async (_cwd, repo, ref) => ({ repo: repo ?? 'https://github.com/a/b', ref: ref ?? 'main' }) });
   events.get('session_start')({}, ctx);
   t.after(() => events.get('session_shutdown')({}, ctx));
   const execute = (name, params) => tools.get(name).execute('call-id', params, undefined, undefined, ctx);
   const status = async id => JSON.parse((await execute('cursor_cloud_status', { id })).content[0].text);
-  return { execute, status, opened, handles, busListeners, asked, messages, notices, widgets, statuses, deleted, commands, events, ctx, renderers,
+  return { execute, status, opened, configPath, handles, busListeners, asked, messages, notices, widgets, statuses, deleted, commands, events, ctx, renderers,
     lines: width => component?.render(width) ?? [], renderCount: () => renders };
 }
 
@@ -99,6 +108,9 @@ test('idle follow-up resets activity and is reserved before another send can rac
   h.handles[0].runs[1].done.resolve(outcome());
   await flush();
   assert.equal(h.messages.length, 2);
+  assert.equal(h.messages[0].details.prompt, 'First');
+  assert.equal(h.messages[1].details.prompt, 'Next');
+  assert.notEqual(h.messages[0].details.completionId, h.messages[1].details.completionId);
 });
 
 test('cancel reports terminal result and commands restrict deletion to owned idle agents', async t => {
@@ -279,4 +291,62 @@ test('tool results and commands carry structured details for renderers', async t
   await h.commands.get('cloud').handler('list', h.ctx);
   assert.equal(h.messages.at(-1).details.kind, 'list');
   assert.ok(h.renderers.has('cursor-cloud-command'));
+});
+
+test('completion renderer requests a tidy component synchronously or shows all raw text', t => {
+  const h = harness(t);
+  const renderer = h.renderers.get('cursor-cloud-completion');
+  const content = '# Raw heading\n**not styled**\n' + Array.from({ length: 30 }, (_, i) => `line ${i}`).join('\n');
+  const message = { customType: 'cursor-cloud-completion', content };
+  const theme = { fg: () => { throw new Error('raw fallback must not style'); } };
+  assert.equal(renderer(message, { expanded: false }, theme).render(500).map(line => line.trimEnd()).join('\n'), content);
+  assert.equal(renderer({ ...message, content: [{ type: 'text', text: '**raw**' }] }, { expanded: true }, theme).render(500)[0].trimEnd(), '**raw**');
+  const tidy = new Text('tidy component', 0, 0);
+  h.busListeners.set('tidy:message-card:v1', request => {
+    assert.equal(request.version, 1);
+    assert.equal(request.customType, 'cursor-cloud-completion');
+    assert.equal(request.message, message);
+    assert.equal(request.expanded, true);
+    assert.equal(request.theme, theme);
+    request.component = tidy;
+  });
+  assert.equal(renderer(message, { expanded: true }, theme), tidy);
+});
+
+test('/cloud model saves the default and spawn respects explicit, saved and built-in models', async t => {
+  const h = harness(t);
+  await h.execute('cursor_cloud_spawn', { prompt: 'Built-in' });
+  assert.equal(h.handles[0].options.model, 'composer-2-5');
+  await h.commands.get('cloud').handler('model custom-model', h.ctx);
+  assert.deepEqual(JSON.parse(readFileSync(h.configPath, 'utf8')), { defaultModel: 'custom-model' });
+  assert.deepEqual(h.notices.at(-1), { text: 'Default cloud model: custom-model', level: 'info' });
+  assert.equal(h.messages.length, 0, 'configuration is not a model-facing message');
+  await h.execute('cursor_cloud_spawn', { prompt: 'Saved' });
+  await h.execute('cursor_cloud_spawn', { prompt: 'Override', model: 'explicit' });
+  assert.equal(h.handles[1].options.model, 'custom-model');
+  assert.equal(h.handles[2].options.model, 'explicit');
+  const restored = harness(t, { savedModel: 'persisted' });
+  await restored.execute('cursor_cloud_spawn', { prompt: 'Restored' });
+  assert.equal(restored.handles[0].options.model, 'persisted');
+});
+
+test('/cloud model picker marks the current default and saves the selected SDK model', async t => {
+  const h = harness(t, { models: [{ id: 'composer-2-5', displayName: 'Composer' }, { id: 'other', displayName: 'Other' }], picks: [1] });
+  await h.commands.get('cloud').handler('model', h.ctx);
+  assert.match(h.asked[0].options[0], /Composer.*composer-2-5.*current default/);
+  assert.deepEqual(JSON.parse(readFileSync(h.configPath, 'utf8')), { defaultModel: 'other' });
+  await h.execute('cursor_cloud_spawn', { prompt: 'Use selection' });
+  assert.equal(h.handles[0].options.model, 'other');
+});
+
+test('/cloud model falls back to input on discovery failure and cancellation preserves the default', async t => {
+  const h = harness(t, { modelsError: true, inputs: ['manual'] });
+  await h.commands.get('cloud').handler('model', h.ctx);
+  assert.equal(h.asked[0], 'Default cloud model ID');
+  assert.deepEqual(JSON.parse(readFileSync(h.configPath, 'utf8')), { defaultModel: 'manual' });
+  const cancelled = harness(t, { savedModel: 'saved', models: [{ id: 'one' }] });
+  await cancelled.commands.get('cloud').handler('model', cancelled.ctx);
+  assert.deepEqual(JSON.parse(readFileSync(cancelled.configPath, 'utf8')), { defaultModel: 'saved' });
+  assert.equal(cancelled.handles.length, 0);
+  assert.deepEqual(cancelled.notices.at(-1), { text: 'Cancelled.', level: 'info' });
 });

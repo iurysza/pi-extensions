@@ -39,7 +39,9 @@ Set `CURSOR_API_KEY`, or use the existing `cursor.key` entry in `~/.pi/agent/aut
 | `cursor_cloud_cancel` | `id` | Requests cancellation of the current run |
 | `cursor_cloud_status` | optional `id` | Returns plain state, activity, elapsed time, tool count, result text, and branch or PR info |
 
-The default model is `composer-2-5`. The repository defaults to the current working directory's GitHub origin. SSH origins become HTTPS URLs. The ref defaults to the current branch if a corresponding local `origin` tracking ref exists, otherwise `main`. A different explicit repository defaults to `main`. Nothing fetches or uploads your local checkout.
+The default model is `composer-2-5` until you change it with `/cloud model [id]`. The choice is saved in `~/.pi/agent/pi-cursor-cloud.json`, or under `PI_CODING_AGENT_DIR` when set. An explicit spawn `model` overrides the saved default.
+
+The repository defaults to the current working directory's GitHub origin. SSH origins become HTTPS URLs. The ref defaults to the current branch if a corresponding local `origin` tracking ref exists, otherwise `main`. A different explicit repository defaults to `main`. Nothing fetches or uploads your local checkout.
 
 IDs are the first 8 characters after `bc-`. Full IDs and unique prefixes also work. An ambiguous prefix fails rather than choosing an agent.
 
@@ -54,9 +56,10 @@ IDs are the first 8 characters after `bc-`. Full IDs and unique prefixes also wo
 /cloud cancel <id>
 /cloud delete <id>
 /cloud open [id]     # open the agent's page on cursor.com/agents; picks an agent if no id
+/cloud model [id]    # save the default model; opens a model picker if no id
 ```
 
-Run `spawn`, `send`, `cancel` or `delete` without arguments in the interactive UI and the command asks for the prompt or lets you pick the agent. Cancelling a prompt spends nothing.
+Run `spawn`, `send`, `cancel` or `delete` without arguments in the interactive UI and the command asks for the prompt or lets you pick the agent. Cancelling a prompt spends nothing. `/cloud model` marks the current default in the model picker. If model listing fails, it asks for a model ID instead.
 
 ## Leader Key menu
 
@@ -64,7 +67,7 @@ With Leader Key loaded, Cursor commands appear at `Ctrl+X → c Cursor`:
 
 ```text
 s Spawn cloud agent…   l List cloud agents   f Follow up…
-o Open in browser…
+o Open in browser…     m Default model…
 p Plan mode            a Agent mode          q Toggle fast
 r Runtime → l Local / c Cloud
 z More → c Cancel…  d Delete…  h Recorded cloud runs
@@ -86,6 +89,8 @@ While it runs, help me plan the local tests.
 ```
 
 The spawn tool returns without waiting for the run. The widget shows thinking, tool names and arguments, then text snippets. On completion, Pi receives a custom follow-up message with the result, duration, and any branch or PR details Cursor supplies. This triggers a main-agent turn. Ask for a follow-up with `cursor_cloud_send` after the agent is idle.
+
+With tidy enabled, the completion appears as a collapsible cloud card. Terminals with hyperlink support show an Open in Cursor link. Ctrl+O shows metadata and the plain-text reply, subject to `/tidy lines`. Chill mode folds it with finished tools after the main agent replies or a 5-second grace period. Without tidy, the completion shows raw plain text.
 
 Running agents animate every 150ms. Finished agents stay in the widget for 60 seconds. The tree shows at most 12 lines and collapses overflow into `+N more`.
 

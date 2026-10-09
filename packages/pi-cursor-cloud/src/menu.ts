@@ -24,6 +24,7 @@ export function cursorMenu(has: (name: string) => boolean): CursorMenu | undefin
     cmd("l", "List cloud agents", "cloud", "list"),
     cmd("f", "Follow up…", "cloud", "send"),
     cmd("o", "Open in browser…", "cloud", "open"),
+    cmd("m", "Default model…", "cloud", "model"),
     cmd("p", "Plan mode", "cursor-mode", "plan"),
     cmd("a", "Agent mode", "cursor-mode", "agent"),
     { key: "r", label: "Runtime", items: [

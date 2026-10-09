@@ -2,7 +2,21 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, writeFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
-import { mapDelta, mapStep, mapCompletion, cloudError, redact, readApiKey } from '../src/cloud-client.js';
+import { Cursor } from '@cursor/sdk';
+import { mapDelta, mapStep, mapCompletion, cloudError, redact, readApiKey, createCloudClient } from '../src/cloud-client.js';
+
+test('cloud client lists model ids and names with injected credentials, without SDK internals', async t => {
+  t.mock.method(Cursor.models, 'list', async ({ apiKey }) => {
+    assert.equal(apiKey, 'fake-key');
+    return [{ id: 'composer-2-5', displayName: 'Composer', parameters: [{ id: 'effort' }] }];
+  });
+  assert.deepEqual(await createCloudClient(async () => 'fake-key').models(), [{ id: 'composer-2-5', displayName: 'Composer' }]);
+});
+
+test('model listing failures do not expose raw SDK errors or credentials', async t => {
+  t.mock.method(Cursor.models, 'list', async () => { throw new Error('fake-key internal client'); });
+  await assert.rejects(createCloudClient(async () => 'fake-key').models(), error => /model listing failed/.test(error.message) && !error.message.includes('fake-key'));
+});
 
 test('SDK callback fields map to plain lifecycle activities', () => {
   assert.deepEqual(mapDelta({ type: 'thinking-delta', text: 'private thought' }), { type: 'delta', activity: { type: 'thinking' } });

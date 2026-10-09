@@ -9,6 +9,7 @@ export interface CardSpec {
   headline(args: CardArgs): string;
   target(args: CardArgs, result?: CardResult): string;
   summary(result: CardResult, args: CardArgs): string;
+  link?(result: CardResult, args: CardArgs): { label: string; url: string } | undefined;
   failed?(result: CardResult): boolean;
   errorSummary?(result: CardResult, args: CardArgs): string;
   running?(partial: CardResult, args: CardArgs): string;

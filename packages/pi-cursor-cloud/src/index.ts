@@ -1,8 +1,10 @@
-import { getMarkdownTheme, type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { Container, getCapabilities, Markdown, Text } from "@earendil-works/pi-tui";
+import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import { getCapabilities, Text, type Component } from "@earendil-works/pi-tui";
+import { randomUUID } from "node:crypto";
+import { loadDefaultModel, saveDefaultModel } from "./config.js";
 import { Type } from "typebox";
 import { createCloudClient, type CloudClient, type CloudHandle, type CloudRun } from "./cloud-client.js";
-import { agentUrl, cleanText, completionHeader, formatCompletion, formatList, renderCommandView, singleLine, summarize, type AgentSummary, type CommandView } from "./render.js";
+import { agentUrl, cleanText, formatCompletion, formatList, renderCommandView, singleLine, summarize, type CommandView } from "./render.js";
 import { resolveRepo } from "./repo.js";
 import { COMMAND_MENU_COLLECT, cursorMenu } from "./menu.js";
 import { elapsedMs, isActive, reduce, shortId, type CloudAgent, type Event, type State } from "./state.js";
@@ -10,7 +12,6 @@ import { createWidget } from "./widget.js";
 
 const MESSAGE_TYPE = "cursor-cloud-completion";
 const COMMAND_TYPE = "cursor-cloud-command";
-const COLLAPSED_LINES = 12;
 const DEFAULT_MODEL = "composer-2-5";
 const promptSchema = Type.String({ minLength: 1, description: "Task for the cloud agent" });
 const idSchema = Type.String({ minLength: 1, description: "Short cloud agent ID or unique prefix" });
@@ -27,6 +28,7 @@ export interface Dependencies {
   client?: CloudClient;
   now?: () => number;
   repo?: typeof resolveRepo;
+  configPath?: string;
 }
 
 /** Leading flags (--repo, --ref, --model, --name) then the prompt. */
@@ -48,6 +50,7 @@ export function registerCloudExtension(pi: ExtensionAPI, dependencies: Dependenc
   const client = dependencies.client ?? createCloudClient();
   const now = dependencies.now ?? Date.now;
   const repoDefaults = dependencies.repo ?? resolveRepo;
+  let defaultModel = loadDefaultModel(dependencies.configPath);
   let state: State = [];
   let stopped = false;
   const handles = new Map<string, CloudHandle>();
@@ -83,7 +86,7 @@ export function registerCloudExtension(pi: ExtensionAPI, dependencies: Dependenc
     const agent = state.find(a => a.id === id);
     if (!agent) return;
     pi.sendMessage({ customType: MESSAGE_TYPE, content: formatCompletion(agent), display: true,
-      details: { ...summarize(agent, now()), text: "result" in agent.status ? cleanText(agent.status.result.text) : "",
+      details: { ...summarize(agent, now()), prompt: cleanText(agent.description), completionId: randomUUID(), text: "result" in agent.status ? cleanText(agent.status.result.text) : "",
         error: agent.status.type === "failed" ? cleanText(agent.status.error) : undefined } },
     { deliverAs: "followUp", triggerTurn: true });
   }
@@ -125,7 +128,7 @@ export function registerCloudExtension(pi: ExtensionAPI, dependencies: Dependenc
     checkSession(ctx);
     requirePrompt(params.prompt);
     const { repo, ref } = await repoDefaults(ctx.cwd, params.repo, params.ref);
-    const model = params.model?.trim() || DEFAULT_MODEL;
+    const model = params.model?.trim() || defaultModel || DEFAULT_MODEL;
     const name = singleLine(params.name?.trim() || `cloud-${state.length + 1}`);
     const handle = await client.create({ repo, ref, model, name });
     if (stopped) { handle.close(); throw new Error("Session shut down while creating the cloud agent. No prompt was sent."); }
@@ -182,7 +185,7 @@ export function registerCloudExtension(pi: ExtensionAPI, dependencies: Dependenc
   const agentDetails = (id: string) => { try { return { agent: summarize(find(id), now()) }; } catch { return undefined; } };
   pi.registerTool({
     name: "cursor_cloud_spawn", label: "Spawn cloud subagent",
-    description: "Run a Cursor Cloud subagent in the BACKGROUND. Returns immediately after creating the agent; results arrive later as a follow-up message. Cloud agents cannot see local uncommitted files. Each run costs real money at Cursor Max Mode pricing. Defaults to the current GitHub origin and an origin-tracked current branch, otherwise main.",
+    description: "Run a Cursor Cloud subagent in the BACKGROUND. Returns immediately after creating the agent; results arrive later as a follow-up message. Cloud agents cannot see local uncommitted files. Each run costs real money at Cursor Max Mode pricing. Defaults to the current GitHub origin and an origin-tracked current branch, otherwise main. Uses the configured default cloud model unless model is supplied.",
     parameters: spawnSchema, executionMode: "sequential",
     async execute(_id, params, _signal, _update, ctx) { const text = await spawn(params, ctx); return textResult(text, { agent: summarize(state.at(-1)!, now()) }); },
   });
@@ -223,9 +226,9 @@ export function registerCloudExtension(pi: ExtensionAPI, dependencies: Dependenc
     if (!text) throw new Cancelled("Cancelled.");
     return text;
   }
-  async function pick(ctx: ExtensionContext, title: string, fits: (agent: CloudAgent) => boolean): Promise<string> {
-    if (!ctx.hasUI) throw new Error("This /cloud command needs an agent id outside the interactive UI.");
-    const options = state.filter(fits).map(a => ({ id: a.id, label: `${shortId(a.id)}  ${a.name}  · ${a.status.type}` }));
+  async function pick(ctx: ExtensionContext, title: string, fits: ((agent: CloudAgent) => boolean) | { id: string; label: string }[]): Promise<string> {
+    if (!ctx.hasUI) throw new Error("This /cloud command needs arguments outside the interactive UI.");
+    const options = Array.isArray(fits) ? fits : state.filter(fits).map(a => ({ id: a.id, label: `${shortId(a.id)}  ${a.name}  · ${a.status.type}` }));
     if (!options.length) throw new Error("No cloud agents fit this action.");
     const label = await ctx.ui.select(title, options.map(o => o.label));
     const chosen = options.find(o => o.label === label);
@@ -241,7 +244,7 @@ export function registerCloudExtension(pi: ExtensionAPI, dependencies: Dependenc
   });
 
   pi.registerCommand("cloud", {
-    description: "Cloud subagents: list, spawn [--repo <url>] [--ref <ref>] [--model <id>] [--name <n>] <prompt>, send <id> <prompt>, cancel <id>, delete <id>, open <id>",
+    description: "Cloud subagents: list, spawn [--repo <url>] [--ref <ref>] [--model <id>] [--name <n>] <prompt>, send <id> <prompt>, cancel <id>, delete <id>, open <id>, model [id]",
     async handler(args, ctx) {
       try {
         const match = /^(\S+)(?:\s+([\s\S]*))?$/.exec(args.trim());
@@ -249,6 +252,21 @@ export function registerCloudExtension(pi: ExtensionAPI, dependencies: Dependenc
         const rest = match?.[2] ?? "";
         let text: string;
         let view: CommandView | undefined;
+        if (action === "model") {
+          let model = rest.trim();
+          if (!model) {
+            let models: Awaited<ReturnType<CloudClient["models"]>>;
+            try { models = await client.models(); }
+            catch { models = []; }
+            model = models.length ? await pick(ctx, "Default cloud model", models.map(m => ({ id: m.id,
+              label: `${m.displayName || m.id}  (${m.id})${m.id === (defaultModel || DEFAULT_MODEL) ? " · current default" : ""}` })))
+              : await ask(ctx, "Default cloud model ID");
+          }
+          await saveDefaultModel(model, dependencies.configPath);
+          defaultModel = model;
+          ctx.ui.notify(`Default cloud model: ${model}`, "info");
+          return;
+        }
         if (action === "list" && !rest) { text = formatList(state, now()); view = { kind: "list", agents: state.map(a => summarize(a, now())) }; }
         else if (action === "spawn") {
           const params = parseSpawnArgs(rest);
@@ -269,29 +287,22 @@ export function registerCloudExtension(pi: ExtensionAPI, dependencies: Dependenc
           ctx.ui.notify(`Opened ${url}`, "info");
           return;
         }
-        else throw new Error("Usage: /cloud [list | spawn [--repo <url>] [--ref <ref>] [--model <id>] [--name <n>] <prompt> | send <id> <prompt> | cancel <id> | delete <id> | open <id>]");
+        else throw new Error("Usage: /cloud [list | spawn [--repo <url>] [--ref <ref>] [--model <id>] [--name <n>] <prompt> | send <id> <prompt> | cancel <id> | delete <id> | open <id> | model [id]]");
         if (!stopped) pi.sendMessage({ customType: COMMAND_TYPE, content: text, display: true, details: view });
       } catch (error) { ctx.ui.notify(error instanceof Error ? error.message : "Cloud command failed.", error instanceof Cancelled ? "info" : "error"); }
     },
   });
   const clickable = () => getCapabilities().hyperlinks;
   pi.registerMessageRenderer(MESSAGE_TYPE, (message, { expanded }, theme) => {
-    const details = message.details as (AgentSummary & { text?: string; error?: string }) | undefined;
-    // Older sessions stored plain text only.
-    if (!details?.url) {
-      const text = typeof message.content === "string" ? cleanText(message.content) : "Cloud agent completed.";
-      const [header, ...body] = text.split("\n");
-      return new Text(theme.fg("accent", theme.bold(header)) + "\n" + (expanded ? body.join("\n") : body.join("\n").slice(0, 1200)), 0, 0);
-    }
-    const box = new Container();
-    box.addChild(new Text(completionHeader(details, theme, clickable()).join("\n"), 0, 0));
-    if (details.error) box.addChild(new Text(theme.fg("error", `Error: ${details.error}`), 0, 0));
-    const body = details.text?.trim() || "No result text.";
-    const lines = body.split("\n");
-    const shown = expanded || lines.length <= COLLAPSED_LINES ? body : lines.slice(0, COLLAPSED_LINES).join("\n");
-    box.addChild(new Markdown(shown, 0, 1, getMarkdownTheme()));
-    if (!expanded && lines.length > COLLAPSED_LINES) box.addChild(new Text(theme.fg("dim", `… ${lines.length - COLLAPSED_LINES} more lines, ctrl+o to expand`), 0, 0));
-    return box;
+    // Synchronous, customType-keyed protocol: tidy may set component before emit returns.
+    // No listener means raw output, including when tidy is disabled.
+    const request: { version: 1; customType: string; message: typeof message; expanded: boolean; theme: typeof theme; component?: Component } =
+      { version: 1, customType: MESSAGE_TYPE, message, expanded, theme };
+    pi.events.emit("tidy:message-card:v1", request);
+    if (request.component) return request.component;
+    const text = typeof message.content === "string" ? message.content
+      : message.content.filter(block => block.type === "text").map(block => block.text).join("\n");
+    return new Text(cleanText(text), 0, 0);
   });
   pi.registerMessageRenderer(COMMAND_TYPE, (message, _options, theme) => {
     const view = message.details as CommandView | undefined;

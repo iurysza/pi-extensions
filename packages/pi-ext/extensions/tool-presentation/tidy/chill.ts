@@ -8,7 +8,14 @@ import { readToolTiming, type ToolTimeline } from "./timeline.js";
 const builtins = new Set(["read", "write", "edit", "bash", "grep", "find", "ls"]);
 const hasCard = (name: string) => builtins.has(name) || !!specForTool({ name });
 type Group = { calls: Call[]; open?: boolean };
-type Call = { id: string; group: Group; done: boolean; failed: boolean; elapsedMs?: number; settled?: boolean };
+type Call = { id: string; group: Group; done: boolean; failed: boolean; elapsedMs?: number; settled?: boolean; cloud?: boolean };
+
+export const CLOUD_COMPLETION_TYPE = "cursor-cloud-completion";
+/** New completions carry a stable identity in details, shared by live and restored messages. */
+export function completionId(message: { timestamp?: string | number; details?: any }): string {
+  const time = typeof message.timestamp === "string" ? Date.parse(message.timestamp) : message.timestamp;
+  return `cloud:${message.details?.completionId ?? `${message.details?.url ?? message.details?.id}:${time}`}`;
+}
 
 /** How long the newest finished card stays visible when no other tool follows. */
 export const CHILL_GRACE_MS = 5000;
@@ -22,7 +29,11 @@ export class ChillState {
 
   constructor(public enabled: boolean, private readonly timeline: ToolTimeline, private readonly graceMs = CHILL_GRACE_MS) {}
 
-  boundary(): void { this.current = undefined; }
+  boundary(): void {
+    if (this.current) for (const call of this.current.calls) if (call.done) call.settled = true;
+    this.current = undefined;
+    this.refresh();
+  }
   watch(id: string, invalidate: () => void): void { this.invalidators.set(id, invalidate); }
   refresh(): void { for (const invalidate of [...this.invalidators.values()]) invalidate(); }
   toggle(): boolean { this.enabled = !this.enabled; this.refresh(); return this.enabled; }
@@ -30,7 +41,7 @@ export class ChillState {
   start(id: string, name: string): void {
     if (!hasCard(name) || this.calls.has(id)) return;
     const group = this.current ??= { calls: [] };
-    const call: Call = { id, group, done: false, failed: false };
+    const call: Call = { id, group, done: false, failed: false, cloud: name === "cursor_cloud_completion" };
     group.calls.push(call);
     this.calls.set(id, call);
     this.refresh();
@@ -43,7 +54,7 @@ export class ChillState {
     call.done = true;
     call.settled = settled;
     call.failed = isError || result?.isError === true || specForTool({ name })?.failed?.(result) === true;
-    call.elapsedMs = readToolTiming(result?.details)?.elapsedMs ?? this.timeline.get(id)?.elapsedMs;
+    call.elapsedMs = call.cloud ? result?.details?.elapsedMs : readToolTiming(result?.details)?.elapsedMs ?? this.timeline.get(id)?.elapsedMs;
     if (!settled) {
       const timer = setTimeout(() => { this.timers.delete(timer); call.settled = true; this.refresh(); }, this.graceMs);
       timer.unref?.();
@@ -52,7 +63,14 @@ export class ChillState {
     this.refresh();
   }
 
-  /** A finished card folds once a later tool starts, or once its grace period ends. */
+  completeMessage(message: { customType?: string; timestamp?: string | number; details?: any }, settled = this.graceMs <= 0): void {
+    if (message.customType !== CLOUD_COMPLETION_TYPE) return;
+    const id = completionId(message);
+    if (this.calls.has(id)) return;
+    this.finish(id, "cursor_cloud_completion", { details: message.details }, false, settled);
+  }
+
+  /** A finished card folds once a later tool starts, text arrives, or its grace period ends. */
   private isFolded(call: Call): boolean {
     return call.done && (call.settled === true || call.group.calls.at(-1) !== call);
   }
@@ -88,13 +106,18 @@ export class ChillState {
     const failures = finished.filter((item) => item.failed).length;
     const timed = finished.filter((item) => item.elapsedMs !== undefined);
     const duration = timed.length ? ` · ${formatElapsed(timed.reduce((total, item) => total + item.elapsedMs!, 0))}` : "";
-    const tools = `${finished.length} ${finished.length === 1 ? "tool" : "tools"}`;
-    return `${running ? "Working" : "Worked"} · ${tools}${duration}${RESET}${failures ? ` ${RED}· ${failures} failed` : ""}`;
+    const cloudCount = finished.filter(item => item.cloud).length;
+    const toolCount = finished.length - cloudCount;
+    const counts = [toolCount || !cloudCount ? `${toolCount} ${toolCount === 1 ? "tool" : "tools"}` : "",
+      cloudCount ? `${cloudCount} cloud ${cloudCount === 1 ? "agent" : "agents"}` : ""].filter(Boolean).join(" · ");
+    return `${running ? "Working" : "Worked"} · ${counts}${duration}${RESET}${failures ? ` ${RED}· ${failures} failed` : ""}`;
   }
 
-  restore(entries: readonly { type: string; message?: any }[]): void {
+  restore(entries: readonly { type: string; message?: any; customType?: string; timestamp?: string; details?: any; display?: boolean }[]): void {
     this.clear();
     for (const entry of entries) {
+      // Pi persists custom messages directly on custom_message entries, not entry.message.
+      if (entry.type === "custom_message" && entry.display !== false) this.completeMessage(entry, true);
       if (entry.type !== "message") continue;
       const message = entry.message;
       if (message?.role === "user") this.boundary();
@@ -120,36 +143,37 @@ export function hasText(message: any): boolean {
 }
 
 /** The live components consult state at render time, so earlier cards fold too. */
-export function chillRenderers(renderers: ToolRenderers, chill: ChillState): ToolRenderers {
-  const wrap = (component: Component, context: any, kind: "call" | "result", expanded: boolean): Component => {
-    const id = context?.toolCallId;
-    if (context?.invalidate) chill.watch(id, context.invalidate);
-    // Lines added above the card, so mouse rows shift down by this much.
-    let offset = 0;
-    let summary = false;
-    return {
-      invalidate: () => component.invalidate(),
-      render(width) {
-        offset = 0;
-        const folded = expanded ? undefined : chill.folded(id, kind);
-        summary = !!folded?.length;
-        if (folded !== undefined) return new WidthAwareLines(folded).render(width);
-        const header = kind === "call" ? chill.header(id) : undefined;
-        if (header === undefined) return component.render(width);
-        offset = 1;
-        return [...new WidthAwareLines([header]).render(width), ...component.render(width)];
-      },
-      handleMouse(event) {
-        const click = event.type === "click" && event.button === "left";
-        if (summary) return click ? (chill.toggleGroup(id), { handled: true }) : undefined;
-        if (offset && event.y < offset) return click ? (chill.toggleGroup(id), { handled: true }) : undefined;
-        return (component as any).handleMouse?.({ ...event, y: event.y - offset });
-      },
-    } as Component;
+export function chillComponent(component: Component, chill: ChillState, context: any, kind: "call" | "result" | "message", expanded: boolean): Component {
+  const id = context?.toolCallId;
+  if (context?.invalidate) chill.watch(id, context.invalidate);
+  // Lines added above the card, so mouse rows shift down by this much.
+  let offset = 0;
+  let summary = false;
+  return {
+    invalidate: () => component.invalidate(),
+    render(width) {
+      offset = 0;
+      const folded = expanded ? undefined : chill.folded(id, kind === "message" ? "result" : kind);
+      summary = !!folded?.length;
+      if (folded !== undefined) return new WidthAwareLines(folded).render(width);
+      const header = kind !== "result" ? chill.header(id) : undefined;
+      if (header === undefined) return component.render(width);
+      offset = 1;
+      return [...new WidthAwareLines([header]).render(width), ...component.render(width)];
+    },
+    handleMouse(event) {
+      const click = event.type === "click" && event.button === "left";
+      if (summary) return click ? (chill.toggleGroup(id), { handled: true }) : undefined;
+      if (offset && event.y < offset) return click ? (chill.toggleGroup(id), { handled: true }) : undefined;
+      return component.handleMouse?.({ ...event, y: event.y - offset });
+    },
   };
+}
+
+export function chillRenderers(renderers: ToolRenderers, chill: ChillState): ToolRenderers {
   return {
     ...renderers,
-    renderCall: renderers.renderCall && ((args, theme, context) => wrap(renderers.renderCall!(args, theme, context), context, "call", context.expanded)),
-    renderResult: renderers.renderResult && ((result, options, theme, context) => wrap(renderers.renderResult!(result, options, theme, context), context, "result", options.expanded)),
+    renderCall: renderers.renderCall && ((args, theme, context) => chillComponent(renderers.renderCall!(args, theme, context), chill, context, "call", context.expanded)),
+    renderResult: renderers.renderResult && ((result, options, theme, context) => chillComponent(renderers.renderResult!(result, options, theme, context), chill, context, "result", options.expanded)),
   };
 }

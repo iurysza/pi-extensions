@@ -1,3 +1,4 @@
+import { EventEmitter } from "node:events";
 import type { ExtensionAPI, ToolRendererResolver } from "@earendil-works/pi-coding-agent";
 import { createTidyExtension } from "../../../extensions/tool-presentation/tidy/index.js";
 
@@ -10,7 +11,7 @@ export async function rendererHarness({ enabled = true, chill = false, chillGrac
   const commands = new Map<string, any>();
   const resolvers: ToolRendererResolver[] = [];
   const pi = {
-    events: {},
+    events: new EventEmitter(),
     on(name: string, handler: any) { hooks.set(name, [...hooks.get(name) ?? [], handler]); },
     registerTool(tool: any) { tools.set(tool.name, tool); },
     registerToolRenderer(resolver: ToolRendererResolver) { resolvers.push(resolver); },
@@ -30,7 +31,7 @@ export async function rendererHarness({ enabled = true, chill = false, chillGrac
     for (const handler of hooks.get(name) ?? []) results.push(await handler(event, ctx));
     return results;
   };
-  return { tools, commands, resolvers, emit };
+  return { tools, commands, resolvers, emit, bus: pi.events };
 }
 
 export function context(id: string, args: any = {}, expanded = false) {

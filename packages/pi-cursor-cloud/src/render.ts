@@ -108,12 +108,3 @@ export function renderCommandView(view: CommandView, theme: WidgetTheme, clickab
   if (!view.agents.length) return [theme.fg("dim", "No cloud agents started in this process.")];
   return [theme.bold("Cloud agents"), ...view.agents.map(a => agentLine(a, theme, clickable))];
 }
-
-/** Header for a completion message: status line, then repo line. */
-export function completionHeader(a: AgentSummary, theme: WidgetTheme, clickable: boolean): string[] {
-  const label = a.status === "idle" ? "finished" : a.status;
-  return [
-    `${theme.fg(iconColor(a.status), statusIcon(a.status))} ${theme.bold(singleLine(a.name))} ${label} · ${duration(a.elapsedMs)} · ${a.tools} tools  ${theme.fg("accent", link("Open in Cursor ↗", a.url, clickable))}`,
-    theme.fg("dim", `  ${repoName(a.repo)} @ ${a.ref} · ${a.id}`),
-  ];
-}
