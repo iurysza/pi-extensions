@@ -34,7 +34,7 @@ import { copyToClipboard } from "../pi-telescope/clipboard.js";
 import { stashDraft } from "./stash-draft.js";
 import { saveLastResponse } from "../chat-to-md/index.js";
 import { entryKey, type ActionItem, type ActionGroup, type MenuEntry, type TopLevelEntry } from "./types.js";
-import { groupEntries } from "./layout.js";
+import { groupEntries, sectionEntries, type HomeSection } from "./layout.js";
 import { buildSessionEntries } from "./session-actions.js";
 import { buildLabelEntries } from "./label-actions.js";
 import { collectCommandMenus } from "./contributions.js";
@@ -44,10 +44,20 @@ import {
 	withHerdrNavigationPassthrough,
 } from "./herdr-navigation.js";
 
-const ROOT_EXTENSION_MENU_IDS = ["themed-agents", "pi-voice", "pi-optmem"];
+const ROOT_EXTENSION_MENU_IDS = ["themed-agents", "pi-voice", "pi-optmem", "cursor"];
 const CONTRIBUTED_EXTENSION_COMMAND_NAMES = new Set(["team", "voice"]);
 // Move home entries by listing their existing keys; no action implementation needs to move.
-const HOME_GROUPS: { key: string; label: string; children: string[] }[] = [];
+const HOME_GROUPS: { key: string; label: string; children: string[] }[] = [
+	// Permissions, Label, Writing style, Spec, Save last response.
+	{ key: "o", label: "More", children: ["p", "l", "t", "c", "w"] },
+];
+// Home order and dividers. Unlisted entries land in "Other" above the footer.
+const HOME_SECTIONS: HomeSection[] = [
+	{ title: "Find", keys: ["k", "e"] },
+	{ title: "Agent", keys: ["m", "c", "b", "v", "g"] },
+	{ title: "This session", keys: ["s", "r", "a", "y"] },
+];
+const HOME_FOOTER = ["o", "q"];
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Build top-level entries
@@ -454,6 +464,7 @@ export class LeaderKeyOverlay {
 		entries: MenuEntry[],
 		theme: Theme,
 		done: (result: ActionItem | null) => void,
+		private readonly headings: ReadonlyMap<number, string> = new Map(),
 	) {
 		this.entries = entries;
 		this.theme = theme;
@@ -705,6 +716,11 @@ export class LeaderKeyOverlay {
 			for (let i = 0; i < items.length; i++) {
 				const item = items[i];
 				const isHighlighted = i === this.highlightedIndex;
+				const heading = this.groups.length === 0 ? this.headings.get(i) : undefined;
+				if (heading !== undefined) {
+					const title = heading ? `── ${heading} ` : "";
+					lines.push(f.row(th.fg("muted", title + "─".repeat(Math.max(0, f.innerWidth - title.length)))));
+				}
 
 				const keyBadge = th.fg("warning", th.bold(`[${item.key}]`));
 				const label = isHighlighted
@@ -778,11 +794,12 @@ export default function leaderKeyExtension(pi: ExtensionAPI) {
 	async function openLeaderKey(ctx: ExtensionContext) {
 		if (!ctx.hasUI) return;
 
-		const entries = collectCommandMenus(pi, buildEntries(pi, ctx, openFavouriteModels), (message) => ctx.ui.notify(message, "warning"), ROOT_EXTENSION_MENU_IDS);
+		const collected = collectCommandMenus(pi, buildEntries(pi, ctx, openFavouriteModels), (message) => ctx.ui.notify(message, "warning"), ROOT_EXTENSION_MENU_IDS);
+		const { entries, headings } = sectionEntries(collected, HOME_SECTIONS, HOME_FOOTER);
 
 		const selected = await withHerdrNavigationPassthrough(() => ctx.ui.custom<ActionItem | null>(
 			(tui, theme, _kb, done) => {
-				const overlay = new LeaderKeyOverlay(entries, theme, done);
+				const overlay = new LeaderKeyOverlay(entries, theme, done, headings);
 				return {
 					render: (w: number) => overlay.render(w),
 					invalidate: () => overlay.invalidate(),
