@@ -17,7 +17,7 @@ import {
   type ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
 import { loadConfig, parseModelReference } from "./config.js";
-import { decorateSummary, EXTRA_INSTRUCTIONS, firstUserText, mergeInstructions, overThreshold, stripAdditions } from "./policy.js";
+import { decorateSummary, EXTRA_INSTRUCTIONS, firstUserText, mergeInstructions, overThreshold, stripAdditions, summaryReserveTokens } from "./policy.js";
 import { ENTRY_TYPE, reportParts, runningParts, type CardStyle, type CompactionReport } from "./report.js";
 import { ExpandedCard, WidthAwareLines } from "../tool-presentation/tidy/cards/card.js";
 import { loadTidyExpandedMaxLines, loadTidyIcons, loadTidyMode } from "../tool-presentation/tidy/config.js";
@@ -126,8 +126,10 @@ export default function compactionModel(pi: ExtensionAPI): void {
       // Our blocks are re-added below; keep them out of the model's input.
       if (event.preparation.previousSummary) event.preparation.previousSummary = stripAdditions(event.preparation.previousSummary);
 
+      // Pi caps the summary at 0.8 × reserveTokens (about 13K). Haiku's long summaries hit that cap and fall back.
+      const preparation = { ...event.preparation, settings: { ...event.preparation.settings, reserveTokens: summaryReserveTokens(event.preparation.settings?.reserveTokens, config.summaryMaxTokens) } };
       const result = await compact(
-        event.preparation,
+        preparation,
         model,
         auth.apiKey,
         auth.headers,

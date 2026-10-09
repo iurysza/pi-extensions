@@ -17,7 +17,17 @@ export const EXTRA_INSTRUCTIONS = [
   "- exact error messages that are still unresolved;",
   "- preferences the user stated.",
   "Keep exact paths, commands and identifiers verbatim.",
+  "Keep the whole summary under about 4,000 words. When space is short, drop details of finished work first.",
 ].join("\n");
+
+/**
+ * Pi's summary budget is floor(0.8 × reserveTokens). Returns the reserveTokens that
+ * yields `summaryMaxTokens`, never lowering Pi's own value. Only the summary call
+ * reads it here; the decision to compact has already been made.
+ */
+export function summaryReserveTokens(current: number | undefined, summaryMaxTokens: number): number {
+  return Math.max(current ?? 0, Math.ceil(summaryMaxTokens / 0.8));
+}
 
 export function mergeInstructions(extra: string, user?: string): string {
   return user?.trim() ? `${extra}\n\n${user.trim()}` : extra;

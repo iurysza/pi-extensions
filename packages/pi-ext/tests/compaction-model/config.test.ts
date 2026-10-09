@@ -10,7 +10,7 @@ test("no compactionModel keeps Pi's default compaction", () => {
 
 test("a global model routes every reason", () => {
   assert.deepEqual(resolveConfig({ compactionModel: { model: "claude-code/claude-haiku-5-5" } }, undefined, quiet), {
-    model: "claude-code/claude-haiku-5-5", thinkingLevel: undefined, reasons: ["manual", "threshold", "overflow"],
+    model: "claude-code/claude-haiku-5-5", thinkingLevel: undefined, reasons: ["manual", "threshold", "overflow"], summaryMaxTokens: 24000,
   });
 });
 

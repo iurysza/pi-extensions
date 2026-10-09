@@ -26,7 +26,11 @@ export interface CompactionModelConfig {
   thresholdPercent?: number;
   /** On quit, compact in a detached process when context is at least this many tokens. */
   compactOnExitMinTokens?: number;
+  /** Output budget for the summary. Pi's default is 0.8 × reserveTokens (about 13K), too small for long sessions. */
+  summaryMaxTokens: number;
 }
+
+export const DEFAULT_SUMMARY_MAX_TOKENS = 24_000;
 
 type UnknownRecord = Record<string, unknown>;
 type Warn = (message: string) => void;
@@ -110,8 +114,18 @@ export function resolveConfig(
     }
   }
 
+  let summaryMaxTokens = DEFAULT_SUMMARY_MAX_TOKENS;
+  if (raw.summaryMaxTokens !== undefined) {
+    if (typeof raw.summaryMaxTokens === "number" && Number.isInteger(raw.summaryMaxTokens) && raw.summaryMaxTokens >= 1000) {
+      summaryMaxTokens = raw.summaryMaxTokens;
+    } else {
+      warn(`summaryMaxTokens must be an integer of at least 1000; using ${DEFAULT_SUMMARY_MAX_TOKENS}.`);
+    }
+  }
+
   return {
     model: raw.model.trim(),
+    summaryMaxTokens,
     thinkingLevel,
     reasons,
     ...(thresholdPercent === undefined ? {} : { thresholdPercent }),
