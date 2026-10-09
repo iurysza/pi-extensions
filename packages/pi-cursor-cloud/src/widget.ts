@@ -30,7 +30,7 @@ export function createWidget(getState: () => State, now: () => number) {
       expiry = setTimeout(update, Math.max(1, Math.min(...ends) - now()));
       expiry.unref();
     }
-    const nextStatus = running ? `☁ ${running} running` : undefined;
+    const nextStatus = running ? `󰅟 ${running} running` : undefined;
     if (status !== nextStatus) { ui.setStatus("cursor-cloud", nextStatus); status = nextStatus; }
     if (!visible.length) {
       if (registered) ui.setWidget("cursor-cloud", undefined);

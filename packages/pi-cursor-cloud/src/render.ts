@@ -101,7 +101,7 @@ export function renderCommandView(view: CommandView, theme: WidgetTheme, clickab
   if (view.kind === "spawn") {
     const a = view.agent;
     return [
-      `${theme.fg("accent", "☁")} ${theme.bold(singleLine(a.name))} started ${theme.fg("dim", a.id)}  ${theme.fg("accent", link("Open in Cursor ↗", a.url, clickable))}`,
+      `${theme.fg("accent", "󰅟")} ${theme.bold(singleLine(a.name))} started ${theme.fg("dim", a.id)}  ${theme.fg("accent", link("Open in Cursor ↗", a.url, clickable))}`,
       theme.fg("dim", `  ${repoName(a.repo)} @ ${a.ref} · local uncommitted files not included · result arrives as a follow-up`),
     ];
   }
