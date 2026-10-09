@@ -4,11 +4,12 @@ import { webSpecs } from "./specs/web.js";
 import { subagentSpecs } from "./specs/subagents.js";
 import { resourceSpecs, mcpSpec } from "./specs/mcp.js";
 import { codemodeSpec } from "./specs/codemode.js";
+import { cursorCloudSpecs } from "./specs/cursor-cloud.js";
 import type { CardSpec } from "./spec.js";
 export { cardRenderers, cardRuntime, type CardAPI } from "./renderers.js";
 export { renderCard, WidthAwareLines, fitToolLine, formatElapsed } from "./card.js";
 export type { CardSpec, CardArgs, CardResult } from "./spec.js";
-export const cardSpecs: Record<string, CardSpec> = { ...memorySpecs, ...miscSpecs, ...webSpecs, ...subagentSpecs, ...resourceSpecs, codemode: codemodeSpec };
+export const cardSpecs: Record<string, CardSpec> = { ...memorySpecs, ...miscSpecs, ...webSpecs, ...subagentSpecs, ...resourceSpecs, ...cursorCloudSpecs, codemode: codemodeSpec };
 const nativeExpanded = new Set(["ask_user", "cursor_ask_question", "choose_visual_artifact_direction", "plannotator_submit_plan", "plannotator_mark_done", "Agent", "SubagentWorkflow", "get_subagent_result"]);
 export function specForTool(tool: { name: string; label?: string; title?: string; annotations?: { readOnlyHint?: boolean } }): CardSpec | undefined {
   const spec = Object.hasOwn(cardSpecs, tool.name) ? cardSpecs[tool.name] : undefined;

@@ -61,3 +61,18 @@ test('agent links point at the Cursor web page for the full id', async () => {
   const { agentUrl } = await import('../src/render.js');
   assert.equal(agentUrl('bc-34f7b2b2-8439'), 'https://cursor.com/agents/bc-34f7b2b2-8439');
 });
+
+test('command views render a compact list and a two-line spawn notice', async () => {
+  const { summarize, renderCommandView, link } = await import('../src/render.js');
+  const theme = { fg: (_c, s) => s, bold: s => s };
+  const a = summarize({ ...make(), repo: 'https://github.com/owner/nice-mermaid.nvim', ref: 'main' }, 0);
+  const list = renderCommandView({ kind: 'list', agents: [a] }, theme, false);
+  assert.equal(list[0], 'Cloud agents');
+  assert.match(list[1], /nice-mermaid\.nvim @ main/);
+  assert.ok(!list[1].includes('github.com/owner'));
+  assert.match(list[1], /https:\/\/cursor\.com\/agents\//);
+  const spawn = renderCommandView({ kind: 'spawn', agent: a }, theme, true);
+  assert.equal(spawn.length, 2);
+  assert.ok(spawn[0].includes('\x1b]8;;https://cursor.com/agents/'));
+  assert.equal(link('Open', 'https://x', false), 'https://x');
+});

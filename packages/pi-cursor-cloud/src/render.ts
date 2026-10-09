@@ -68,3 +68,52 @@ export function formatList(state: State, now: number): string {
     `${shortId(a.id).padEnd(10)}${singleLine(a.name).slice(0, 20).padEnd(22)}${a.status.type.padEnd(12)}${duration(elapsedMs(a, now)).padEnd(9)}${a.repo}`,
     `          ${agentUrl(a.id)}`])].join("\n");
 }
+
+/** Structured view of one agent. Tool results and messages carry it as `details` for renderers. */
+export interface AgentSummary {
+  id: string; url: string; name: string; status: CloudAgent["status"]["type"]; repo: string; ref: string;
+  model: string; elapsedMs: number; tools: number; activity: string;
+}
+export function summarize(agent: CloudAgent, now: number): AgentSummary {
+  return { id: shortId(agent.id), url: agentUrl(agent.id), name: agent.name, status: agent.status.type, repo: agent.repo,
+    ref: agent.ref, model: agent.model, elapsedMs: elapsedMs(agent, now), tools: agent.tools, activity: singleLine(agent.activity) };
+}
+export const repoName = (url: string): string => url.replace(/\.git$/, "").split("/").filter(Boolean).pop() ?? url;
+export const statusIcon = (status: string): string =>
+  status === "idle" ? "✓" : status === "failed" ? "✗" : status === "cancelled" ? "■" : "⠼";
+const iconColor = (status: string) => status === "idle" ? "success" : status === "failed" ? "error" : status === "cancelled" ? "dim" : "accent";
+
+/** Clickable label when the terminal supports OSC 8, otherwise the plain URL. */
+export const link = (label: string, url: string, clickable: boolean): string =>
+  clickable ? `\x1b]8;;${url}\x07${label}\x1b]8;;\x07` : url;
+
+export function agentLine(a: AgentSummary, theme: WidgetTheme, clickable: boolean): string {
+  return [
+    theme.fg(iconColor(a.status), statusIcon(a.status)), theme.bold(singleLine(a.name)), theme.fg("dim", a.id),
+    theme.fg("dim", `${a.status} · ${duration(a.elapsedMs)}`), `${repoName(a.repo)} @ ${a.ref}`,
+    theme.fg("accent", link("Open ↗", a.url, clickable)),
+  ].join("  ");
+}
+
+/** On-screen view of a /cloud command. The model still reads the plain text content. */
+export type CommandView = { kind: "list"; agents: AgentSummary[] } | { kind: "spawn"; agent: AgentSummary };
+export function renderCommandView(view: CommandView, theme: WidgetTheme, clickable: boolean): string[] {
+  if (view.kind === "spawn") {
+    const a = view.agent;
+    return [
+      `${theme.fg("accent", "☁")} ${theme.bold(singleLine(a.name))} started ${theme.fg("dim", a.id)}  ${theme.fg("accent", link("Open in Cursor ↗", a.url, clickable))}`,
+      theme.fg("dim", `  ${repoName(a.repo)} @ ${a.ref} · local uncommitted files not included · result arrives as a follow-up`),
+    ];
+  }
+  if (!view.agents.length) return [theme.fg("dim", "No cloud agents started in this process.")];
+  return [theme.bold("Cloud agents"), ...view.agents.map(a => agentLine(a, theme, clickable))];
+}
+
+/** Header for a completion message: status line, then repo line. */
+export function completionHeader(a: AgentSummary, theme: WidgetTheme, clickable: boolean): string[] {
+  const label = a.status === "idle" ? "finished" : a.status;
+  return [
+    `${theme.fg(iconColor(a.status), statusIcon(a.status))} ${theme.bold(singleLine(a.name))} ${label} · ${duration(a.elapsedMs)} · ${a.tools} tools  ${theme.fg("accent", link("Open in Cursor ↗", a.url, clickable))}`,
+    theme.fg("dim", `  ${repoName(a.repo)} @ ${a.ref} · ${a.id}`),
+  ];
+}

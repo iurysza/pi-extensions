@@ -199,3 +199,11 @@ test("cursor activity cards keep the old one-line facts without repeating them",
   assert.deepEqual(card({ activityTitle: "Cursor edit" }, { content: [{ type: "text", text: "ok" }], details: { variant: "activity", summary: "a.ts", linesAdded: 2, linesRemoved: 1 } }), ["cursor Cursor edit", "a.ts · +2/-1"]);
   assert.deepEqual(card({ activityTitle: "Cursor web search" }, { content: [{ type: "text", text: "web search x\n\nError: rate limited" }], details: { variant: "activity" }, isError: true }, true), ["cursor Cursor web search", "Error: rate limited"]);
 });
+test("cursor cloud cards read structured details, not the JSON text", () => {
+  const a = { id: "34f7b2b2", url: "https://cursor.com/agents/bc-34f7b2b2", name: "cloud-1", status: "idle", repo: "https://github.com/o/nice-mermaid.nvim", ref: "main", model: "composer-2-5", elapsedMs: 28000, tools: 12, activity: "read README.md", text: "# Done" };
+  const status = { content: [{ type: "text", text: JSON.stringify([a]) }], details: { agents: [a] } };
+  assert.equal(cardSpecs.cursor_cloud_status.summary(status, { id: "34f7b2b2" }), "idle · 0:28 · 12 tools");
+  const spawn = { content: [{ type: "text", text: "Cloud agent 34f7b2b2 runs" }], details: { agent: a } };
+  assert.equal(cardSpecs.cursor_cloud_spawn.summary(spawn, {}), "background · 34f7b2b2 · nice-mermaid.nvim @ main");
+  assert.ok(cardSpecs.cursor_cloud_status.expanded!(status, {}).includes("Open: https://cursor.com/agents/bc-34f7b2b2"));
+});

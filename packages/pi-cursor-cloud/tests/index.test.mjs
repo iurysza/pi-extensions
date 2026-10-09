@@ -267,3 +267,16 @@ test('/cloud open opens the Cursor page for a picked or named agent', async t =>
   for (const call of h.opened) assert.deepEqual(call.args, [`https://cursor.com/agents/${id}`]);
   assert.ok(h.notices.some(n => n.text.startsWith('Opened https://cursor.com/agents/')));
 });
+
+test('tool results and commands carry structured details for renderers', async t => {
+  const h = harness(t);
+  const spawned = await h.execute('cursor_cloud_spawn', { prompt: 'Look', name: 'look' });
+  assert.equal(spawned.details.agent.name, 'look');
+  assert.match(spawned.details.agent.url, /^https:\/\/cursor\.com\/agents\/bc-/);
+  const status = await h.execute('cursor_cloud_status', {});
+  assert.equal(status.details.agents[0].status, 'starting');
+  JSON.parse(status.content[0].text);
+  await h.commands.get('cloud').handler('list', h.ctx);
+  assert.equal(h.messages.at(-1).details.kind, 'list');
+  assert.ok(h.renderers.has('cursor-cloud-command'));
+});

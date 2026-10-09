@@ -1,14 +1,16 @@
-import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { Text } from "@earendil-works/pi-tui";
+import { getMarkdownTheme, type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";
+import { Container, getCapabilities, Markdown, Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import { createCloudClient, type CloudClient, type CloudHandle, type CloudRun } from "./cloud-client.js";
-import { agentUrl, cleanText, formatCompletion, formatList, singleLine } from "./render.js";
+import { agentUrl, cleanText, completionHeader, formatCompletion, formatList, renderCommandView, singleLine, summarize, type AgentSummary, type CommandView } from "./render.js";
 import { resolveRepo } from "./repo.js";
 import { COMMAND_MENU_COLLECT, cursorMenu } from "./menu.js";
 import { elapsedMs, isActive, reduce, shortId, type CloudAgent, type Event, type State } from "./state.js";
 import { createWidget } from "./widget.js";
 
 const MESSAGE_TYPE = "cursor-cloud-completion";
+const COMMAND_TYPE = "cursor-cloud-command";
+const COLLAPSED_LINES = 12;
 const DEFAULT_MODEL = "composer-2-5";
 const promptSchema = Type.String({ minLength: 1, description: "Task for the cloud agent" });
 const idSchema = Type.String({ minLength: 1, description: "Short cloud agent ID or unique prefix" });
@@ -81,7 +83,8 @@ export function registerCloudExtension(pi: ExtensionAPI, dependencies: Dependenc
     const agent = state.find(a => a.id === id);
     if (!agent) return;
     pi.sendMessage({ customType: MESSAGE_TYPE, content: formatCompletion(agent), display: true,
-      details: { id: shortId(id), name: agent.name, status: agent.status.type } },
+      details: { ...summarize(agent, now()), text: "result" in agent.status ? cleanText(agent.status.result.text) : "",
+        error: agent.status.type === "failed" ? cleanText(agent.status.error) : undefined } },
     { deliverAs: "followUp", triggerTurn: true });
   }
 
@@ -175,24 +178,25 @@ export function registerCloudExtension(pi: ExtensionAPI, dependencies: Dependenc
     } finally { deleting.delete(agent.id); }
   }
 
-  const textResult = (text: string) => ({ content: [{ type: "text" as const, text }], details: undefined });
+  const textResult = (text: string, details?: unknown) => ({ content: [{ type: "text" as const, text }], details });
+  const agentDetails = (id: string) => { try { return { agent: summarize(find(id), now()) }; } catch { return undefined; } };
   pi.registerTool({
     name: "cursor_cloud_spawn", label: "Spawn cloud subagent",
     description: "Run a Cursor Cloud subagent in the BACKGROUND. Returns immediately after creating the agent; results arrive later as a follow-up message. Cloud agents cannot see local uncommitted files. Each run costs real money at Cursor Max Mode pricing. Defaults to the current GitHub origin and an origin-tracked current branch, otherwise main.",
     parameters: spawnSchema, executionMode: "sequential",
-    async execute(_id, params, _signal, _update, ctx) { return textResult(await spawn(params, ctx)); },
+    async execute(_id, params, _signal, _update, ctx) { const text = await spawn(params, ctx); return textResult(text, { agent: summarize(state.at(-1)!, now()) }); },
   });
   pi.registerTool({
     name: "cursor_cloud_send", label: "Send cloud follow-up",
     description: "Send a follow-up to an idle cloud subagent in the background. Not live steering: sending during an active run is rejected. Results arrive later. Each follow-up costs money.",
     parameters: Type.Object({ id: idSchema, prompt: promptSchema }), executionMode: "sequential",
-    async execute(_id, params, _signal, _update, ctx) { return textResult(send(params.id, params.prompt, ctx)); },
+    async execute(_id, params, _signal, _update, ctx) { return textResult(send(params.id, params.prompt, ctx), agentDetails(params.id)); },
   });
   pi.registerTool({
     name: "cursor_cloud_cancel", label: "Cancel cloud run",
     description: "Cancel an active cloud subagent run started by this process. Does not delete the agent.",
     parameters: Type.Object({ id: idSchema }), executionMode: "sequential",
-    async execute(_id, params, _signal, _update, ctx) { return textResult(await cancel(params.id, ctx)); },
+    async execute(_id, params, _signal, _update, ctx) { return textResult(await cancel(params.id, ctx), agentDetails(params.id)); },
   });
   pi.registerTool({
     name: "cursor_cloud_status", label: "Cloud subagent status",
@@ -205,7 +209,8 @@ export function registerCloudExtension(pi: ExtensionAPI, dependencies: Dependenc
         text: "result" in a.status ? a.status.result.text : a.text,
         error: a.status.type === "failed" ? a.status.error : undefined,
         branches: "result" in a.status ? a.status.result.branches : [] }));
-      return textResult(JSON.stringify(rows, null, 2));
+      return textResult(JSON.stringify(rows, null, 2), { agents: agents.map(a => ({ ...summarize(a, now()),
+        text: cleanText("result" in a.status ? a.status.result.text : a.text) })) });
     },
   });
 
@@ -243,11 +248,13 @@ export function registerCloudExtension(pi: ExtensionAPI, dependencies: Dependenc
         const action = match?.[1] ?? "list";
         const rest = match?.[2] ?? "";
         let text: string;
-        if (action === "list" && !rest) text = formatList(state, now());
+        let view: CommandView | undefined;
+        if (action === "list" && !rest) { text = formatList(state, now()); view = { kind: "list", agents: state.map(a => summarize(a, now())) }; }
         else if (action === "spawn") {
           const params = parseSpawnArgs(rest);
           if (!params.prompt.trim()) params.prompt = await ask(ctx, "Cloud agent prompt");
           text = await spawn(params, ctx);
+          view = { kind: "spawn", agent: summarize(state.at(-1)!, now()) };
         } else if (action === "send") {
           const parts = /^(\S+)(?:\s+([\s\S]+))?$/.exec(rest);
           const id = parts?.[1] ?? await pick(ctx, "Follow up which cloud agent?", a => !isActive(a));
@@ -263,14 +270,33 @@ export function registerCloudExtension(pi: ExtensionAPI, dependencies: Dependenc
           return;
         }
         else throw new Error("Usage: /cloud [list | spawn [--repo <url>] [--ref <ref>] [--model <id>] [--name <n>] <prompt> | send <id> <prompt> | cancel <id> | delete <id> | open <id>]");
-        if (!stopped) pi.sendMessage({ customType: "cursor-cloud-command", content: text, display: true });
+        if (!stopped) pi.sendMessage({ customType: COMMAND_TYPE, content: text, display: true, details: view });
       } catch (error) { ctx.ui.notify(error instanceof Error ? error.message : "Cloud command failed.", error instanceof Cancelled ? "info" : "error"); }
     },
   });
+  const clickable = () => getCapabilities().hyperlinks;
   pi.registerMessageRenderer(MESSAGE_TYPE, (message, { expanded }, theme) => {
-    const text = typeof message.content === "string" ? cleanText(message.content) : "Cloud agent completed.";
-    const [header, ...body] = text.split("\n");
-    return new Text(theme.fg("accent", theme.bold(header)) + "\n" + (expanded ? body.join("\n") : body.join("\n").slice(0, 1200)), 0, 0);
+    const details = message.details as (AgentSummary & { text?: string; error?: string }) | undefined;
+    // Older sessions stored plain text only.
+    if (!details?.url) {
+      const text = typeof message.content === "string" ? cleanText(message.content) : "Cloud agent completed.";
+      const [header, ...body] = text.split("\n");
+      return new Text(theme.fg("accent", theme.bold(header)) + "\n" + (expanded ? body.join("\n") : body.join("\n").slice(0, 1200)), 0, 0);
+    }
+    const box = new Container();
+    box.addChild(new Text(completionHeader(details, theme, clickable()).join("\n"), 0, 0));
+    if (details.error) box.addChild(new Text(theme.fg("error", `Error: ${details.error}`), 0, 0));
+    const body = details.text?.trim() || "No result text.";
+    const lines = body.split("\n");
+    const shown = expanded || lines.length <= COLLAPSED_LINES ? body : lines.slice(0, COLLAPSED_LINES).join("\n");
+    box.addChild(new Markdown(shown, 0, 1, getMarkdownTheme()));
+    if (!expanded && lines.length > COLLAPSED_LINES) box.addChild(new Text(theme.fg("dim", `… ${lines.length - COLLAPSED_LINES} more lines, ctrl+o to expand`), 0, 0));
+    return box;
+  });
+  pi.registerMessageRenderer(COMMAND_TYPE, (message, _options, theme) => {
+    const view = message.details as CommandView | undefined;
+    if (view?.kind) return new Text(renderCommandView(view, theme, clickable()).join("\n"), 0, 0);
+    return new Text(typeof message.content === "string" ? cleanText(message.content) : "", 0, 0);
   });
   pi.on("session_start", (_event, ctx) => { widget.attach(ctx); });
   pi.on("session_shutdown", () => {
