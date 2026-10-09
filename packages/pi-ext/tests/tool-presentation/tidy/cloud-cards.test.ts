@@ -30,8 +30,8 @@ test("completion expands to plain metadata and reply with a rail on every wrappe
   const spec = cardSpecs.cursor_cloud_completion;
   const rows = cardRenderers(spec, undefined, undefined, { mode: "default", icons: true, expandedMaxLines: 500 })
     .renderResult({ details: agent }, { expanded: true }, theme, context("completion", { prompt: agent.prompt }, true)).render(300).map(plain).map(line => line.trimEnd());
-  assert.deepEqual(rows.slice(2), ["  │ id: abcdef12", "  │ repo: https://github.com/iurysza/pi-voice @ main", "  │ model: composer-2-5",
-    "  │ url: https://cursor.com/agents/bc-abcdef12-uuid", "  │", "  │ # Result", "  │ **plain text**, not Markdown"]);
+  assert.deepEqual(rows.slice(2), ["  │ id    abcdef12", "  │ repo  https://github.com/iurysza/pi-voice @ main", "  │ model composer-2-5",
+    "  │ url   https://cursor.com/agents/bc-abcdef12-uuid", "  │", "  │ # Result", "  │ **plain text**, not Markdown"]);
   const longReply = { ...agent, text: "unformatted words ".repeat(30) };
   const wrapped = cardRenderers(spec, undefined, undefined, { mode: "default", icons: true, expandedMaxLines: 0 })
     .renderResult({ details: longReply }, { expanded: true }, theme, context("wrap", {}, true)).render(30).map(plain);

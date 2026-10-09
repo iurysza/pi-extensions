@@ -316,7 +316,7 @@ test('completion renderer requests a tidy component synchronously or shows all r
 test('/cloud model saves the default and spawn respects explicit, saved and built-in models', async t => {
   const h = harness(t);
   await h.execute('cursor_cloud_spawn', { prompt: 'Built-in' });
-  assert.equal(h.handles[0].options.model, 'composer-2-5');
+  assert.equal(h.handles[0].options.model, 'composer-2.5');
   await h.commands.get('cloud').handler('model custom-model', h.ctx);
   assert.deepEqual(JSON.parse(readFileSync(h.configPath, 'utf8')), { defaultModel: 'custom-model' });
   assert.deepEqual(h.notices.at(-1), { text: 'Default cloud model: custom-model', level: 'info' });
@@ -331,9 +331,9 @@ test('/cloud model saves the default and spawn respects explicit, saved and buil
 });
 
 test('/cloud model picker marks the current default and saves the selected SDK model', async t => {
-  const h = harness(t, { models: [{ id: 'composer-2-5', displayName: 'Composer' }, { id: 'other', displayName: 'Other' }], picks: [1] });
+  const h = harness(t, { models: [{ id: 'composer-2.5', displayName: 'Composer' }, { id: 'other', displayName: 'Other' }], picks: [1] });
   await h.commands.get('cloud').handler('model', h.ctx);
-  assert.match(h.asked[0].options[0], /Composer.*composer-2-5.*current default/);
+  assert.match(h.asked[0].options[0], /Composer.*composer-2\.5.*current default/);
   assert.deepEqual(JSON.parse(readFileSync(h.configPath, 'utf8')), { defaultModel: 'other' });
   await h.execute('cursor_cloud_spawn', { prompt: 'Use selection' });
   assert.equal(h.handles[0].options.model, 'other');

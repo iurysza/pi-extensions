@@ -12,7 +12,7 @@ import { createWidget } from "./widget.js";
 
 const MESSAGE_TYPE = "cursor-cloud-completion";
 const COMMAND_TYPE = "cursor-cloud-command";
-const DEFAULT_MODEL = "composer-2-5";
+const DEFAULT_MODEL = "composer-2.5";
 const promptSchema = Type.String({ minLength: 1, description: "Task for the cloud agent" });
 const idSchema = Type.String({ minLength: 1, description: "Short cloud agent ID or unique prefix" });
 const spawnSchema = Type.Object({

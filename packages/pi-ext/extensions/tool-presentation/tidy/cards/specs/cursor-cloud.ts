@@ -9,8 +9,8 @@ const repoName = (url: string) => url.replace(/\.git$/, "").split("/").filter(Bo
 const clock = (ms: number) => { const s = Math.floor(Math.max(0, ms) / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; };
 const facts = (a: Agent) => joinFacts(a.status, clock(a.elapsedMs), `${a.tools} tool${a.tools === 1 ? "" : "s"}`);
 const failed = (r: CardResult) => !!r.isError || /^(No cloud agent|Agent already has|Cloud agent handle|Session shut down)/.test(firstLine(r));
-const metadata = (a: Agent) => [`id: ${a.id}`, `repo: ${a.repo} @ ${a.ref}`, `model: ${a.model}`, `url: ${a.url}`];
-const details = (a: Agent) => [joinFacts(`${repoName(a.repo)} @ ${a.ref}`, a.model), `url: ${a.url}`, a.activity && `Last: ${a.activity}`].filter(Boolean) as string[];
+const metadata = (a: Agent) => [["id", a.id], ["repo", `${a.repo} @ ${a.ref}`], ["model", a.model], ["url", a.url]].map(([k, v]) => `${k.padEnd(6)}${v}`);
+const details = (a: Agent) => [joinFacts(`${repoName(a.repo)} @ ${a.ref}`, a.model), `url   ${a.url}`, a.activity && `Last: ${a.activity}`].filter(Boolean) as string[];
 const open = (r: CardResult) => { const a = agent(r); return a?.url ? { label: "Open ↗", url: a.url } : undefined; };
 const expanded = (r: CardResult): string[] => {
   const agents: Agent[] = r.details?.agents ?? (r.details?.agent ? [r.details.agent] : []);

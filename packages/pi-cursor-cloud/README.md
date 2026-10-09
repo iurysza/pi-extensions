@@ -39,7 +39,7 @@ Set `CURSOR_API_KEY`, or use the existing `cursor.key` entry in `~/.pi/agent/aut
 | `cursor_cloud_cancel` | `id` | Requests cancellation of the current run |
 | `cursor_cloud_status` | optional `id` | Returns plain state, activity, elapsed time, tool count, result text, and branch or PR info |
 
-The default model is `composer-2-5` until you change it with `/cloud model [id]`. The choice is saved in `~/.pi/agent/pi-cursor-cloud.json`, or under `PI_CODING_AGENT_DIR` when set. An explicit spawn `model` overrides the saved default.
+The default model is `composer-2.5` until you change it with `/cloud model [id]`. The choice is saved in `~/.pi/agent/pi-cursor-cloud.json`, or under `PI_CODING_AGENT_DIR` when set. An explicit spawn `model` overrides the saved default.
 
 The repository defaults to the current working directory's GitHub origin. SSH origins become HTTPS URLs. The ref defaults to the current branch if a corresponding local `origin` tracking ref exists, otherwise `main`. A different explicit repository defaults to `main`. Nothing fetches or uploads your local checkout.
 

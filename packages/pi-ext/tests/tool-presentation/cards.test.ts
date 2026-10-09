@@ -205,5 +205,5 @@ test("cursor cloud cards read structured details, not the JSON text", () => {
   assert.equal(cardSpecs.cursor_cloud_status.summary(status, { id: "34f7b2b2" }), "idle · 0:28 · 12 tools");
   const spawn = { content: [{ type: "text", text: "Cloud agent 34f7b2b2 runs" }], details: { agent: a } };
   assert.equal(cardSpecs.cursor_cloud_spawn.summary(spawn, {}), "background · 34f7b2b2 · nice-mermaid.nvim @ main");
-  assert.ok(cardSpecs.cursor_cloud_status.expanded!(status, {}).includes("url: https://cursor.com/agents/bc-34f7b2b2"));
+  assert.ok(cardSpecs.cursor_cloud_status.expanded!(status, {}).includes("url   https://cursor.com/agents/bc-34f7b2b2"));
 });
