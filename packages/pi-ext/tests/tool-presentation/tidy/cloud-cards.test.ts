@@ -60,7 +60,7 @@ test("card links depend on terminal capabilities and survive narrow summary fitt
     setCapabilities({ ...caps, hyperlinks: false });
     assert.ok(!renderCard({ spec: cardSpecs.cursor_cloud_completion, args: {}, result: { details: agent } }).join("\n").includes("Open in Cursor"));
     for (const name of ["cursor_cloud_spawn", "cursor_cloud_send", "cursor_cloud_cancel", "cursor_cloud_status"]) {
-      assert.ok(cardSpecs[name].expanded!({ details: { agent } }, {}).includes(`url: ${agent.url}`));
+      assert.ok(cardSpecs[name].expanded!({ details: { agent } }, {}).includes(`url   ${agent.url}`));
     }
   } finally { setCapabilities(caps); }
 });
