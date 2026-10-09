@@ -6,7 +6,7 @@ const keysUnique = items => { const keys = items.map(i => i.key); assert.equal(n
 
 test('full menu has unique single-letter keys at every level', () => {
   const menu = cursorMenu(() => true);
-  assert.deepEqual(menu.items.map(i => i.key), ['s', 'l', 'f', 'p', 'a', 'r', 'q', 'z']);
+  assert.deepEqual(menu.items.map(i => i.key), ['s', 'l', 'f', 'o', 'p', 'a', 'r', 'q', 'z']);
   keysUnique(menu.items);
   assert.ok(JSON.stringify(menu).match(/"key":"[a-z]"/g).length > 15);
 });

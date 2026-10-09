@@ -53,6 +53,7 @@ IDs are the first 8 characters after `bc-`. Full IDs and unique prefixes also wo
 /cloud send <id> Explain the most important correction.
 /cloud cancel <id>
 /cloud delete <id>
+/cloud open [id]     # open the agent's page on cursor.com/agents; picks an agent if no id
 ```
 
 Run `spawn`, `send`, `cancel` or `delete` without arguments in the interactive UI and the command asks for the prompt or lets you pick the agent. Cancelling a prompt spends nothing.

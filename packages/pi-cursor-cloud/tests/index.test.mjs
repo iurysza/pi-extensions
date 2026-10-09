@@ -9,7 +9,7 @@ const outcome = (type = 'finished') => ({ type, result: { text: 'Docs checked.',
 function harness(t, { mode = 'tui', pendingSend = false, createGate, deleteGate, inputs = [], picks = [], commandNames = [] } = {}) {
   const busListeners = new Map(), asked = [];
   const tools = new Map(), commands = new Map(), events = new Map(), renderers = new Map();
-  const messages = [], notices = [], widgets = [], statuses = [], handles = [], deleted = [];
+  const messages = [], notices = [], widgets = [], statuses = [], handles = [], deleted = [], opened = [];
   let renders = 0;
   const pi = {
     registerTool: tool => tools.set(tool.name, tool),
@@ -18,6 +18,7 @@ function harness(t, { mode = 'tui', pendingSend = false, createGate, deleteGate,
     on: (name, callback) => events.set(name, callback),
     sendMessage: (message, options) => messages.push({ ...message, options }),
     events: { on: (name, fn) => busListeners.set(name, fn) },
+    exec: async (command, args) => { opened.push({ command, args }); return { code: 0, stdout: '', stderr: '' }; },
     getCommands: () => commandNames.map(name => ({ name, source: 'extension' })),
   };
   const theme = { fg: (_c, s) => s, bold: s => s };
@@ -55,7 +56,7 @@ function harness(t, { mode = 'tui', pendingSend = false, createGate, deleteGate,
   t.after(() => events.get('session_shutdown')({}, ctx));
   const execute = (name, params) => tools.get(name).execute('call-id', params, undefined, undefined, ctx);
   const status = async id => JSON.parse((await execute('cursor_cloud_status', { id })).content[0].text);
-  return { execute, status, handles, busListeners, asked, messages, notices, widgets, statuses, deleted, commands, events, ctx, renderers,
+  return { execute, status, opened, handles, busListeners, asked, messages, notices, widgets, statuses, deleted, commands, events, ctx, renderers,
     lines: width => component?.render(width) ?? [], renderCount: () => renders };
 }
 
@@ -254,4 +255,15 @@ test('contributes a Cursor menu with only loaded commands', t => {
   assert.doesNotMatch(flat, /cursor-runtime|cursor-fast|Maintenance/);
   h.busListeners.get('command-menu:collect:v1')({ version: 2, add: g => added.push(g) });
   assert.equal(added.length, 1);
+});
+
+test('/cloud open opens the Cursor page for a picked or named agent', async t => {
+  const h = harness(t, { picks: [0] });
+  await h.execute('cursor_cloud_spawn', { prompt: 'Look', name: 'look' });
+  const id = h.handles[0].id;
+  await h.commands.get('cloud').handler('open', h.ctx);
+  await h.commands.get('cloud').handler(`open ${id.slice(3, 11)}`, h.ctx);
+  assert.equal(h.opened.length, 2);
+  for (const call of h.opened) assert.deepEqual(call.args, [`https://cursor.com/agents/${id}`]);
+  assert.ok(h.notices.some(n => n.text.startsWith('Opened https://cursor.com/agents/')));
 });

@@ -236,7 +236,7 @@ export function registerCloudExtension(pi: ExtensionAPI, dependencies: Dependenc
   });
 
   pi.registerCommand("cloud", {
-    description: "Cloud subagents: list, spawn [--repo <url>] [--ref <ref>] [--model <id>] [--name <n>] <prompt>, send <id> <prompt>, cancel <id>, delete <id>",
+    description: "Cloud subagents: list, spawn [--repo <url>] [--ref <ref>] [--model <id>] [--name <n>] <prompt>, send <id> <prompt>, cancel <id>, delete <id>, open <id>",
     async handler(args, ctx) {
       try {
         const match = /^(\S+)(?:\s+([\s\S]*))?$/.exec(args.trim());
@@ -254,7 +254,15 @@ export function registerCloudExtension(pi: ExtensionAPI, dependencies: Dependenc
           text = send(id, parts?.[2] ?? await ask(ctx, `Follow-up for ${shortId(find(id).id)}`), ctx);
         } else if (action === "cancel" && !/\s/.test(rest)) text = await cancel(rest || await pick(ctx, "Cancel which cloud run?", isActive), ctx);
         else if (action === "delete" && !/\s/.test(rest)) text = await remove(rest || await pick(ctx, "Delete which cloud agent?", a => !isActive(a)), ctx);
-        else throw new Error("Usage: /cloud [list | spawn [--repo <url>] [--ref <ref>] [--model <id>] [--name <n>] <prompt> | send <id> <prompt> | cancel <id> | delete <id>]");
+        else if (action === "open" && !/\s/.test(rest)) {
+          const url = agentUrl(find(rest || await pick(ctx, "Open which cloud agent?", () => true)).id);
+          const opener = process.platform === "darwin" ? "open" : process.platform === "win32" ? "explorer" : "xdg-open";
+          const result = await pi.exec(opener, [url]);
+          if (result.code !== 0 && opener !== "explorer") throw new Error(`Could not open ${url}`);
+          ctx.ui.notify(`Opened ${url}`, "info");
+          return;
+        }
+        else throw new Error("Usage: /cloud [list | spawn [--repo <url>] [--ref <ref>] [--model <id>] [--name <n>] <prompt> | send <id> <prompt> | cancel <id> | delete <id> | open <id>]");
         if (!stopped) pi.sendMessage({ customType: "cursor-cloud-command", content: text, display: true });
       } catch (error) { ctx.ui.notify(error instanceof Error ? error.message : "Cloud command failed.", error instanceof Cancelled ? "info" : "error"); }
     },
