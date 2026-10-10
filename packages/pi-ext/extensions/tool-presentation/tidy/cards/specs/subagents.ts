@@ -14,14 +14,14 @@ const resultSummary = (r: CardResult): string => {
   return joinFacts(s === "running" ? d.activity ?? "running" : s === "completed" ? "done" : s || firstLine(r), count(d.toolUses ?? (Number(resultText(r).match(/Tool uses:\s*(\d+)/i)?.[1]) || undefined), "tools"), d.tokens ? `${d.tokens} tok` : resultText(r).match(/([\d.]+k?)\s*(?:tok|tokens)/i)?.[0]);
 };
 export const subagentSpecs: Record<string, CardSpec> = {
-  Agent: { icon: "󰚩", color: MAGENTA, label: "agent", headline: (a) => a.description ?? "run agent", target: (a) => `@${a.name ?? a.subagent_type ?? "agent"}`,
+  Agent: { icon: "󰚩", color: MAGENTA, label: "subagents", headline: (a) => a.description ?? "run agent", target: (a) => `@${a.name ?? a.subagent_type ?? "agent"}`,
     summary: resultSummary, failed, running: resultSummary,
     expanded: (r, a) => [joinFacts(r.details?.modelName, r.details?.tags?.join(", "), count(r.details?.turnCount, "turns")), String(a.prompt ?? ""), ...rawExpanded(r)].filter(Boolean) },
-  SubagentWorkflow: { icon: "󰒪", color: MAGENTA, label: "workflow", headline: (a) => a.meta?.description ?? (basename(a.scriptPath) || "workflow"),
+  SubagentWorkflow: { icon: "󰒪", color: MAGENTA, label: "subagents", headline: (a) => a.meta?.description ?? (basename(a.scriptPath) || "workflow"),
     target: (a, r) => r?.details?.taskId ?? basename(a.scriptPath), summary: (r) => joinFacts(r.details?.taskId ? "background" : firstLine(r), count(r.details?.agentCount, "agents"), r.details?.tokens ? `${r.details.tokens} tok` : ""),
     failed: (r) => !!r.isError || /error|missing|failed/i.test(firstLine(r)), expanded: rawExpanded,
     running: (r) => r.details?.workflowProgress?.phaseTitle ?? "running" },
-  get_subagent_result: { icon: "󰄠", color: CYAN, label: "result", headline: (a) => a.wait ? "wait for result" : "get result", target: (a) => `@${shortId(a.agent_id)}`, summary: resultSummary, failed, expanded: rawExpanded },
-  steer_subagent: { icon: "󰓔", color: MAGENTA, label: "steer", headline: () => "steer agent", target: (a) => `@${shortId(a.agent_id)}`,
+  get_subagent_result: { icon: "󰄠", color: CYAN, label: "subagents", headline: (a) => a.wait ? "wait for result" : "get result", target: (a) => `@${shortId(a.agent_id)}`, summary: resultSummary, failed, expanded: rawExpanded },
+  steer_subagent: { icon: "󰓔", color: MAGENTA, label: "subagents", headline: () => "steer agent", target: (a) => `@${shortId(a.agent_id)}`,
     summary: (r, a) => r.details?.kind === "not_running" || /not running|already finished|not found/i.test(resultText(r)) ? firstLine(r) : `${/queued/i.test(resultText(r)) ? "queued" : "sent"} "${a.message ?? ""}"`, failed, expanded: rawExpanded },
 };

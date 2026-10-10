@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import test from "node:test";
+import { visibleWidth } from "@earendil-works/pi-tui";
 import { rendererHarness, context, theme, plain } from "./renderer-harness.js";
 import { loadTidyChill } from "../../../extensions/tool-presentation/tidy/config.js";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
@@ -20,9 +21,12 @@ test("chill off matches every step 2 fixture byte-for-byte at narrow and wide wi
       const renderers = h.resolvers[0](fixture.name, () => undefined)!;
       for (const expected of baseline[index]) {
         const ctx = { ...context("fixture", fixture.args, expected.expanded), isError: fixture.state === "error" };
-        assert.deepEqual(renderers.renderResult!(fixture.result, { expanded: expected.expanded, isPartial: false }, theme, ctx).render(expected.width), expected.lines, `${fixture.name} width ${expected.width}`);
+        const lines = renderers.renderResult!(fixture.result, { expanded: expected.expanded, isPartial: false }, theme, ctx).render(expected.width);
+        if (process.env.UPDATE_BASELINE) expected.lines = lines;
+        else assert.deepEqual(lines, expected.lines, `${fixture.name} width ${expected.width}`);
       }
     }
+    if (process.env.UPDATE_BASELINE) writeFileSync(join(process.env.INIT_CWD ?? process.cwd(), "tests/tool-presentation/card-renderer-baseline.json"), JSON.stringify(baseline, null, 2) + "\n");
     for (const [name, original] of h.tools) {
       const renderers = h.resolvers[0](name, () => original)!;
       const result = { content: [{ type: "text" as const, text: "fixture" }], details: {} };
@@ -52,14 +56,14 @@ test("finished cards fold into one summary with recorded duration and red failur
     const b = context("b", { line: "Second" });
     await start(h, "a"); await finish(h, "a");
     const first = renderers.renderResult!(output("Saved as #1."), { expanded: false, isPartial: false }, theme, a);
-    assert.match(plain(first.render(80).join("\n")), /Worked · 1 tool · 1s/);
+    assert.match(plain(first.render(80).join("\n")), / memory · 1s$/m);
     await start(h, "b");
-    assert.match(plain(first.render(80).join("\n")), /Working · 1 tool · 1s/);
+    assert.match(plain(first.render(80).join("\n")), / memory · 1s · running/);
     assert.equal(renderers.renderResult!(output("streaming"), { expanded: false, isPartial: true }, theme, b).render(80).length, 2);
     await finish(h, "b", "memo_note", output("Too long: 284 bytes, limit 280.", { piTidyElapsedMs: 2000 }));
     assert.deepEqual(first.render(80), []);
     const summary = renderers.renderResult!(output("failed"), { expanded: false, isPartial: false }, theme, b).render(80).join("\n");
-    assert.match(plain(summary), /Worked · 2 tools · 3s · 1 failed/);
+    assert.match(plain(summary), /memory 2 · 3s · 1 failed/);
     assert.match(summary, /\x1b\[31m/);
     assert.deepEqual(renderers.renderCall!({}, theme, a).render(80), []);
   } finally { await h.emit("session_shutdown"); }
@@ -74,7 +78,7 @@ test("Ctrl+O expansion reveals every folded card and full original body", async 
     for (const id of ["a", "b"]) {
       const lines = renderers.renderResult!(output("full result\nsecond line"), { expanded: true, isPartial: false }, theme, context(id, { line: "Keep this" }, true)).render(80).join("\n");
       assert.match(plain(lines), /full result\s*\n\s*second line/);
-      assert.doesNotMatch(plain(lines), /Worked/);
+      assert.doesNotMatch(plain(lines), /(?:memory|cursor cloud)(?: \d+)? · <?\d/);
     }
   } finally { await h.emit("session_shutdown"); }
 });
@@ -90,15 +94,15 @@ test("user and assistant text break groups, while thinking and nested calls do n
     await h.emit("tool_execution_start", { toolCallId: "nested", toolName: "read", parentToolCallId: "code" });
     await h.emit("tool_execution_end", { toolCallId: "nested", toolName: "read", parentToolCallId: "code", result: output("nested") });
     await start(h, "b"); await finish(h, "b");
-    assert.match(render("b"), /2 tools/);
+    assert.match(render("b"), /memory 2/);
     await h.emit("message_update", { message: { role: "assistant", content: [{ type: "text", text: "Next step" }] } });
     await start(h, "c"); await finish(h, "c");
-    assert.match(render("b"), /2 tools/);
-    assert.match(render("c"), /1 tool/);
+    assert.match(render("b"), /memory 2/);
+    assert.match(render("c"), / memory · /);
     await h.emit("message_start", { message: { role: "user", content: "Continue" } });
     await start(h, "d"); await finish(h, "d");
-    assert.match(render("c"), /1 tool/);
-    assert.match(render("d"), /1 tool/);
+    assert.match(render("c"), / memory · /);
+    assert.match(render("d"), / memory · /);
   } finally { await h.emit("session_shutdown"); }
 });
 
@@ -109,12 +113,12 @@ test("parallel calls keep pending cards visible and summary ownership follows ca
     await finish(h, "b", "memo_note", output("error", { piTidyElapsedMs: 0 }), true);
     const renderers = h.resolvers[0]("memo_note", () => undefined)!;
     const later = renderers.renderResult!(output("result"), { expanded: false, isPartial: false }, theme, context("b"));
-    assert.match(plain(later.render(80).join("\n")), /Working · 1 tool · <1s · 1 failed/);
+    assert.match(plain(later.render(80).join("\n")), /memory · <1s · running · 1 failed/);
     const pending = plain(renderers.renderResult!(output("partial"), { expanded: false, isPartial: true }, theme, context("a")).render(80).join("\n"));
     assert.match(pending, /\n· /);
-    assert.doesNotMatch(pending, /Working|Worked/);
+    assert.doesNotMatch(pending, / · running|memory(?: \d+)? · <?\d/);
     await finish(h, "a");
-    assert.match(plain(later.render(80).join("\n")), /Worked · 2 tools · 1s · 1 failed/);
+    assert.match(plain(later.render(80).join("\n")), /memory 2 · 1s · 1 failed/);
     assert.deepEqual(renderers.renderResult!(output("result"), { expanded: false, isPartial: false }, theme, context("a")).render(80), []);
   } finally { await h.emit("session_shutdown"); }
 });
@@ -133,7 +137,7 @@ test("replay groups restore per branch without modifying messages and sum known 
       await h.emit(event, {}, { sessionManager: { getBranch: () => branch } });
       const renderers = h.resolvers[0]("memo_note", () => undefined)!;
       const lines = renderers.renderResult!(output("Saved"), { expanded: false, isPartial: false }, theme, context("b")).render(80).join("\n");
-      assert.match(plain(lines), /Worked · 2 tools · 1s/);
+      assert.match(plain(lines), /memory 2 · 1s/);
     }
     assert.equal(JSON.stringify(branch), before);
     await h.emit("session_tree", {}, { sessionManager: { getBranch: () => [] } });
@@ -154,7 +158,7 @@ test("/chill toggles existing cards, requests redraw and neither saves nor reloa
     const notices: string[] = [];
     const commandCtx = { ui: { notify: (message: string) => notices.push(message) }, reload() { throw new Error("must not reload"); } };
     await h.commands.get("chill").handler("", commandCtx);
-    assert.match(plain(card.render(80).join("\n")), /Worked/);
+    assert.match(plain(card.render(80).join("\n")), /(?:memory|cursor cloud)(?: \d+)? · <?\d/);
     await h.commands.get("chill").handler("", commandCtx);
     assert.deepEqual(card.render(80), normal);
     assert.equal(redraws, 2);
@@ -183,16 +187,16 @@ test("newest finished card stays visible until the next tool starts or the grace
     const b = context("b", { line: "Second" });
     await start(h, "a"); await finish(h, "a");
     const first = renderers.renderResult!(output("Saved as #1."), { expanded: false, isPartial: false }, theme, a);
-    assert.doesNotMatch(plain(first.render(80).join("\n")), /Worked/, "visible during grace");
+    assert.doesNotMatch(plain(first.render(80).join("\n")), /(?:memory|cursor cloud)(?: \d+)? · <?\d/, "visible during grace");
     await start(h, "b");
-    assert.match(plain(first.render(80).join("\n")), /Working · 1 tool · 1s/, "folds when the next tool starts");
+    assert.match(plain(first.render(80).join("\n")), / memory · 1s · running/, "folds when the next tool starts");
     await finish(h, "b");
     const second = renderers.renderResult!(output("Saved as #2."), { expanded: false, isPartial: false }, theme, b);
-    assert.doesNotMatch(plain(second.render(80).join("\n")), /Worked/, "newest card visible during grace");
-    assert.match(plain(first.render(80).join("\n")), /Working · 1 tool/);
+    assert.doesNotMatch(plain(second.render(80).join("\n")), /(?:memory|cursor cloud)(?: \d+)? · <?\d/, "newest card visible during grace");
+    assert.match(plain(first.render(80).join("\n")), /memory · 1s · running/);
     await new Promise((resolve) => setTimeout(resolve, 80));
     assert.deepEqual(first.render(80), []);
-    assert.match(plain(second.render(80).join("\n")), /Worked · 2 tools · 2s/, "folds after the grace period");
+    assert.match(plain(second.render(80).join("\n")), /memory 2 · 2s/, "folds after the grace period");
   } finally { await h.emit("session_shutdown"); }
 });
 
@@ -208,7 +212,7 @@ test("tool result messages do not split a group", async () => {
     await start(h, "b"); await finish(h, "b");
     await h.emit("message_end", { message: toolResult });
     const second = renderers.renderResult!(output("Saved as #2."), { expanded: false, isPartial: false }, theme, context("b"));
-    assert.match(plain(second.render(80).join("\n")), /Worked · 2 tools/);
+    assert.match(plain(second.render(80).join("\n")), /memory 2 · 2s/);
   } finally { await h.emit("session_shutdown"); }
 });
 
@@ -223,14 +227,33 @@ test("clicking the summary opens the group and clicking its header folds it", as
     const first = renderers.renderResult!(output("Saved as #1."), { expanded: false, isPartial: false }, theme, context("a"));
     const owner = renderers.renderResult!(output("Saved as #2."), { expanded: false, isPartial: false }, theme, context("b"));
     assert.deepEqual(first.render(80), []);
-    assert.match(plain(owner.render(80).join("\n")), / Worked · 2 tools · 3s/);
+    assert.match(plain(owner.render(80).join("\n")), / memory 2 · 3s/);
     assert.deepEqual(owner.handleMouse!(click), { handled: true });
     const header = plain(firstCall.render(80)[0]);
-    assert.match(header, / Worked · 2 tools · 3s/, "open group shows a header");
+    assert.match(header, / memory 2 · 3s/, "open group shows a header");
     assert.notDeepEqual(first.render(80), [], "sibling card shows");
-    assert.doesNotMatch(plain(owner.render(80).join("\n")), /Worked/);
+    assert.doesNotMatch(plain(owner.render(80).join("\n")), /(?:memory|cursor cloud)(?: \d+)? · <?\d/);
     assert.deepEqual(firstCall.handleMouse!(click), { handled: true });
-    assert.match(plain(owner.render(80).join("\n")), / Worked · 2 tools · 3s/, "header click folds the group");
+    assert.match(plain(owner.render(80).join("\n")), / memory 2 · 3s/, "header click folds the group");
     assert.deepEqual(first.render(80), []);
+  } finally { await h.emit("session_shutdown"); }
+});
+
+test("group header names built-in groups by what they did, collapses long lists, and indents open cards", async () => {
+  const h = await rendererHarness({ chill: true });
+  const click = { type: "click", button: "left", x: 0, y: 0, screenX: 0, screenY: 0 } as any;
+  try {
+    const done = output("ok", { piTidyElapsedMs: 1000 });
+    const run = async (pairs: readonly (readonly [string, string])[]) => { for (const [id, name] of pairs) { await start(h, id, name); await finish(h, id, name, done); } };
+    await run([["r1", "read"], ["r2", "grep"], ["e1", "edit"], ["s1", "bash"], ["m1", "memo_note"]]);
+    const owner = h.resolvers[0]("memo_note", () => undefined)!.renderResult!(done, { expanded: false, isPartial: false }, theme, context("m1"));
+    assert.match(plain(owner.render(80).join("\n")), / read 2 · edit · shell · memory · 5s/, "built-ins grouped, first-run order");
+    await run([["w1", "web_search"], ["c1", "codemode"]]);
+    const last = h.resolvers[0]("codemode", () => undefined)!.renderResult!(done, { expanded: false, isPartial: false }, theme, context("c1"));
+    assert.match(plain(last.render(80).join("\n")), / read 2 · edit · shell · \+3 · 7s/, "more than four groups collapse to +N");
+    assert.deepEqual(last.handleMouse!(click), { handled: true });
+    const lines = last.render(80);
+    assert.ok(lines.length > 0 && lines.map(plain).every((l) => l.startsWith("  ")), "open-group cards are indented two columns");
+    assert.ok(lines.every((l) => visibleWidth(l) <= 80), "indent stays within width");
   } finally { await h.emit("session_shutdown"); }
 });

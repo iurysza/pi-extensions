@@ -26,7 +26,7 @@ const completionSummary = (r: CardResult) => {
 };
 
 export const cursorCloudSpecs: Record<string, CardSpec> = {
-  cursor_cloud_completion: { icon: "󰅟", color: BLUE, label: "cloud", headline: (a) => oneLine(a.prompt) || "cloud agent completed",
+  cursor_cloud_completion: { icon: "󰅟", color: BLUE, label: "cursor cloud", headline: (a) => oneLine(a.prompt) || "cloud agent completed",
     target: (_a, r) => r?.details?.name ?? "", summary: completionSummary, errorSummary: completionSummary,
     failed: (r) => r.details?.status === "failed",
     link: (r) => r.details?.url ? { label: "Open in Cursor ↗", url: r.details.url } : undefined,
@@ -35,16 +35,16 @@ export const cursorCloudSpecs: Record<string, CardSpec> = {
       if (!a?.url) return rawExpanded(r).map(line => `│ ${line}`);
       return [...metadata(a).map(line => `│ ${line}`), "│", ...(a.text || "No result text.").split("\n").map(line => `│ ${line}`)];
     } },
-  cursor_cloud_spawn: { icon: "󰅟", color: BLUE, label: "cloud", headline: (a) => oneLine(a.prompt) || "spawn cloud agent",
+  cursor_cloud_spawn: { icon: "󰅟", color: BLUE, label: "cursor cloud", headline: (a) => oneLine(a.prompt) || "spawn cloud agent",
     target: (a, r) => agent(r ?? {})?.name ?? a.name ?? "",
     summary: (r) => { const a = agent(r); return a ? joinFacts("background", a.id, `${repoName(a.repo)} @ ${a.ref}`) : firstLine(r); },
     failed, expanded, link: open, running: () => "creating agent" },
-  cursor_cloud_send: { icon: "󰅟", color: MAGENTA, label: "cloud", headline: (a) => oneLine(a.prompt) || "follow up",
+  cursor_cloud_send: { icon: "󰅟", color: MAGENTA, label: "cursor cloud", headline: (a) => oneLine(a.prompt) || "follow up",
     target: (a) => `@${a.id ?? ""}`, summary: (r) => failed(r) ? firstLine(r) : "follow-up sent", failed, expanded, link: open },
-  cursor_cloud_cancel: { icon: "󰅟", color: MAGENTA, label: "cloud", headline: () => "cancel run",
+  cursor_cloud_cancel: { icon: "󰅟", color: MAGENTA, label: "cursor cloud", headline: () => "cancel run",
     target: (a) => `@${a.id ?? ""}`, summary: (r) => /already/.test(firstLine(r)) ? firstLine(r).replace(/^Cloud agent \S+ is /, "") : failed(r) ? firstLine(r) : "cancel requested",
     failed, expanded, link: open },
-  cursor_cloud_status: { icon: "󰅟", color: CYAN, label: "cloud", headline: (a) => a.id ? "status" : "status of all",
+  cursor_cloud_status: { icon: "󰅟", color: CYAN, label: "cursor cloud", headline: (a) => a.id ? "status" : "status of all",
     target: (a) => a.id ? `@${a.id}` : "",
     summary: (r) => {
       const all: Agent[] | undefined = r.details?.agents;

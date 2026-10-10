@@ -4,7 +4,7 @@
       "expanded": false,
       "width": 20,
       "lines": [
-        "\u001b[33m󰉗\u001b[0m Example           \u001b[0m",
+        "\u001b[33m󰉗 \u001b[1mdirectories\u001b[0m Examp\u001b[0m…\u001b[0m\u001b[0m",
         "\u001b[2m/tmp/tool\u001b[0m…\u001b[0m →\u001b[0m \u001b[32m1 skill\u001b[0m\u001b[0m"
       ]
     },
@@ -12,7 +12,7 @@
       "expanded": false,
       "width": 80,
       "lines": [
-        "\u001b[33m󰉗\u001b[0m Example                                                                       \u001b[0m",
+        "\u001b[33m󰉗 \u001b[1mdirectories\u001b[0m Example                                                           \u001b[0m",
         "\u001b[2m/tmp/tool-cards/example.md\u001b[0m \u001b[2m→\u001b[0m \u001b[32m1 skill\u001b[0m                                            \u001b[0m"
       ]
     },
@@ -20,7 +20,7 @@
       "expanded": false,
       "width": 120,
       "lines": [
-        "\u001b[33m󰉗\u001b[0m Example                                                                                                               \u001b[0m",
+        "\u001b[33m󰉗 \u001b[1mdirectories\u001b[0m Example                                                                                                   \u001b[0m",
         "\u001b[2m/tmp/tool-cards/example.md\u001b[0m \u001b[2m→\u001b[0m \u001b[32m1 skill\u001b[0m                                                                                    \u001b[0m"
       ]
     },
@@ -28,7 +28,7 @@
       "expanded": true,
       "width": 20,
       "lines": [
-        "\u001b[33m󰉗\u001b[0m Example           \u001b[0m",
+        "\u001b[33m󰉗 \u001b[1mdirectories\u001b[0m Examp\u001b[0m…\u001b[0m\u001b[0m",
         "\u001b[2m/tmp/tool\u001b[0m…\u001b[0m →\u001b[0m \u001b[32m1 skill\u001b[0m\u001b[0m",
         "  \u001b[2mExample\u001b[0m           \u001b[0m"
       ]
@@ -37,7 +37,7 @@
       "expanded": true,
       "width": 80,
       "lines": [
-        "\u001b[33m󰉗\u001b[0m Example                                                                       \u001b[0m",
+        "\u001b[33m󰉗 \u001b[1mdirectories\u001b[0m Example                                                           \u001b[0m",
         "\u001b[2m/tmp/tool-cards/example.md\u001b[0m \u001b[2m→\u001b[0m \u001b[32m1 skill\u001b[0m                                            \u001b[0m",
         "  \u001b[2mExample\u001b[0m                                                                       \u001b[0m"
       ]
@@ -46,7 +46,7 @@
       "expanded": true,
       "width": 120,
       "lines": [
-        "\u001b[33m󰉗\u001b[0m Example                                                                                                               \u001b[0m",
+        "\u001b[33m󰉗 \u001b[1mdirectories\u001b[0m Example                                                                                                   \u001b[0m",
         "\u001b[2m/tmp/tool-cards/example.md\u001b[0m \u001b[2m→\u001b[0m \u001b[32m1 skill\u001b[0m                                                                                    \u001b[0m",
         "  \u001b[2mExample\u001b[0m                                                                                                               \u001b[0m"
       ]
@@ -57,7 +57,7 @@
       "expanded": false,
       "width": 20,
       "lines": [
-        "\u001b[34m󱜸\u001b[0m Example           \u001b[0m",
+        "\u001b[34m󱜸 \u001b[1mask\u001b[0m Example       \u001b[0m",
         "\u001b[2m3 options\u001b[0m \u001b[2m→\u001b[0m \u001b[32mExample\u001b[0m \u001b[0m"
       ]
     },
@@ -65,7 +65,7 @@
       "expanded": false,
       "width": 80,
       "lines": [
-        "\u001b[34m󱜸\u001b[0m Example                                                                       \u001b[0m",
+        "\u001b[34m󱜸 \u001b[1mask\u001b[0m Example                                                                   \u001b[0m",
         "\u001b[2m3 options\u001b[0m \u001b[2m→\u001b[0m \u001b[32mExample\u001b[0m                                                             \u001b[0m"
       ]
     },
@@ -73,7 +73,7 @@
       "expanded": false,
       "width": 120,
       "lines": [
-        "\u001b[34m󱜸\u001b[0m Example                                                                                                               \u001b[0m",
+        "\u001b[34m󱜸 \u001b[1mask\u001b[0m Example                                                                                                           \u001b[0m",
         "\u001b[2m3 options\u001b[0m \u001b[2m→\u001b[0m \u001b[32mExample\u001b[0m                                                                                                     \u001b[0m"
       ]
     },
@@ -81,7 +81,7 @@
       "expanded": true,
       "width": 20,
       "lines": [
-        "\u001b[34m󱜸\u001b[0m Example           \u001b[0m",
+        "\u001b[34m󱜸 \u001b[1mask\u001b[0m Example       \u001b[0m",
         "\u001b[2m3 options\u001b[0m \u001b[2m→\u001b[0m \u001b[32mExample\u001b[0m \u001b[0m",
         "  \u001b[2mExample output\u001b[0m    \u001b[0m"
       ]
@@ -90,7 +90,7 @@
       "expanded": true,
       "width": 80,
       "lines": [
-        "\u001b[34m󱜸\u001b[0m Example                                                                       \u001b[0m",
+        "\u001b[34m󱜸 \u001b[1mask\u001b[0m Example                                                                   \u001b[0m",
         "\u001b[2m3 options\u001b[0m \u001b[2m→\u001b[0m \u001b[32mExample\u001b[0m                                                             \u001b[0m",
         "  \u001b[2mExample output\u001b[0m                                                                \u001b[0m"
       ]
@@ -99,7 +99,7 @@
       "expanded": true,
       "width": 120,
       "lines": [
-        "\u001b[34m󱜸\u001b[0m Example                                                                                                               \u001b[0m",
+        "\u001b[34m󱜸 \u001b[1mask\u001b[0m Example                                                                                                           \u001b[0m",
         "\u001b[2m3 options\u001b[0m \u001b[2m→\u001b[0m \u001b[32mExample\u001b[0m                                                                                                     \u001b[0m",
         "  \u001b[2mExample output\u001b[0m                                                                                                        \u001b[0m"
       ]
@@ -110,7 +110,7 @@
       "expanded": false,
       "width": 20,
       "lines": [
-        "\u001b[33m󱕍\u001b[0m Example           \u001b[0m",
+        "\u001b[33m󱕍 \u001b[1mvisual artifact\u001b[0m E\u001b[0m…\u001b[0m\u001b[0m",
         "\u001b[0m…\u001b[0m →\u001b[0m \u001b[32mexample.com/docs\u001b[0m\u001b[0m"
       ]
     },
@@ -118,7 +118,7 @@
       "expanded": false,
       "width": 80,
       "lines": [
-        "\u001b[33m󱕍\u001b[0m Example                                                                       \u001b[0m",
+        "\u001b[33m󱕍 \u001b[1mvisual artifact\u001b[0m Example                                                       \u001b[0m",
         "\u001b[2martifact · 3 nodes\u001b[0m \u001b[2m→\u001b[0m \u001b[32mexample.com/docs\u001b[0m                                           \u001b[0m"
       ]
     },
@@ -126,7 +126,7 @@
       "expanded": false,
       "width": 120,
       "lines": [
-        "\u001b[33m󱕍\u001b[0m Example                                                                                                               \u001b[0m",
+        "\u001b[33m󱕍 \u001b[1mvisual artifact\u001b[0m Example                                                                                               \u001b[0m",
         "\u001b[2martifact · 3 nodes\u001b[0m \u001b[2m→\u001b[0m \u001b[32mexample.com/docs\u001b[0m                                                                                   \u001b[0m"
       ]
     },
@@ -134,7 +134,7 @@
       "expanded": true,
       "width": 20,
       "lines": [
-        "\u001b[33m󱕍\u001b[0m Example           \u001b[0m",
+        "\u001b[33m󱕍 \u001b[1mvisual artifact\u001b[0m E\u001b[0m…\u001b[0m\u001b[0m",
         "\u001b[0m…\u001b[0m →\u001b[0m \u001b[32mexample.com/docs\u001b[0m\u001b[0m",
         "  \u001b[2mExample\u001b[0m           \u001b[0m",
         "  \u001b[2m/tmp/tool-cards/ex\u001b[0m",
@@ -147,7 +147,7 @@
       "expanded": true,
       "width": 80,
       "lines": [
-        "\u001b[33m󱕍\u001b[0m Example                                                                       \u001b[0m",
+        "\u001b[33m󱕍 \u001b[1mvisual artifact\u001b[0m Example                                                       \u001b[0m",
         "\u001b[2martifact · 3 nodes\u001b[0m \u001b[2m→\u001b[0m \u001b[32mexample.com/docs\u001b[0m                                           \u001b[0m",
         "  \u001b[2mExample\u001b[0m                                                                       \u001b[0m",
         "  \u001b[2m/tmp/tool-cards/example.md\u001b[0m                                                    \u001b[0m",
@@ -158,7 +158,7 @@
       "expanded": true,
       "width": 120,
       "lines": [
-        "\u001b[33m󱕍\u001b[0m Example                                                                                                               \u001b[0m",
+        "\u001b[33m󱕍 \u001b[1mvisual artifact\u001b[0m Example                                                                                               \u001b[0m",
         "\u001b[2martifact · 3 nodes\u001b[0m \u001b[2m→\u001b[0m \u001b[32mexample.com/docs\u001b[0m                                                                                   \u001b[0m",
         "  \u001b[2mExample\u001b[0m                                                                                                               \u001b[0m",
         "  \u001b[2m/tmp/tool-cards/example.md\u001b[0m                                                                                            \u001b[0m",
@@ -171,7 +171,7 @@
       "expanded": false,
       "width": 20,
       "lines": [
-        "\u001b[35m󰔰\u001b[0m Example           \u001b[0m",
+        "\u001b[35m󰔰 \u001b[1msessions\u001b[0m Example  \u001b[0m",
         "→\u001b[0m \u001b[32mnew session start\u001b[0m…\u001b[0m\u001b[0m"
       ]
     },
@@ -179,7 +179,7 @@
       "expanded": false,
       "width": 80,
       "lines": [
-        "\u001b[35m󰔰\u001b[0m Example                                                                       \u001b[0m",
+        "\u001b[35m󰔰 \u001b[1msessions\u001b[0m Example                                                              \u001b[0m",
         "\u001b[2msplit\u001b[0m \u001b[2m→\u001b[0m \u001b[32mnew session started\u001b[0m                                                     \u001b[0m"
       ]
     },
@@ -187,7 +187,7 @@
       "expanded": false,
       "width": 120,
       "lines": [
-        "\u001b[35m󰔰\u001b[0m Example                                                                                                               \u001b[0m",
+        "\u001b[35m󰔰 \u001b[1msessions\u001b[0m Example                                                                                                      \u001b[0m",
         "\u001b[2msplit\u001b[0m \u001b[2m→\u001b[0m \u001b[32mnew session started\u001b[0m                                                                                             \u001b[0m"
       ]
     },
@@ -195,7 +195,7 @@
       "expanded": true,
       "width": 20,
       "lines": [
-        "\u001b[35m󰔰\u001b[0m Example           \u001b[0m",
+        "\u001b[35m󰔰 \u001b[1msessions\u001b[0m Example  \u001b[0m",
         "→\u001b[0m \u001b[32mnew session start\u001b[0m…\u001b[0m\u001b[0m",
         "  \u001b[2mExample\u001b[0m           \u001b[0m"
       ]
@@ -204,7 +204,7 @@
       "expanded": true,
       "width": 80,
       "lines": [
-        "\u001b[35m󰔰\u001b[0m Example                                                                       \u001b[0m",
+        "\u001b[35m󰔰 \u001b[1msessions\u001b[0m Example                                                              \u001b[0m",
         "\u001b[2msplit\u001b[0m \u001b[2m→\u001b[0m \u001b[32mnew session started\u001b[0m                                                     \u001b[0m",
         "  \u001b[2mExample\u001b[0m                                                                       \u001b[0m"
       ]
@@ -213,7 +213,7 @@
       "expanded": true,
       "width": 120,
       "lines": [
-        "\u001b[35m󰔰\u001b[0m Example                                                                                                               \u001b[0m",
+        "\u001b[35m󰔰 \u001b[1msessions\u001b[0m Example                                                                                                      \u001b[0m",
         "\u001b[2msplit\u001b[0m \u001b[2m→\u001b[0m \u001b[32mnew session started\u001b[0m                                                                                             \u001b[0m",
         "  \u001b[2mExample\u001b[0m                                                                                                               \u001b[0m"
       ]
@@ -224,7 +224,7 @@
       "expanded": false,
       "width": 20,
       "lines": [
-        "\u001b[36m󰅢\u001b[0m fetch example.com\u001b[0m…\u001b[0m\u001b[0m",
+        "\u001b[36m󰅢 \u001b[1mweb\u001b[0m fetch example\u001b[0m…\u001b[0m\u001b[0m",
         " →\u001b[0m \u001b[32m3k chars · stored\u001b[0m\u001b[0m"
       ]
     },
@@ -232,7 +232,7 @@
       "expanded": false,
       "width": 80,
       "lines": [
-        "\u001b[36m󰅢\u001b[0m fetch example.com/docs                                                        \u001b[0m",
+        "\u001b[36m󰅢 \u001b[1mweb\u001b[0m fetch example.com/docs                                                    \u001b[0m",
         "\u001b[2mexample.com/docs\u001b[0m \u001b[2m→\u001b[0m \u001b[32m3k chars · stored\u001b[0m                                            \u001b[0m"
       ]
     },
@@ -240,7 +240,7 @@
       "expanded": false,
       "width": 120,
       "lines": [
-        "\u001b[36m󰅢\u001b[0m fetch example.com/docs                                                                                                \u001b[0m",
+        "\u001b[36m󰅢 \u001b[1mweb\u001b[0m fetch example.com/docs                                                                                            \u001b[0m",
         "\u001b[2mexample.com/docs\u001b[0m \u001b[2m→\u001b[0m \u001b[32m3k chars · stored\u001b[0m                                                                                    \u001b[0m"
       ]
     },
@@ -248,7 +248,7 @@
       "expanded": true,
       "width": 20,
       "lines": [
-        "\u001b[36m󰅢\u001b[0m fetch example.com\u001b[0m…\u001b[0m\u001b[0m",
+        "\u001b[36m󰅢 \u001b[1mweb\u001b[0m fetch example\u001b[0m…\u001b[0m\u001b[0m",
         " →\u001b[0m \u001b[32m3k chars · stored\u001b[0m\u001b[0m",
         "  \u001b[2mExample output\u001b[0m    \u001b[0m"
       ]
@@ -257,7 +257,7 @@
       "expanded": true,
       "width": 80,
       "lines": [
-        "\u001b[36m󰅢\u001b[0m fetch example.com/docs                                                        \u001b[0m",
+        "\u001b[36m󰅢 \u001b[1mweb\u001b[0m fetch example.com/docs                                                    \u001b[0m",
         "\u001b[2mexample.com/docs\u001b[0m \u001b[2m→\u001b[0m \u001b[32m3k chars · stored\u001b[0m                                            \u001b[0m",
         "  \u001b[2mExample output\u001b[0m                                                                \u001b[0m"
       ]
@@ -266,7 +266,7 @@
       "expanded": true,
       "width": 120,
       "lines": [
-        "\u001b[36m󰅢\u001b[0m fetch example.com/docs                                                                                                \u001b[0m",
+        "\u001b[36m󰅢 \u001b[1mweb\u001b[0m fetch example.com/docs                                                                                            \u001b[0m",
         "\u001b[2mexample.com/docs\u001b[0m \u001b[2m→\u001b[0m \u001b[32m3k chars · stored\u001b[0m                                                                                    \u001b[0m",
         "  \u001b[2mExample output\u001b[0m                                                                                                        \u001b[0m"
       ]
@@ -277,7 +277,7 @@
       "expanded": false,
       "width": 20,
       "lines": [
-        "\u001b[36m󰺮\u001b[0m read stored result\u001b[0m",
+        "\u001b[36m󰺮 \u001b[1mweb\u001b[0m read stored r\u001b[0m…\u001b[0m\u001b[0m",
         "\u001b[0m…\u001b[0m →\u001b[0m \u001b[32m14 of 9.2k chars\u001b[0m\u001b[0m"
       ]
     },
@@ -285,7 +285,7 @@
       "expanded": false,
       "width": 80,
       "lines": [
-        "\u001b[36m󰺮\u001b[0m read stored result                                                            \u001b[0m",
+        "\u001b[36m󰺮 \u001b[1mweb\u001b[0m read stored result                                                        \u001b[0m",
         "\u001b[2mexampl · url Example\u001b[0m \u001b[2m→\u001b[0m \u001b[32m14 of 9.2k chars\u001b[0m                                         \u001b[0m"
       ]
     },
@@ -293,7 +293,7 @@
       "expanded": false,
       "width": 120,
       "lines": [
-        "\u001b[36m󰺮\u001b[0m read stored result                                                                                                    \u001b[0m",
+        "\u001b[36m󰺮 \u001b[1mweb\u001b[0m read stored result                                                                                                \u001b[0m",
         "\u001b[2mexampl · url Example\u001b[0m \u001b[2m→\u001b[0m \u001b[32m14 of 9.2k chars\u001b[0m                                                                                 \u001b[0m"
       ]
     },
@@ -301,7 +301,7 @@
       "expanded": true,
       "width": 20,
       "lines": [
-        "\u001b[36m󰺮\u001b[0m read stored result\u001b[0m",
+        "\u001b[36m󰺮 \u001b[1mweb\u001b[0m read stored r\u001b[0m…\u001b[0m\u001b[0m",
         "\u001b[0m…\u001b[0m →\u001b[0m \u001b[32m14 of 9.2k chars\u001b[0m\u001b[0m",
         "  \u001b[2mExample output\u001b[0m    \u001b[0m"
       ]
@@ -310,7 +310,7 @@
       "expanded": true,
       "width": 80,
       "lines": [
-        "\u001b[36m󰺮\u001b[0m read stored result                                                            \u001b[0m",
+        "\u001b[36m󰺮 \u001b[1mweb\u001b[0m read stored result                                                        \u001b[0m",
         "\u001b[2mexampl · url Example\u001b[0m \u001b[2m→\u001b[0m \u001b[32m14 of 9.2k chars\u001b[0m                                         \u001b[0m",
         "  \u001b[2mExample output\u001b[0m                                                                \u001b[0m"
       ]
@@ -319,7 +319,7 @@
       "expanded": true,
       "width": 120,
       "lines": [
-        "\u001b[36m󰺮\u001b[0m read stored result                                                                                                    \u001b[0m",
+        "\u001b[36m󰺮 \u001b[1mweb\u001b[0m read stored result                                                                                                \u001b[0m",
         "\u001b[2mexampl · url Example\u001b[0m \u001b[2m→\u001b[0m \u001b[32m14 of 9.2k chars\u001b[0m                                                                                 \u001b[0m",
         "  \u001b[2mExample output\u001b[0m                                                                                                        \u001b[0m"
       ]
@@ -330,7 +330,7 @@
       "expanded": false,
       "width": 20,
       "lines": [
-        "\u001b[36m󰅢\u001b[0m fetch             \u001b[0m",
+        "\u001b[36m󰅢 \u001b[1mweb\u001b[0m fetch         \u001b[0m",
         "\u001b[31mExample\u001b[0m             \u001b[0m"
       ]
     },
@@ -338,7 +338,7 @@
       "expanded": false,
       "width": 80,
       "lines": [
-        "\u001b[36m󰅢\u001b[0m fetch                                                                         \u001b[0m",
+        "\u001b[36m󰅢 \u001b[1mweb\u001b[0m fetch                                                                     \u001b[0m",
         "\u001b[31mExample\u001b[0m                                                                         \u001b[0m"
       ]
     },
@@ -346,7 +346,7 @@
       "expanded": false,
       "width": 120,
       "lines": [
-        "\u001b[36m󰅢\u001b[0m fetch                                                                                                                 \u001b[0m",
+        "\u001b[36m󰅢 \u001b[1mweb\u001b[0m fetch                                                                                                             \u001b[0m",
         "\u001b[31mExample\u001b[0m                                                                                                                 \u001b[0m"
       ]
     },
@@ -354,7 +354,7 @@
       "expanded": true,
       "width": 20,
       "lines": [
-        "\u001b[36m󰅢\u001b[0m fetch             \u001b[0m",
+        "\u001b[36m󰅢 \u001b[1mweb\u001b[0m fetch         \u001b[0m",
         "\u001b[31mExample\u001b[0m             \u001b[0m",
         "  \u001b[31mExample\u001b[0m           \u001b[0m"
       ]
@@ -363,7 +363,7 @@
       "expanded": true,
       "width": 80,
       "lines": [
-        "\u001b[36m󰅢\u001b[0m fetch                                                                         \u001b[0m",
+        "\u001b[36m󰅢 \u001b[1mweb\u001b[0m fetch                                                                     \u001b[0m",
         "\u001b[31mExample\u001b[0m                                                                         \u001b[0m",
         "  \u001b[31mExample\u001b[0m                                                                       \u001b[0m"
       ]
@@ -372,7 +372,7 @@
       "expanded": true,
       "width": 120,
       "lines": [
-        "\u001b[36m󰅢\u001b[0m fetch                                                                                                                 \u001b[0m",
+        "\u001b[36m󰅢 \u001b[1mweb\u001b[0m fetch                                                                                                             \u001b[0m",
         "\u001b[31mExample\u001b[0m                                                                                                                 \u001b[0m",
         "  \u001b[31mExample\u001b[0m                                                                                                               \u001b[0m"
       ]
@@ -383,7 +383,7 @@
       "expanded": false,
       "width": 20,
       "lines": [
-        "\u001b[36m󰖟\u001b[0m search Example    \u001b[0m",
+        "\u001b[36m󰖟 \u001b[1mweb\u001b[0m search Example\u001b[0m",
         "→\u001b[0m \u001b[32m1/1 q\u001b[0m…\u001b[0m \u001b[2m· 5 sources\u001b[0m\u001b[0m"
       ]
     },
@@ -391,7 +391,7 @@
       "expanded": false,
       "width": 80,
       "lines": [
-        "\u001b[36m󰖟\u001b[0m search Example                                                                \u001b[0m",
+        "\u001b[36m󰖟 \u001b[1mweb\u001b[0m search Example                                                            \u001b[0m",
         "\u001b[2m\"Example\"\u001b[0m \u001b[2m→\u001b[0m \u001b[32m1/1 queries · 5 sources\u001b[0m                                             \u001b[0m"
       ]
     },
@@ -399,7 +399,7 @@
       "expanded": false,
       "width": 120,
       "lines": [
-        "\u001b[36m󰖟\u001b[0m search Example                                                                                                        \u001b[0m",
+        "\u001b[36m󰖟 \u001b[1mweb\u001b[0m search Example                                                                                                    \u001b[0m",
         "\u001b[2m\"Example\"\u001b[0m \u001b[2m→\u001b[0m \u001b[32m1/1 queries · 5 sources\u001b[0m                                                                                     \u001b[0m"
       ]
     },
@@ -407,7 +407,7 @@
       "expanded": true,
       "width": 20,
       "lines": [
-        "\u001b[36m󰖟\u001b[0m search Example    \u001b[0m",
+        "\u001b[36m󰖟 \u001b[1mweb\u001b[0m search Example\u001b[0m",
         "→\u001b[0m \u001b[32m1/1 q\u001b[0m…\u001b[0m \u001b[2m· 5 sources\u001b[0m\u001b[0m",
         "  \u001b[2mExample output\u001b[0m    \u001b[0m"
       ]
@@ -416,7 +416,7 @@
       "expanded": true,
       "width": 80,
       "lines": [
-        "\u001b[36m󰖟\u001b[0m search Example                                                                \u001b[0m",
+        "\u001b[36m󰖟 \u001b[1mweb\u001b[0m search Example                                                            \u001b[0m",
         "\u001b[2m\"Example\"\u001b[0m \u001b[2m→\u001b[0m \u001b[32m1/1 queries · 5 sources\u001b[0m                                             \u001b[0m",
         "  \u001b[2mExample output\u001b[0m                                                                \u001b[0m"
       ]
@@ -425,7 +425,7 @@
       "expanded": true,
       "width": 120,
       "lines": [
-        "\u001b[36m󰖟\u001b[0m search Example                                                                                                        \u001b[0m",
+        "\u001b[36m󰖟 \u001b[1mweb\u001b[0m search Example                                                                                                    \u001b[0m",
         "\u001b[2m\"Example\"\u001b[0m \u001b[2m→\u001b[0m \u001b[32m1/1 queries · 5 sources\u001b[0m                                                                                     \u001b[0m",
         "  \u001b[2mExample output\u001b[0m                                                                                                        \u001b[0m"
       ]
@@ -436,7 +436,7 @@
       "expanded": false,
       "width": 20,
       "lines": [
-        "\u001b[34m󱜸\u001b[0m Example           \u001b[0m",
+        "\u001b[34m󱜸 \u001b[1mask\u001b[0m Example       \u001b[0m",
         "\u001b[2m2 o\u001b[0m…\u001b[0m →\u001b[0m \u001b[31mExample error\u001b[0m\u001b[0m"
       ]
     },
@@ -444,7 +444,7 @@
       "expanded": false,
       "width": 80,
       "lines": [
-        "\u001b[34m󱜸\u001b[0m Example                                                                       \u001b[0m",
+        "\u001b[34m󱜸 \u001b[1mask\u001b[0m Example                                                                   \u001b[0m",
         "\u001b[2m2 options\u001b[0m \u001b[2m→\u001b[0m \u001b[31mExample error\u001b[0m                                                       \u001b[0m"
       ]
     },
@@ -452,7 +452,7 @@
       "expanded": false,
       "width": 120,
       "lines": [
-        "\u001b[34m󱜸\u001b[0m Example                                                                                                               \u001b[0m",
+        "\u001b[34m󱜸 \u001b[1mask\u001b[0m Example                                                                                                           \u001b[0m",
         "\u001b[2m2 options\u001b[0m \u001b[2m→\u001b[0m \u001b[31mExample error\u001b[0m                                                                                               \u001b[0m"
       ]
     },
@@ -460,7 +460,7 @@
       "expanded": true,
       "width": 20,
       "lines": [
-        "\u001b[34m󱜸\u001b[0m Example           \u001b[0m",
+        "\u001b[34m󱜸 \u001b[1mask\u001b[0m Example       \u001b[0m",
         "\u001b[2m2 o\u001b[0m…\u001b[0m →\u001b[0m \u001b[31mExample error\u001b[0m\u001b[0m",
         "  \u001b[31mExample error\u001b[0m     \u001b[0m"
       ]
@@ -469,7 +469,7 @@
       "expanded": true,
       "width": 80,
       "lines": [
-        "\u001b[34m󱜸\u001b[0m Example                                                                       \u001b[0m",
+        "\u001b[34m󱜸 \u001b[1mask\u001b[0m Example                                                                   \u001b[0m",
         "\u001b[2m2 options\u001b[0m \u001b[2m→\u001b[0m \u001b[31mExample error\u001b[0m                                                       \u001b[0m",
         "  \u001b[31mExample error\u001b[0m                                                                 \u001b[0m"
       ]
@@ -478,7 +478,7 @@
       "expanded": true,
       "width": 120,
       "lines": [
-        "\u001b[34m󱜸\u001b[0m Example                                                                                                               \u001b[0m",
+        "\u001b[34m󱜸 \u001b[1mask\u001b[0m Example                                                                                                           \u001b[0m",
         "\u001b[2m2 options\u001b[0m \u001b[2m→\u001b[0m \u001b[31mExample error\u001b[0m                                                                                               \u001b[0m",
         "  \u001b[31mExample error\u001b[0m                                                                                                         \u001b[0m"
       ]
@@ -489,7 +489,7 @@
       "expanded": false,
       "width": 20,
       "lines": [
-        "\u001b[36m󰭻\u001b[0m Example           \u001b[0m",
+        "\u001b[36m󰭻 \u001b[1msessions\u001b[0m Example  \u001b[0m",
         "\u001b[2mexample.\u001b[0m…\u001b[0m →\u001b[0m \u001b[32manswered\u001b[0m\u001b[0m"
       ]
     },
@@ -497,7 +497,7 @@
       "expanded": false,
       "width": 80,
       "lines": [
-        "\u001b[36m󰭻\u001b[0m Example                                                                       \u001b[0m",
+        "\u001b[36m󰭻 \u001b[1msessions\u001b[0m Example                                                              \u001b[0m",
         "\u001b[2mexample.md\u001b[0m \u001b[2m→\u001b[0m \u001b[32manswered\u001b[0m                                                           \u001b[0m"
       ]
     },
@@ -505,7 +505,7 @@
       "expanded": false,
       "width": 120,
       "lines": [
-        "\u001b[36m󰭻\u001b[0m Example                                                                                                               \u001b[0m",
+        "\u001b[36m󰭻 \u001b[1msessions\u001b[0m Example                                                                                                      \u001b[0m",
         "\u001b[2mexample.md\u001b[0m \u001b[2m→\u001b[0m \u001b[32manswered\u001b[0m                                                                                                   \u001b[0m"
       ]
     },
@@ -513,7 +513,7 @@
       "expanded": true,
       "width": 20,
       "lines": [
-        "\u001b[36m󰭻\u001b[0m Example           \u001b[0m",
+        "\u001b[36m󰭻 \u001b[1msessions\u001b[0m Example  \u001b[0m",
         "\u001b[2mexample.\u001b[0m…\u001b[0m →\u001b[0m \u001b[32manswered\u001b[0m\u001b[0m",
         "  \u001b[2mExample answer.\u001b[0m   \u001b[0m"
       ]
@@ -522,7 +522,7 @@
       "expanded": true,
       "width": 80,
       "lines": [
-        "\u001b[36m󰭻\u001b[0m Example                                                                       \u001b[0m",
+        "\u001b[36m󰭻 \u001b[1msessions\u001b[0m Example                                                              \u001b[0m",
         "\u001b[2mexample.md\u001b[0m \u001b[2m→\u001b[0m \u001b[32manswered\u001b[0m                                                           \u001b[0m",
         "  \u001b[2mExample answer.\u001b[0m                                                               \u001b[0m"
       ]
@@ -531,7 +531,7 @@
       "expanded": true,
       "width": 120,
       "lines": [
-        "\u001b[36m󰭻\u001b[0m Example                                                                                                               \u001b[0m",
+        "\u001b[36m󰭻 \u001b[1msessions\u001b[0m Example                                                                                                      \u001b[0m",
         "\u001b[2mexample.md\u001b[0m \u001b[2m→\u001b[0m \u001b[32manswered\u001b[0m                                                                                                   \u001b[0m",
         "  \u001b[2mExample answer.\u001b[0m                                                                                                       \u001b[0m"
       ]
@@ -542,7 +542,7 @@
       "expanded": false,
       "width": 20,
       "lines": [
-        "\u001b[33m󰉗\u001b[0m Example           \u001b[0m",
+        "\u001b[33m󰉗 \u001b[1mdirectories\u001b[0m Examp\u001b[0m…\u001b[0m\u001b[0m",
         "\u001b[2m/tm\u001b[0m…\u001b[0m →\u001b[0m \u001b[31mExample error\u001b[0m\u001b[0m"
       ]
     },
@@ -550,7 +550,7 @@
       "expanded": false,
       "width": 80,
       "lines": [
-        "\u001b[33m󰉗\u001b[0m Example                                                                       \u001b[0m",
+        "\u001b[33m󰉗 \u001b[1mdirectories\u001b[0m Example                                                           \u001b[0m",
         "\u001b[2m/tmp/tool-cards/example.md\u001b[0m \u001b[2m→\u001b[0m \u001b[31mExample error\u001b[0m                                      \u001b[0m"
       ]
     },
@@ -558,7 +558,7 @@
       "expanded": false,
       "width": 120,
       "lines": [
-        "\u001b[33m󰉗\u001b[0m Example                                                                                                               \u001b[0m",
+        "\u001b[33m󰉗 \u001b[1mdirectories\u001b[0m Example                                                                                                   \u001b[0m",
         "\u001b[2m/tmp/tool-cards/example.md\u001b[0m \u001b[2m→\u001b[0m \u001b[31mExample error\u001b[0m                                                                              \u001b[0m"
       ]
     },
@@ -566,7 +566,7 @@
       "expanded": true,
       "width": 20,
       "lines": [
-        "\u001b[33m󰉗\u001b[0m Example           \u001b[0m",
+        "\u001b[33m󰉗 \u001b[1mdirectories\u001b[0m Examp\u001b[0m…\u001b[0m\u001b[0m",
         "\u001b[2m/tm\u001b[0m…\u001b[0m →\u001b[0m \u001b[31mExample error\u001b[0m\u001b[0m",
         "  \u001b[31mExample error\u001b[0m     \u001b[0m"
       ]
@@ -575,7 +575,7 @@
       "expanded": true,
       "width": 80,
       "lines": [
-        "\u001b[33m󰉗\u001b[0m Example                                                                       \u001b[0m",
+        "\u001b[33m󰉗 \u001b[1mdirectories\u001b[0m Example                                                           \u001b[0m",
         "\u001b[2m/tmp/tool-cards/example.md\u001b[0m \u001b[2m→\u001b[0m \u001b[31mExample error\u001b[0m                                      \u001b[0m",
         "  \u001b[31mExample error\u001b[0m                                                                 \u001b[0m"
       ]
@@ -584,7 +584,7 @@
       "expanded": true,
       "width": 120,
       "lines": [
-        "\u001b[33m󰉗\u001b[0m Example                                                                                                               \u001b[0m",
+        "\u001b[33m󰉗 \u001b[1mdirectories\u001b[0m Example                                                                                                   \u001b[0m",
         "\u001b[2m/tmp/tool-cards/example.md\u001b[0m \u001b[2m→\u001b[0m \u001b[31mExample error\u001b[0m                                                                              \u001b[0m",
         "  \u001b[31mExample error\u001b[0m                                                                                                         \u001b[0m"
       ]
@@ -595,7 +595,7 @@
       "expanded": false,
       "width": 20,
       "lines": [
-        "\u001b[36m󰺮\u001b[0m read stored result\u001b[0m",
+        "\u001b[36m󰺮 \u001b[1mweb\u001b[0m read stored r\u001b[0m…\u001b[0m\u001b[0m",
         "\u001b[2mexampl · \u001b[0m…\u001b[0m →\u001b[0m \u001b[31mExample\u001b[0m\u001b[0m"
       ]
     },
@@ -603,7 +603,7 @@
       "expanded": false,
       "width": 80,
       "lines": [
-        "\u001b[36m󰺮\u001b[0m read stored result                                                            \u001b[0m",
+        "\u001b[36m󰺮 \u001b[1mweb\u001b[0m read stored result                                                        \u001b[0m",
         "\u001b[2mexampl · query 0\u001b[0m \u001b[2m→\u001b[0m \u001b[31mExample\u001b[0m                                                      \u001b[0m"
       ]
     },
@@ -611,7 +611,7 @@
       "expanded": false,
       "width": 120,
       "lines": [
-        "\u001b[36m󰺮\u001b[0m read stored result                                                                                                    \u001b[0m",
+        "\u001b[36m󰺮 \u001b[1mweb\u001b[0m read stored result                                                                                                \u001b[0m",
         "\u001b[2mexampl · query 0\u001b[0m \u001b[2m→\u001b[0m \u001b[31mExample\u001b[0m                                                                                              \u001b[0m"
       ]
     },
@@ -619,7 +619,7 @@
       "expanded": true,
       "width": 20,
       "lines": [
-        "\u001b[36m󰺮\u001b[0m read stored result\u001b[0m",
+        "\u001b[36m󰺮 \u001b[1mweb\u001b[0m read stored r\u001b[0m…\u001b[0m\u001b[0m",
         "\u001b[2mexampl · \u001b[0m…\u001b[0m →\u001b[0m \u001b[31mExample\u001b[0m\u001b[0m",
         "  \u001b[31mExample\u001b[0m           \u001b[0m"
       ]
@@ -628,7 +628,7 @@
       "expanded": true,
       "width": 80,
       "lines": [
-        "\u001b[36m󰺮\u001b[0m read stored result                                                            \u001b[0m",
+        "\u001b[36m󰺮 \u001b[1mweb\u001b[0m read stored result                                                        \u001b[0m",
         "\u001b[2mexampl · query 0\u001b[0m \u001b[2m→\u001b[0m \u001b[31mExample\u001b[0m                                                      \u001b[0m",
         "  \u001b[31mExample\u001b[0m                                                                       \u001b[0m"
       ]
@@ -637,7 +637,7 @@
       "expanded": true,
       "width": 120,
       "lines": [
-        "\u001b[36m󰺮\u001b[0m read stored result                                                                                                    \u001b[0m",
+        "\u001b[36m󰺮 \u001b[1mweb\u001b[0m read stored result                                                                                                \u001b[0m",
         "\u001b[2mexampl · query 0\u001b[0m \u001b[2m→\u001b[0m \u001b[31mExample\u001b[0m                                                                                              \u001b[0m",
         "  \u001b[31mExample\u001b[0m                                                                                                               \u001b[0m"
       ]
@@ -648,7 +648,7 @@
       "expanded": false,
       "width": 20,
       "lines": [
-        "\u001b[36m󰈞\u001b[0m find external fil\u001b[0m…\u001b[0m\u001b[0m",
+        "\u001b[36m󰈞 \u001b[1mdirectories\u001b[0m find \u001b[0m…\u001b[0m\u001b[0m",
         "→\u001b[0m \u001b[32m15 files in 1 dirs\u001b[0m\u001b[0m"
       ]
     },
@@ -656,7 +656,7 @@
       "expanded": false,
       "width": 80,
       "lines": [
-        "\u001b[36m󰈞\u001b[0m find external files                                                           \u001b[0m",
+        "\u001b[36m󰈞 \u001b[1mdirectories\u001b[0m find external files                                               \u001b[0m",
         "\u001b[2mExample\u001b[0m \u001b[2m→\u001b[0m \u001b[32m15 files in 1 dirs\u001b[0m                                                    \u001b[0m"
       ]
     },
@@ -664,7 +664,7 @@
       "expanded": false,
       "width": 120,
       "lines": [
-        "\u001b[36m󰈞\u001b[0m find external files                                                                                                   \u001b[0m",
+        "\u001b[36m󰈞 \u001b[1mdirectories\u001b[0m find external files                                                                                       \u001b[0m",
         "\u001b[2mExample\u001b[0m \u001b[2m→\u001b[0m \u001b[32m15 files in 1 dirs\u001b[0m                                                                                            \u001b[0m"
       ]
     },
@@ -672,7 +672,7 @@
       "expanded": true,
       "width": 20,
       "lines": [
-        "\u001b[36m󰈞\u001b[0m find external fil\u001b[0m…\u001b[0m\u001b[0m",
+        "\u001b[36m󰈞 \u001b[1mdirectories\u001b[0m find \u001b[0m…\u001b[0m\u001b[0m",
         "→\u001b[0m \u001b[32m15 files in 1 dirs\u001b[0m\u001b[0m",
         "  \u001b[2mExample output\u001b[0m    \u001b[0m"
       ]
@@ -681,7 +681,7 @@
       "expanded": true,
       "width": 80,
       "lines": [
-        "\u001b[36m󰈞\u001b[0m find external files                                                           \u001b[0m",
+        "\u001b[36m󰈞 \u001b[1mdirectories\u001b[0m find external files                                               \u001b[0m",
         "\u001b[2mExample\u001b[0m \u001b[2m→\u001b[0m \u001b[32m15 files in 1 dirs\u001b[0m                                                    \u001b[0m",
         "  \u001b[2mExample output\u001b[0m                                                                \u001b[0m"
       ]
@@ -690,7 +690,7 @@
       "expanded": true,
       "width": 120,
       "lines": [
-        "\u001b[36m󰈞\u001b[0m find external files                                                                                                   \u001b[0m",
+        "\u001b[36m󰈞 \u001b[1mdirectories\u001b[0m find external files                                                                                       \u001b[0m",
         "\u001b[2mExample\u001b[0m \u001b[2m→\u001b[0m \u001b[32m15 files in 1 dirs\u001b[0m                                                                                            \u001b[0m",
         "  \u001b[2mExample output\u001b[0m                                                                                                        \u001b[0m"
       ]
@@ -701,7 +701,7 @@
       "expanded": false,
       "width": 20,
       "lines": [
-        "\u001b[33m󱕍\u001b[0m Example           \u001b[0m",
+        "\u001b[33m󱕍 \u001b[1mvisual artifact\u001b[0m E\u001b[0m…\u001b[0m\u001b[0m",
         "\u001b[2mart\u001b[0m…\u001b[0m →\u001b[0m \u001b[31mExample error\u001b[0m\u001b[0m"
       ]
     },
@@ -709,7 +709,7 @@
       "expanded": false,
       "width": 80,
       "lines": [
-        "\u001b[33m󱕍\u001b[0m Example                                                                       \u001b[0m",
+        "\u001b[33m󱕍 \u001b[1mvisual artifact\u001b[0m Example                                                       \u001b[0m",
         "\u001b[2martifact · 10 nodes\u001b[0m \u001b[2m→\u001b[0m \u001b[31mExample error\u001b[0m                                             \u001b[0m"
       ]
     },
@@ -717,7 +717,7 @@
       "expanded": false,
       "width": 120,
       "lines": [
-        "\u001b[33m󱕍\u001b[0m Example                                                                                                               \u001b[0m",
+        "\u001b[33m󱕍 \u001b[1mvisual artifact\u001b[0m Example                                                                                               \u001b[0m",
         "\u001b[2martifact · 10 nodes\u001b[0m \u001b[2m→\u001b[0m \u001b[31mExample error\u001b[0m                                                                                     \u001b[0m"
       ]
     },
@@ -725,7 +725,7 @@
       "expanded": true,
       "width": 20,
       "lines": [
-        "\u001b[33m󱕍\u001b[0m Example           \u001b[0m",
+        "\u001b[33m󱕍 \u001b[1mvisual artifact\u001b[0m E\u001b[0m…\u001b[0m\u001b[0m",
         "\u001b[2mart\u001b[0m…\u001b[0m →\u001b[0m \u001b[31mExample error\u001b[0m\u001b[0m",
         "  \u001b[31mExample error\u001b[0m     \u001b[0m"
       ]
@@ -734,7 +734,7 @@
       "expanded": true,
       "width": 80,
       "lines": [
-        "\u001b[33m󱕍\u001b[0m Example                                                                       \u001b[0m",
+        "\u001b[33m󱕍 \u001b[1mvisual artifact\u001b[0m Example                                                       \u001b[0m",
         "\u001b[2martifact · 10 nodes\u001b[0m \u001b[2m→\u001b[0m \u001b[31mExample error\u001b[0m                                             \u001b[0m",
         "  \u001b[31mExample error\u001b[0m                                                                 \u001b[0m"
       ]
@@ -743,7 +743,7 @@
       "expanded": true,
       "width": 120,
       "lines": [
-        "\u001b[33m󱕍\u001b[0m Example                                                                                                               \u001b[0m",
+        "\u001b[33m󱕍 \u001b[1mvisual artifact\u001b[0m Example                                                                                               \u001b[0m",
         "\u001b[2martifact · 10 nodes\u001b[0m \u001b[2m→\u001b[0m \u001b[31mExample error\u001b[0m                                                                                     \u001b[0m",
         "  \u001b[31mExample error\u001b[0m                                                                                                         \u001b[0m"
       ]
@@ -754,7 +754,7 @@
       "expanded": false,
       "width": 20,
       "lines": [
-        "\u001b[36m󰋚\u001b[0m search sessions   \u001b[0m",
+        "\u001b[36m󰋚 \u001b[1msessions\u001b[0m search s\u001b[0m…\u001b[0m\u001b[0m",
         "\u001b[2m\"Examp\u001b[0m…\u001b[0m →\u001b[0m \u001b[32m3 sessions\u001b[0m\u001b[0m"
       ]
     },
@@ -762,7 +762,7 @@
       "expanded": false,
       "width": 80,
       "lines": [
-        "\u001b[36m󰋚\u001b[0m search sessions                                                               \u001b[0m",
+        "\u001b[36m󰋚 \u001b[1msessions\u001b[0m search sessions                                                      \u001b[0m",
         "\u001b[2m\"Example\"\u001b[0m \u001b[2m→\u001b[0m \u001b[32m3 sessions\u001b[0m                                                          \u001b[0m"
       ]
     },
@@ -770,7 +770,7 @@
       "expanded": false,
       "width": 120,
       "lines": [
-        "\u001b[36m󰋚\u001b[0m search sessions                                                                                                       \u001b[0m",
+        "\u001b[36m󰋚 \u001b[1msessions\u001b[0m search sessions                                                                                              \u001b[0m",
         "\u001b[2m\"Example\"\u001b[0m \u001b[2m→\u001b[0m \u001b[32m3 sessions\u001b[0m                                                                                                  \u001b[0m"
       ]
     },
@@ -778,7 +778,7 @@
       "expanded": true,
       "width": 20,
       "lines": [
-        "\u001b[36m󰋚\u001b[0m search sessions   \u001b[0m",
+        "\u001b[36m󰋚 \u001b[1msessions\u001b[0m search s\u001b[0m…\u001b[0m\u001b[0m",
         "\u001b[2m\"Examp\u001b[0m…\u001b[0m →\u001b[0m \u001b[32m3 sessions\u001b[0m\u001b[0m",
         "  \u001b[2mExample output\u001b[0m    \u001b[0m"
       ]
@@ -787,7 +787,7 @@
       "expanded": true,
       "width": 80,
       "lines": [
-        "\u001b[36m󰋚\u001b[0m search sessions                                                               \u001b[0m",
+        "\u001b[36m󰋚 \u001b[1msessions\u001b[0m search sessions                                                      \u001b[0m",
         "\u001b[2m\"Example\"\u001b[0m \u001b[2m→\u001b[0m \u001b[32m3 sessions\u001b[0m                                                          \u001b[0m",
         "  \u001b[2mExample output\u001b[0m                                                                \u001b[0m"
       ]
@@ -796,7 +796,7 @@
       "expanded": true,
       "width": 120,
       "lines": [
-        "\u001b[36m󰋚\u001b[0m search sessions                                                                                                       \u001b[0m",
+        "\u001b[36m󰋚 \u001b[1msessions\u001b[0m search sessions                                                                                              \u001b[0m",
         "\u001b[2m\"Example\"\u001b[0m \u001b[2m→\u001b[0m \u001b[32m3 sessions\u001b[0m                                                                                                  \u001b[0m",
         "  \u001b[2mExample output\u001b[0m                                                                                                        \u001b[0m"
       ]
@@ -807,7 +807,7 @@
       "expanded": false,
       "width": 20,
       "lines": [
-        "\u001b[36m󰭻\u001b[0m Example           \u001b[0m",
+        "\u001b[36m󰭻 \u001b[1msessions\u001b[0m Example  \u001b[0m",
         "→\u001b[0m \u001b[31mError: Session fi\u001b[0m…\u001b[0m\u001b[0m"
       ]
     },
@@ -815,7 +815,7 @@
       "expanded": false,
       "width": 80,
       "lines": [
-        "\u001b[36m󰭻\u001b[0m Example                                                                       \u001b[0m",
+        "\u001b[36m󰭻 \u001b[1msessions\u001b[0m Example                                                              \u001b[0m",
         "\u001b[2mexample.md · detailed\u001b[0m \u001b[2m→\u001b[0m \u001b[31mError: Session file not found: /tmp/example.jso\u001b[0m…\u001b[0m\u001b[0m        \u001b[0m"
       ]
     },
@@ -823,7 +823,7 @@
       "expanded": false,
       "width": 120,
       "lines": [
-        "\u001b[36m󰭻\u001b[0m Example                                                                                                               \u001b[0m",
+        "\u001b[36m󰭻 \u001b[1msessions\u001b[0m Example                                                                                                      \u001b[0m",
         "\u001b[2mexample.md · detailed\u001b[0m \u001b[2m→\u001b[0m \u001b[31mError: Session file not found: /tmp/example.jso\u001b[0m…\u001b[0m\u001b[0m                                                \u001b[0m"
       ]
     },
@@ -831,7 +831,7 @@
       "expanded": true,
       "width": 20,
       "lines": [
-        "\u001b[36m󰭻\u001b[0m Example           \u001b[0m",
+        "\u001b[36m󰭻 \u001b[1msessions\u001b[0m Example  \u001b[0m",
         "→\u001b[0m \u001b[31mError: Session fi\u001b[0m…\u001b[0m\u001b[0m",
         "  \u001b[31mError: Session    \u001b[0m",
         "  \u001b[31mfile not found:   \u001b[0m",
@@ -842,7 +842,7 @@
       "expanded": true,
       "width": 80,
       "lines": [
-        "\u001b[36m󰭻\u001b[0m Example                                                                       \u001b[0m",
+        "\u001b[36m󰭻 \u001b[1msessions\u001b[0m Example                                                              \u001b[0m",
         "\u001b[2mexample.md · detailed\u001b[0m \u001b[2m→\u001b[0m \u001b[31mError: Session file not found: /tmp/example.jso\u001b[0m…\u001b[0m\u001b[0m        \u001b[0m",
         "  \u001b[31mError: Session file not found: /tmp/example.jsonl\u001b[0m                             \u001b[0m"
       ]
@@ -851,7 +851,7 @@
       "expanded": true,
       "width": 120,
       "lines": [
-        "\u001b[36m󰭻\u001b[0m Example                                                                                                               \u001b[0m",
+        "\u001b[36m󰭻 \u001b[1msessions\u001b[0m Example                                                                                                      \u001b[0m",
         "\u001b[2mexample.md · detailed\u001b[0m \u001b[2m→\u001b[0m \u001b[31mError: Session file not found: /tmp/example.jso\u001b[0m…\u001b[0m\u001b[0m                                                \u001b[0m",
         "  \u001b[31mError: Session file not found: /tmp/example.jsonl\u001b[0m                                                                     \u001b[0m"
       ]
@@ -862,7 +862,7 @@
       "expanded": false,
       "width": 20,
       "lines": [
-        "\u001b[33m󰎜\u001b[0m Example           \u001b[0m",
+        "\u001b[33m󰎜 \u001b[1mmemory\u001b[0m Example    \u001b[0m",
         "\u001b[32msaved #0\u001b[0m            \u001b[0m"
       ]
     },
@@ -870,7 +870,7 @@
       "expanded": false,
       "width": 80,
       "lines": [
-        "\u001b[33m󰎜\u001b[0m Example                                                                       \u001b[0m",
+        "\u001b[33m󰎜 \u001b[1mmemory\u001b[0m Example                                                                \u001b[0m",
         "\u001b[32msaved #0\u001b[0m                                                                        \u001b[0m"
       ]
     },
@@ -878,7 +878,7 @@
       "expanded": false,
       "width": 120,
       "lines": [
-        "\u001b[33m󰎜\u001b[0m Example                                                                                                               \u001b[0m",
+        "\u001b[33m󰎜 \u001b[1mmemory\u001b[0m Example                                                                                                        \u001b[0m",
         "\u001b[32msaved #0\u001b[0m                                                                                                                \u001b[0m"
       ]
     },
@@ -886,7 +886,7 @@
       "expanded": true,
       "width": 20,
       "lines": [
-        "\u001b[33m󰎜\u001b[0m Example           \u001b[0m",
+        "\u001b[33m󰎜 \u001b[1mmemory\u001b[0m Example    \u001b[0m",
         "\u001b[32msaved #0\u001b[0m            \u001b[0m",
         "  \u001b[2mSaved as #0.\u001b[0m      \u001b[0m"
       ]
@@ -895,7 +895,7 @@
       "expanded": true,
       "width": 80,
       "lines": [
-        "\u001b[33m󰎜\u001b[0m Example                                                                       \u001b[0m",
+        "\u001b[33m󰎜 \u001b[1mmemory\u001b[0m Example                                                                \u001b[0m",
         "\u001b[32msaved #0\u001b[0m                                                                        \u001b[0m",
         "  \u001b[2mSaved as #0.\u001b[0m                                                                  \u001b[0m"
       ]
@@ -904,7 +904,7 @@
       "expanded": true,
       "width": 120,
       "lines": [
-        "\u001b[33m󰎜\u001b[0m Example                                                                                                               \u001b[0m",
+        "\u001b[33m󰎜 \u001b[1mmemory\u001b[0m Example                                                                                                        \u001b[0m",
         "\u001b[32msaved #0\u001b[0m                                                                                                                \u001b[0m",
         "  \u001b[2mSaved as #0.\u001b[0m                                                                                                          \u001b[0m"
       ]
@@ -915,7 +915,7 @@
       "expanded": false,
       "width": 20,
       "lines": [
-        "\u001b[33m󰎜\u001b[0m Example           \u001b[0m",
+        "\u001b[33m󰎜 \u001b[1mmemory\u001b[0m Example    \u001b[0m",
         "\u001b[31mToo long: 284 bytes\u001b[0m…\u001b[0m\u001b[0m"
       ]
     },
@@ -923,7 +923,7 @@
       "expanded": false,
       "width": 80,
       "lines": [
-        "\u001b[33m󰎜\u001b[0m Example                                                                       \u001b[0m",
+        "\u001b[33m󰎜 \u001b[1mmemory\u001b[0m Example                                                                \u001b[0m",
         "\u001b[31mToo long: 284 bytes, limit 280. Accented charac\u001b[0m…\u001b[0m\u001b[0m                                \u001b[0m"
       ]
     },
@@ -931,7 +931,7 @@
       "expanded": false,
       "width": 120,
       "lines": [
-        "\u001b[33m󰎜\u001b[0m Example                                                                                                               \u001b[0m",
+        "\u001b[33m󰎜 \u001b[1mmemory\u001b[0m Example                                                                                                        \u001b[0m",
         "\u001b[31mToo long: 284 bytes, limit 280. Accented charac\u001b[0m…\u001b[0m\u001b[0m                                                                        \u001b[0m"
       ]
     },
@@ -939,7 +939,7 @@
       "expanded": true,
       "width": 20,
       "lines": [
-        "\u001b[33m󰎜\u001b[0m Example           \u001b[0m",
+        "\u001b[33m󰎜 \u001b[1mmemory\u001b[0m Example    \u001b[0m",
         "\u001b[31mToo long: 284 bytes\u001b[0m…\u001b[0m\u001b[0m",
         "  \u001b[31mToo long: 284     \u001b[0m",
         "  \u001b[31mbytes, limit 280. \u001b[0m",
@@ -953,7 +953,7 @@
       "expanded": true,
       "width": 80,
       "lines": [
-        "\u001b[33m󰎜\u001b[0m Example                                                                       \u001b[0m",
+        "\u001b[33m󰎜 \u001b[1mmemory\u001b[0m Example                                                                \u001b[0m",
         "\u001b[31mToo long: 284 bytes, limit 280. Accented charac\u001b[0m…\u001b[0m\u001b[0m                                \u001b[0m",
         "  \u001b[31mToo long: 284 bytes, limit 280. Accented characters cost 2 bytes. Compress it \u001b[0m",
         "  \u001b[31mfurther.\u001b[0m                                                                      \u001b[0m"
@@ -963,7 +963,7 @@
       "expanded": true,
       "width": 120,
       "lines": [
-        "\u001b[33m󰎜\u001b[0m Example                                                                                                               \u001b[0m",
+        "\u001b[33m󰎜 \u001b[1mmemory\u001b[0m Example                                                                                                        \u001b[0m",
         "\u001b[31mToo long: 284 bytes, limit 280. Accented charac\u001b[0m…\u001b[0m\u001b[0m                                                                        \u001b[0m",
         "  \u001b[31mToo long: 284 bytes, limit 280. Accented characters cost 2 bytes. Compress it further.\u001b[0m                                \u001b[0m"
       ]
@@ -974,7 +974,7 @@
       "expanded": false,
       "width": 20,
       "lines": [
-        "\u001b[33m󰒲\u001b[0m Example           \u001b[0m",
+        "\u001b[33m󰒲 \u001b[1mmemory\u001b[0m Example    \u001b[0m",
         "\u001b[2m#0-1\u001b[0m \u001b[2m→\u001b[0m \u001b[32mmerged\u001b[0m       \u001b[0m"
       ]
     },
@@ -982,7 +982,7 @@
       "expanded": false,
       "width": 80,
       "lines": [
-        "\u001b[33m󰒲\u001b[0m Example                                                                       \u001b[0m",
+        "\u001b[33m󰒲 \u001b[1mmemory\u001b[0m Example                                                                \u001b[0m",
         "\u001b[2m#0-1\u001b[0m \u001b[2m→\u001b[0m \u001b[32mmerged\u001b[0m                                                                   \u001b[0m"
       ]
     },
@@ -990,7 +990,7 @@
       "expanded": false,
       "width": 120,
       "lines": [
-        "\u001b[33m󰒲\u001b[0m Example                                                                                                               \u001b[0m",
+        "\u001b[33m󰒲 \u001b[1mmemory\u001b[0m Example                                                                                                        \u001b[0m",
         "\u001b[2m#0-1\u001b[0m \u001b[2m→\u001b[0m \u001b[32mmerged\u001b[0m                                                                                                           \u001b[0m"
       ]
     },
@@ -998,7 +998,7 @@
       "expanded": true,
       "width": 20,
       "lines": [
-        "\u001b[33m󰒲\u001b[0m Example           \u001b[0m",
+        "\u001b[33m󰒲 \u001b[1mmemory\u001b[0m Example    \u001b[0m",
         "\u001b[2m#0-1\u001b[0m \u001b[2m→\u001b[0m \u001b[32mmerged\u001b[0m       \u001b[0m",
         "  \u001b[2m0-1 saved.\u001b[0m        \u001b[0m",
         "  \u001b[2mNothing left to   \u001b[0m",
@@ -1009,7 +1009,7 @@
       "expanded": true,
       "width": 80,
       "lines": [
-        "\u001b[33m󰒲\u001b[0m Example                                                                       \u001b[0m",
+        "\u001b[33m󰒲 \u001b[1mmemory\u001b[0m Example                                                                \u001b[0m",
         "\u001b[2m#0-1\u001b[0m \u001b[2m→\u001b[0m \u001b[32mmerged\u001b[0m                                                                   \u001b[0m",
         "  \u001b[2m0-1 saved.\u001b[0m                                                                    \u001b[0m",
         "  \u001b[2mNothing left to compress.\u001b[0m                                                     \u001b[0m"
@@ -1019,7 +1019,7 @@
       "expanded": true,
       "width": 120,
       "lines": [
-        "\u001b[33m󰒲\u001b[0m Example                                                                                                               \u001b[0m",
+        "\u001b[33m󰒲 \u001b[1mmemory\u001b[0m Example                                                                                                        \u001b[0m",
         "\u001b[2m#0-1\u001b[0m \u001b[2m→\u001b[0m \u001b[32mmerged\u001b[0m                                                                                                           \u001b[0m",
         "  \u001b[2m0-1 saved.\u001b[0m                                                                                                            \u001b[0m",
         "  \u001b[2mNothing left to compress.\u001b[0m                                                                                             \u001b[0m"
@@ -1031,7 +1031,7 @@
       "expanded": false,
       "width": 20,
       "lines": [
-        "\u001b[33m󱃞\u001b[0m Example           \u001b[0m",
+        "\u001b[33m󱃞 \u001b[1mwtf\u001b[0m Example       \u001b[0m",
         "\u001b[32mexample.md\u001b[0m          \u001b[0m"
       ]
     },
@@ -1039,7 +1039,7 @@
       "expanded": false,
       "width": 80,
       "lines": [
-        "\u001b[33m󱃞\u001b[0m Example                                                                       \u001b[0m",
+        "\u001b[33m󱃞 \u001b[1mwtf\u001b[0m Example                                                                   \u001b[0m",
         "\u001b[32mexample.md\u001b[0m                                                                      \u001b[0m"
       ]
     },
@@ -1047,7 +1047,7 @@
       "expanded": false,
       "width": 120,
       "lines": [
-        "\u001b[33m󱃞\u001b[0m Example                                                                                                               \u001b[0m",
+        "\u001b[33m󱃞 \u001b[1mwtf\u001b[0m Example                                                                                                           \u001b[0m",
         "\u001b[32mexample.md\u001b[0m                                                                                                              \u001b[0m"
       ]
     },
@@ -1055,7 +1055,7 @@
       "expanded": true,
       "width": 20,
       "lines": [
-        "\u001b[33m󱃞\u001b[0m Example           \u001b[0m",
+        "\u001b[33m󱃞 \u001b[1mwtf\u001b[0m Example       \u001b[0m",
         "\u001b[32mexample.md\u001b[0m          \u001b[0m",
         "  \u001b[2mExample\u001b[0m           \u001b[0m"
       ]
@@ -1064,7 +1064,7 @@
       "expanded": true,
       "width": 80,
       "lines": [
-        "\u001b[33m󱃞\u001b[0m Example                                                                       \u001b[0m",
+        "\u001b[33m󱃞 \u001b[1mwtf\u001b[0m Example                                                                   \u001b[0m",
         "\u001b[32mexample.md\u001b[0m                                                                      \u001b[0m",
         "  \u001b[2mExample\u001b[0m                                                                       \u001b[0m"
       ]
@@ -1073,7 +1073,7 @@
       "expanded": true,
       "width": 120,
       "lines": [
-        "\u001b[33m󱃞\u001b[0m Example                                                                                                               \u001b[0m",
+        "\u001b[33m󱃞 \u001b[1mwtf\u001b[0m Example                                                                                                           \u001b[0m",
         "\u001b[32mexample.md\u001b[0m                                                                                                              \u001b[0m",
         "  \u001b[2mExample\u001b[0m                                                                                                               \u001b[0m"
       ]
@@ -1084,7 +1084,7 @@
       "expanded": false,
       "width": 20,
       "lines": [
-        "\u001b[35m󰚩\u001b[0m Example           \u001b[0m",
+        "\u001b[35m󰚩 \u001b[1msubagents\u001b[0m Example \u001b[0m",
         "→\u001b[0m \u001b[32mback\u001b[0m…\u001b[0m \u001b[2m· example-id\u001b[0m\u001b[0m"
       ]
     },
@@ -1092,7 +1092,7 @@
       "expanded": false,
       "width": 80,
       "lines": [
-        "\u001b[35m󰚩\u001b[0m Example                                                                       \u001b[0m",
+        "\u001b[35m󰚩 \u001b[1msubagents\u001b[0m Example                                                             \u001b[0m",
         "\u001b[2m@example\u001b[0m \u001b[2m→\u001b[0m \u001b[32mbackground · example-id\u001b[0m                                              \u001b[0m"
       ]
     },
@@ -1100,7 +1100,7 @@
       "expanded": false,
       "width": 120,
       "lines": [
-        "\u001b[35m󰚩\u001b[0m Example                                                                                                               \u001b[0m",
+        "\u001b[35m󰚩 \u001b[1msubagents\u001b[0m Example                                                                                                     \u001b[0m",
         "\u001b[2m@example\u001b[0m \u001b[2m→\u001b[0m \u001b[32mbackground · example-id\u001b[0m                                                                                      \u001b[0m"
       ]
     },
@@ -1108,7 +1108,7 @@
       "expanded": true,
       "width": 20,
       "lines": [
-        "\u001b[35m󰚩\u001b[0m Example           \u001b[0m",
+        "\u001b[35m󰚩 \u001b[1msubagents\u001b[0m Example \u001b[0m",
         "→\u001b[0m \u001b[32mback\u001b[0m…\u001b[0m \u001b[2m· example-id\u001b[0m\u001b[0m",
         "  \u001b[2mExample output\u001b[0m    \u001b[0m"
       ]
@@ -1117,7 +1117,7 @@
       "expanded": true,
       "width": 80,
       "lines": [
-        "\u001b[35m󰚩\u001b[0m Example                                                                       \u001b[0m",
+        "\u001b[35m󰚩 \u001b[1msubagents\u001b[0m Example                                                             \u001b[0m",
         "\u001b[2m@example\u001b[0m \u001b[2m→\u001b[0m \u001b[32mbackground · example-id\u001b[0m                                              \u001b[0m",
         "  \u001b[2mExample output\u001b[0m                                                                \u001b[0m"
       ]
@@ -1126,7 +1126,7 @@
       "expanded": true,
       "width": 120,
       "lines": [
-        "\u001b[35m󰚩\u001b[0m Example                                                                                                               \u001b[0m",
+        "\u001b[35m󰚩 \u001b[1msubagents\u001b[0m Example                                                                                                     \u001b[0m",
         "\u001b[2m@example\u001b[0m \u001b[2m→\u001b[0m \u001b[32mbackground · example-id\u001b[0m                                                                                      \u001b[0m",
         "  \u001b[2mExample output\u001b[0m                                                                                                        \u001b[0m"
       ]
@@ -1137,7 +1137,7 @@
       "expanded": false,
       "width": 20,
       "lines": [
-        "\u001b[36m󰄠\u001b[0m Example           \u001b[0m",
+        "\u001b[36m󰄠 \u001b[1msubagents\u001b[0m Example \u001b[0m",
         "→\u001b[0m \u001b[32mdone\u001b[0m…\u001b[0m \u001b[2m· 231.7k tok\u001b[0m\u001b[0m"
       ]
     },
@@ -1145,7 +1145,7 @@
       "expanded": false,
       "width": 80,
       "lines": [
-        "\u001b[36m󰄠\u001b[0m Example                                                                       \u001b[0m",
+        "\u001b[36m󰄠 \u001b[1msubagents\u001b[0m Example                                                             \u001b[0m",
         "\u001b[2m@Example\u001b[0m \u001b[2m→\u001b[0m \u001b[32mdone · 26 tools · 231.7k tok\u001b[0m                                         \u001b[0m"
       ]
     },
@@ -1153,7 +1153,7 @@
       "expanded": false,
       "width": 120,
       "lines": [
-        "\u001b[36m󰄠\u001b[0m Example                                                                                                               \u001b[0m",
+        "\u001b[36m󰄠 \u001b[1msubagents\u001b[0m Example                                                                                                     \u001b[0m",
         "\u001b[2m@Example\u001b[0m \u001b[2m→\u001b[0m \u001b[32mdone · 26 tools · 231.7k tok\u001b[0m                                                                                 \u001b[0m"
       ]
     },
@@ -1161,7 +1161,7 @@
       "expanded": true,
       "width": 20,
       "lines": [
-        "\u001b[36m󰄠\u001b[0m Example           \u001b[0m",
+        "\u001b[36m󰄠 \u001b[1msubagents\u001b[0m Example \u001b[0m",
         "→\u001b[0m \u001b[32mdone\u001b[0m…\u001b[0m \u001b[2m· 231.7k tok\u001b[0m\u001b[0m",
         "  \u001b[2m[redacted]\u001b[0m        \u001b[0m",
         "  \u001b[2mType: Agent |     \u001b[0m",
@@ -1204,7 +1204,7 @@
       "expanded": true,
       "width": 80,
       "lines": [
-        "\u001b[36m󰄠\u001b[0m Example                                                                       \u001b[0m",
+        "\u001b[36m󰄠 \u001b[1msubagents\u001b[0m Example                                                             \u001b[0m",
         "\u001b[2m@Example\u001b[0m \u001b[2m→\u001b[0m \u001b[32mdone · 26 tools · 231.7k tok\u001b[0m                                         \u001b[0m",
         "  \u001b[2m[redacted]\u001b[0m                                                                    \u001b[0m",
         "  \u001b[2mType: Agent | Status: completed | Tool uses: 26 | 231.7k token | Context: 54% \u001b[0m",
@@ -1243,7 +1243,7 @@
       "expanded": true,
       "width": 120,
       "lines": [
-        "\u001b[36m󰄠\u001b[0m Example                                                                                                               \u001b[0m",
+        "\u001b[36m󰄠 \u001b[1msubagents\u001b[0m Example                                                                                                     \u001b[0m",
         "\u001b[2m@Example\u001b[0m \u001b[2m→\u001b[0m \u001b[32mdone · 26 tools · 231.7k tok\u001b[0m                                                                                 \u001b[0m",
         "  \u001b[2m[redacted]\u001b[0m                                                                                                            \u001b[0m",
         "  \u001b[2mType: Agent | Status: completed | Tool uses: 26 | 231.7k token | Context: 54% | Duration: 530.4s\u001b[0m                      \u001b[0m",
@@ -1283,7 +1283,7 @@
       "expanded": false,
       "width": 20,
       "lines": [
-        "\u001b[35m󰓔\u001b[0m Example           \u001b[0m",
+        "\u001b[35m󰓔 \u001b[1msubagents\u001b[0m Example \u001b[0m",
         "\u001b[2m@E\u001b[0m…\u001b[0m →\u001b[0m \u001b[32msent \"Example\"\u001b[0m\u001b[0m"
       ]
     },
@@ -1291,7 +1291,7 @@
       "expanded": false,
       "width": 80,
       "lines": [
-        "\u001b[35m󰓔\u001b[0m Example                                                                       \u001b[0m",
+        "\u001b[35m󰓔 \u001b[1msubagents\u001b[0m Example                                                             \u001b[0m",
         "\u001b[2m@Example\u001b[0m \u001b[2m→\u001b[0m \u001b[32msent \"Example\"\u001b[0m                                                       \u001b[0m"
       ]
     },
@@ -1299,7 +1299,7 @@
       "expanded": false,
       "width": 120,
       "lines": [
-        "\u001b[35m󰓔\u001b[0m Example                                                                                                               \u001b[0m",
+        "\u001b[35m󰓔 \u001b[1msubagents\u001b[0m Example                                                                                                     \u001b[0m",
         "\u001b[2m@Example\u001b[0m \u001b[2m→\u001b[0m \u001b[32msent \"Example\"\u001b[0m                                                                                               \u001b[0m"
       ]
     },
@@ -1307,7 +1307,7 @@
       "expanded": true,
       "width": 20,
       "lines": [
-        "\u001b[35m󰓔\u001b[0m Example           \u001b[0m",
+        "\u001b[35m󰓔 \u001b[1msubagents\u001b[0m Example \u001b[0m",
         "\u001b[2m@E\u001b[0m…\u001b[0m →\u001b[0m \u001b[32msent \"Example\"\u001b[0m\u001b[0m",
         "  \u001b[2mMessage sent.\u001b[0m     \u001b[0m"
       ]
@@ -1316,7 +1316,7 @@
       "expanded": true,
       "width": 80,
       "lines": [
-        "\u001b[35m󰓔\u001b[0m Example                                                                       \u001b[0m",
+        "\u001b[35m󰓔 \u001b[1msubagents\u001b[0m Example                                                             \u001b[0m",
         "\u001b[2m@Example\u001b[0m \u001b[2m→\u001b[0m \u001b[32msent \"Example\"\u001b[0m                                                       \u001b[0m",
         "  \u001b[2mMessage sent.\u001b[0m                                                                 \u001b[0m"
       ]
@@ -1325,7 +1325,7 @@
       "expanded": true,
       "width": 120,
       "lines": [
-        "\u001b[35m󰓔\u001b[0m Example                                                                                                               \u001b[0m",
+        "\u001b[35m󰓔 \u001b[1msubagents\u001b[0m Example                                                                                                     \u001b[0m",
         "\u001b[2m@Example\u001b[0m \u001b[2m→\u001b[0m \u001b[32msent \"Example\"\u001b[0m                                                                                               \u001b[0m",
         "  \u001b[2mMessage sent.\u001b[0m                                                                                                         \u001b[0m"
       ]
@@ -1336,7 +1336,7 @@
       "expanded": false,
       "width": 20,
       "lines": [
-        "\u001b[35m󰅩\u001b[0m verify cards      \u001b[0m",
+        "\u001b[35m󰅩 \u001b[1mcodemode\u001b[0m verify c\u001b[0m…\u001b[0m\u001b[0m",
         "\u001b[2m5 \u001b[0m…\u001b[0m →\u001b[0m \u001b[32mExample output\u001b[0m\u001b[0m"
       ]
     },
@@ -1344,7 +1344,7 @@
       "expanded": false,
       "width": 80,
       "lines": [
-        "\u001b[35m󰅩\u001b[0m verify cards                                                                  \u001b[0m",
+        "\u001b[35m󰅩 \u001b[1mcodemode\u001b[0m verify cards                                                         \u001b[0m",
         "\u001b[2m5 calls\u001b[0m \u001b[2m→\u001b[0m \u001b[32mExample output\u001b[0m                                                        \u001b[0m"
       ]
     },
@@ -1352,7 +1352,7 @@
       "expanded": false,
       "width": 120,
       "lines": [
-        "\u001b[35m󰅩\u001b[0m verify cards                                                                                                          \u001b[0m",
+        "\u001b[35m󰅩 \u001b[1mcodemode\u001b[0m verify cards                                                                                                 \u001b[0m",
         "\u001b[2m5 calls\u001b[0m \u001b[2m→\u001b[0m \u001b[32mExample output\u001b[0m                                                                                                \u001b[0m"
       ]
     },
@@ -1360,7 +1360,7 @@
       "expanded": true,
       "width": 20,
       "lines": [
-        "\u001b[35m󰅩\u001b[0m verify cards      \u001b[0m",
+        "\u001b[35m󰅩 \u001b[1mcodemode\u001b[0m verify c\u001b[0m…\u001b[0m\u001b[0m",
         "\u001b[2m5 \u001b[0m…\u001b[0m →\u001b[0m \u001b[32mExample output\u001b[0m\u001b[0m",
         "  \u001b[2m// verify cards\u001b[0m   \u001b[0m",
         "  \u001b[2mtext('Example     \u001b[0m",
@@ -1384,7 +1384,7 @@
       "expanded": true,
       "width": 80,
       "lines": [
-        "\u001b[35m󰅩\u001b[0m verify cards                                                                  \u001b[0m",
+        "\u001b[35m󰅩 \u001b[1mcodemode\u001b[0m verify cards                                                         \u001b[0m",
         "\u001b[2m5 calls\u001b[0m \u001b[2m→\u001b[0m \u001b[32mExample output\u001b[0m                                                        \u001b[0m",
         "  \u001b[2m// verify cards\u001b[0m                                                               \u001b[0m",
         "  \u001b[2mtext('Example output');\u001b[0m                                                       \u001b[0m",
@@ -1402,7 +1402,7 @@
       "expanded": true,
       "width": 120,
       "lines": [
-        "\u001b[35m󰅩\u001b[0m verify cards                                                                                                          \u001b[0m",
+        "\u001b[35m󰅩 \u001b[1mcodemode\u001b[0m verify cards                                                                                                 \u001b[0m",
         "\u001b[2m5 calls\u001b[0m \u001b[2m→\u001b[0m \u001b[32mExample output\u001b[0m                                                                                                \u001b[0m",
         "  \u001b[2m// verify cards\u001b[0m                                                                                                       \u001b[0m",
         "  \u001b[2mtext('Example output');\u001b[0m                                                                                               \u001b[0m",
@@ -1422,7 +1422,7 @@
       "expanded": false,
       "width": 20,
       "lines": [
-        "\u001b[36m󰞑\u001b[0m Example           \u001b[0m",
+        "\u001b[36m󰞑 \u001b[1mweb\u001b[0m Example       \u001b[0m",
         "→\u001b[0m \u001b[32m5 s\u001b[0m…\u001b[0m \u001b[2m· 14 passages\u001b[0m\u001b[0m"
       ]
     },
@@ -1430,7 +1430,7 @@
       "expanded": false,
       "width": 80,
       "lines": [
-        "\u001b[36m󰞑\u001b[0m Example                                                                       \u001b[0m",
+        "\u001b[36m󰞑 \u001b[1mweb\u001b[0m Example                                                                   \u001b[0m",
         "\u001b[2m1 queries\u001b[0m \u001b[2m→\u001b[0m \u001b[32m5 sources · 14 passages\u001b[0m                                             \u001b[0m"
       ]
     },
@@ -1438,7 +1438,7 @@
       "expanded": false,
       "width": 120,
       "lines": [
-        "\u001b[36m󰞑\u001b[0m Example                                                                                                               \u001b[0m",
+        "\u001b[36m󰞑 \u001b[1mweb\u001b[0m Example                                                                                                           \u001b[0m",
         "\u001b[2m1 queries\u001b[0m \u001b[2m→\u001b[0m \u001b[32m5 sources · 14 passages\u001b[0m                                                                                     \u001b[0m"
       ]
     },
@@ -1446,7 +1446,7 @@
       "expanded": true,
       "width": 20,
       "lines": [
-        "\u001b[36m󰞑\u001b[0m Example           \u001b[0m",
+        "\u001b[36m󰞑 \u001b[1mweb\u001b[0m Example       \u001b[0m",
         "→\u001b[0m \u001b[32m5 s\u001b[0m…\u001b[0m \u001b[2m· 14 passages\u001b[0m\u001b[0m",
         "  \u001b[2m1. Example ·      \u001b[0m",
         "  \u001b[2mexample.com/docs\u001b[0m  \u001b[0m",
@@ -1460,7 +1460,7 @@
       "expanded": true,
       "width": 80,
       "lines": [
-        "\u001b[36m󰞑\u001b[0m Example                                                                       \u001b[0m",
+        "\u001b[36m󰞑 \u001b[1mweb\u001b[0m Example                                                                   \u001b[0m",
         "\u001b[2m1 queries\u001b[0m \u001b[2m→\u001b[0m \u001b[32m5 sources · 14 passages\u001b[0m                                             \u001b[0m",
         "  \u001b[2m1. Example · example.com/docs\u001b[0m                                                 \u001b[0m",
         "  \u001b[2mExample\u001b[0m                                                                       \u001b[0m",
@@ -1472,7 +1472,7 @@
       "expanded": true,
       "width": 120,
       "lines": [
-        "\u001b[36m󰞑\u001b[0m Example                                                                                                               \u001b[0m",
+        "\u001b[36m󰞑 \u001b[1mweb\u001b[0m Example                                                                                                           \u001b[0m",
         "\u001b[2m1 queries\u001b[0m \u001b[2m→\u001b[0m \u001b[32m5 sources · 14 passages\u001b[0m                                                                                     \u001b[0m",
         "  \u001b[2m1. Example · example.com/docs\u001b[0m                                                                                         \u001b[0m",
         "  \u001b[2mExample\u001b[0m                                                                                                               \u001b[0m",
@@ -1486,7 +1486,7 @@
       "expanded": false,
       "width": 20,
       "lines": [
-        "\u001b[34m󰏘\u001b[0m Example           \u001b[0m",
+        "\u001b[34m󰏘 \u001b[1mvisual artifact\u001b[0m E\u001b[0m…\u001b[0m\u001b[0m",
         "\u001b[2m3 directi\u001b[0m…\u001b[0m →\u001b[0m \u001b[32mExample\u001b[0m\u001b[0m"
       ]
     },
@@ -1494,7 +1494,7 @@
       "expanded": false,
       "width": 80,
       "lines": [
-        "\u001b[34m󰏘\u001b[0m Example                                                                       \u001b[0m",
+        "\u001b[34m󰏘 \u001b[1mvisual artifact\u001b[0m Example                                                       \u001b[0m",
         "\u001b[2m3 directions\u001b[0m \u001b[2m→\u001b[0m \u001b[32mExample\u001b[0m                                                          \u001b[0m"
       ]
     },
@@ -1502,7 +1502,7 @@
       "expanded": false,
       "width": 120,
       "lines": [
-        "\u001b[34m󰏘\u001b[0m Example                                                                                                               \u001b[0m",
+        "\u001b[34m󰏘 \u001b[1mvisual artifact\u001b[0m Example                                                                                               \u001b[0m",
         "\u001b[2m3 directions\u001b[0m \u001b[2m→\u001b[0m \u001b[32mExample\u001b[0m                                                                                                  \u001b[0m"
       ]
     },
@@ -1510,7 +1510,7 @@
       "expanded": true,
       "width": 20,
       "lines": [
-        "\u001b[34m󰏘\u001b[0m Example           \u001b[0m",
+        "\u001b[34m󰏘 \u001b[1mvisual artifact\u001b[0m E\u001b[0m…\u001b[0m\u001b[0m",
         "\u001b[2m3 directi\u001b[0m…\u001b[0m →\u001b[0m \u001b[32mExample\u001b[0m\u001b[0m",
         "  \u001b[2mExample output\u001b[0m    \u001b[0m"
       ]
@@ -1519,7 +1519,7 @@
       "expanded": true,
       "width": 80,
       "lines": [
-        "\u001b[34m󰏘\u001b[0m Example                                                                       \u001b[0m",
+        "\u001b[34m󰏘 \u001b[1mvisual artifact\u001b[0m Example                                                       \u001b[0m",
         "\u001b[2m3 directions\u001b[0m \u001b[2m→\u001b[0m \u001b[32mExample\u001b[0m                                                          \u001b[0m",
         "  \u001b[2mExample output\u001b[0m                                                                \u001b[0m"
       ]
@@ -1528,7 +1528,7 @@
       "expanded": true,
       "width": 120,
       "lines": [
-        "\u001b[34m󰏘\u001b[0m Example                                                                                                               \u001b[0m",
+        "\u001b[34m󰏘 \u001b[1mvisual artifact\u001b[0m Example                                                                                               \u001b[0m",
         "\u001b[2m3 directions\u001b[0m \u001b[2m→\u001b[0m \u001b[32mExample\u001b[0m                                                                                                  \u001b[0m",
         "  \u001b[2mExample output\u001b[0m                                                                                                        \u001b[0m"
       ]
@@ -1539,7 +1539,7 @@
       "expanded": false,
       "width": 20,
       "lines": [
-        "\u001b[33m󱃞\u001b[0m Example           \u001b[0m",
+        "\u001b[33m󱃞 \u001b[1mwtf\u001b[0m Example       \u001b[0m",
         "\u001b[31mFailed to record wo\u001b[0m…\u001b[0m\u001b[0m"
       ]
     },
@@ -1547,7 +1547,7 @@
       "expanded": false,
       "width": 80,
       "lines": [
-        "\u001b[33m󱃞\u001b[0m Example                                                                       \u001b[0m",
+        "\u001b[33m󱃞 \u001b[1mwtf\u001b[0m Example                                                                   \u001b[0m",
         "\u001b[31mFailed to record workflow friction: EACCES\u001b[0m                                      \u001b[0m"
       ]
     },
@@ -1555,7 +1555,7 @@
       "expanded": false,
       "width": 120,
       "lines": [
-        "\u001b[33m󱃞\u001b[0m Example                                                                                                               \u001b[0m",
+        "\u001b[33m󱃞 \u001b[1mwtf\u001b[0m Example                                                                                                           \u001b[0m",
         "\u001b[31mFailed to record workflow friction: EACCES\u001b[0m                                                                              \u001b[0m"
       ]
     },
@@ -1563,7 +1563,7 @@
       "expanded": true,
       "width": 20,
       "lines": [
-        "\u001b[33m󱃞\u001b[0m Example           \u001b[0m",
+        "\u001b[33m󱃞 \u001b[1mwtf\u001b[0m Example       \u001b[0m",
         "\u001b[31mFailed to record wo\u001b[0m…\u001b[0m\u001b[0m",
         "  \u001b[31mFailed to record  \u001b[0m",
         "  \u001b[31mworkflow friction:\u001b[0m",
@@ -1574,7 +1574,7 @@
       "expanded": true,
       "width": 80,
       "lines": [
-        "\u001b[33m󱃞\u001b[0m Example                                                                       \u001b[0m",
+        "\u001b[33m󱃞 \u001b[1mwtf\u001b[0m Example                                                                   \u001b[0m",
         "\u001b[31mFailed to record workflow friction: EACCES\u001b[0m                                      \u001b[0m",
         "  \u001b[31mFailed to record workflow friction: EACCES\u001b[0m                                    \u001b[0m"
       ]
@@ -1583,7 +1583,7 @@
       "expanded": true,
       "width": 120,
       "lines": [
-        "\u001b[33m󱃞\u001b[0m Example                                                                                                               \u001b[0m",
+        "\u001b[33m󱃞 \u001b[1mwtf\u001b[0m Example                                                                                                           \u001b[0m",
         "\u001b[31mFailed to record workflow friction: EACCES\u001b[0m                                                                              \u001b[0m",
         "  \u001b[31mFailed to record workflow friction: EACCES\u001b[0m                                                                            \u001b[0m"
       ]
@@ -1594,7 +1594,7 @@
       "expanded": false,
       "width": 20,
       "lines": [
-        "\u001b[36m󰖟\u001b[0m search Example    \u001b[0m",
+        "\u001b[36m󰖟 \u001b[1mweb\u001b[0m search Example\u001b[0m",
         "\u001b[2m\"Example\"\u001b[0m…\u001b[0m →\u001b[0m \u001b[31mExample\u001b[0m\u001b[0m"
       ]
     },
@@ -1602,7 +1602,7 @@
       "expanded": false,
       "width": 80,
       "lines": [
-        "\u001b[36m󰖟\u001b[0m search Example                                                                \u001b[0m",
+        "\u001b[36m󰖟 \u001b[1mweb\u001b[0m search Example                                                            \u001b[0m",
         "\u001b[2m\"Example\" +2\u001b[0m \u001b[2m→\u001b[0m \u001b[31mExample\u001b[0m                                                          \u001b[0m"
       ]
     },
@@ -1610,7 +1610,7 @@
       "expanded": false,
       "width": 120,
       "lines": [
-        "\u001b[36m󰖟\u001b[0m search Example                                                                                                        \u001b[0m",
+        "\u001b[36m󰖟 \u001b[1mweb\u001b[0m search Example                                                                                                    \u001b[0m",
         "\u001b[2m\"Example\" +2\u001b[0m \u001b[2m→\u001b[0m \u001b[31mExample\u001b[0m                                                                                                  \u001b[0m"
       ]
     },
@@ -1618,7 +1618,7 @@
       "expanded": true,
       "width": 20,
       "lines": [
-        "\u001b[36m󰖟\u001b[0m search Example    \u001b[0m",
+        "\u001b[36m󰖟 \u001b[1mweb\u001b[0m search Example\u001b[0m",
         "\u001b[2m\"Example\"\u001b[0m…\u001b[0m →\u001b[0m \u001b[31mExample\u001b[0m\u001b[0m",
         "  \u001b[31mExample\u001b[0m           \u001b[0m"
       ]
@@ -1627,7 +1627,7 @@
       "expanded": true,
       "width": 80,
       "lines": [
-        "\u001b[36m󰖟\u001b[0m search Example                                                                \u001b[0m",
+        "\u001b[36m󰖟 \u001b[1mweb\u001b[0m search Example                                                            \u001b[0m",
         "\u001b[2m\"Example\" +2\u001b[0m \u001b[2m→\u001b[0m \u001b[31mExample\u001b[0m                                                          \u001b[0m",
         "  \u001b[31mExample\u001b[0m                                                                       \u001b[0m"
       ]
@@ -1636,7 +1636,7 @@
       "expanded": true,
       "width": 120,
       "lines": [
-        "\u001b[36m󰖟\u001b[0m search Example                                                                                                        \u001b[0m",
+        "\u001b[36m󰖟 \u001b[1mweb\u001b[0m search Example                                                                                                    \u001b[0m",
         "\u001b[2m\"Example\" +2\u001b[0m \u001b[2m→\u001b[0m \u001b[31mExample\u001b[0m                                                                                                  \u001b[0m",
         "  \u001b[31mExample\u001b[0m                                                                                                               \u001b[0m"
       ]
@@ -1647,7 +1647,7 @@
       "expanded": false,
       "width": 20,
       "lines": [
-        "\u001b[34m󰳹\u001b[0m submit plan       \u001b[0m",
+        "\u001b[34m󰳹 \u001b[1mplannotator\u001b[0m submi\u001b[0m…\u001b[0m\u001b[0m",
         "\u001b[2m/tmp/too\u001b[0m…\u001b[0m →\u001b[0m \u001b[32mapproved\u001b[0m\u001b[0m"
       ]
     },
@@ -1655,7 +1655,7 @@
       "expanded": false,
       "width": 80,
       "lines": [
-        "\u001b[34m󰳹\u001b[0m submit plan                                                                   \u001b[0m",
+        "\u001b[34m󰳹 \u001b[1mplannotator\u001b[0m submit plan                                                       \u001b[0m",
         "\u001b[2m/tmp/tool-cards/example.md\u001b[0m \u001b[2m→\u001b[0m \u001b[32mapproved\u001b[0m                                           \u001b[0m"
       ]
     },
@@ -1663,7 +1663,7 @@
       "expanded": false,
       "width": 120,
       "lines": [
-        "\u001b[34m󰳹\u001b[0m submit plan                                                                                                           \u001b[0m",
+        "\u001b[34m󰳹 \u001b[1mplannotator\u001b[0m submit plan                                                                                               \u001b[0m",
         "\u001b[2m/tmp/tool-cards/example.md\u001b[0m \u001b[2m→\u001b[0m \u001b[32mapproved\u001b[0m                                                                                   \u001b[0m"
       ]
     },
@@ -1671,7 +1671,7 @@
       "expanded": true,
       "width": 20,
       "lines": [
-        "\u001b[34m󰳹\u001b[0m submit plan       \u001b[0m",
+        "\u001b[34m󰳹 \u001b[1mplannotator\u001b[0m submi\u001b[0m…\u001b[0m\u001b[0m",
         "\u001b[2m/tmp/too\u001b[0m…\u001b[0m →\u001b[0m \u001b[32mapproved\u001b[0m\u001b[0m",
         "  \u001b[2mExample output\u001b[0m    \u001b[0m"
       ]
@@ -1680,7 +1680,7 @@
       "expanded": true,
       "width": 80,
       "lines": [
-        "\u001b[34m󰳹\u001b[0m submit plan                                                                   \u001b[0m",
+        "\u001b[34m󰳹 \u001b[1mplannotator\u001b[0m submit plan                                                       \u001b[0m",
         "\u001b[2m/tmp/tool-cards/example.md\u001b[0m \u001b[2m→\u001b[0m \u001b[32mapproved\u001b[0m                                           \u001b[0m",
         "  \u001b[2mExample output\u001b[0m                                                                \u001b[0m"
       ]
@@ -1689,7 +1689,7 @@
       "expanded": true,
       "width": 120,
       "lines": [
-        "\u001b[34m󰳹\u001b[0m submit plan                                                                                                           \u001b[0m",
+        "\u001b[34m󰳹 \u001b[1mplannotator\u001b[0m submit plan                                                                                               \u001b[0m",
         "\u001b[2m/tmp/tool-cards/example.md\u001b[0m \u001b[2m→\u001b[0m \u001b[32mapproved\u001b[0m                                                                                   \u001b[0m",
         "  \u001b[2mExample output\u001b[0m                                                                                                        \u001b[0m"
       ]
@@ -1700,7 +1700,7 @@
       "expanded": false,
       "width": 20,
       "lines": [
-        "\u001b[34m󰏘\u001b[0m Example           \u001b[0m",
+        "\u001b[34m󰏘 \u001b[1mvisual artifact\u001b[0m E\u001b[0m…\u001b[0m\u001b[0m",
         "\u001b[2m3 d\u001b[0m…\u001b[0m →\u001b[0m \u001b[31mExample error\u001b[0m\u001b[0m"
       ]
     },
@@ -1708,7 +1708,7 @@
       "expanded": false,
       "width": 80,
       "lines": [
-        "\u001b[34m󰏘\u001b[0m Example                                                                       \u001b[0m",
+        "\u001b[34m󰏘 \u001b[1mvisual artifact\u001b[0m Example                                                       \u001b[0m",
         "\u001b[2m3 directions\u001b[0m \u001b[2m→\u001b[0m \u001b[31mExample error\u001b[0m                                                    \u001b[0m"
       ]
     },
@@ -1716,7 +1716,7 @@
       "expanded": false,
       "width": 120,
       "lines": [
-        "\u001b[34m󰏘\u001b[0m Example                                                                                                               \u001b[0m",
+        "\u001b[34m󰏘 \u001b[1mvisual artifact\u001b[0m Example                                                                                               \u001b[0m",
         "\u001b[2m3 directions\u001b[0m \u001b[2m→\u001b[0m \u001b[31mExample error\u001b[0m                                                                                            \u001b[0m"
       ]
     },
@@ -1724,7 +1724,7 @@
       "expanded": true,
       "width": 20,
       "lines": [
-        "\u001b[34m󰏘\u001b[0m Example           \u001b[0m",
+        "\u001b[34m󰏘 \u001b[1mvisual artifact\u001b[0m E\u001b[0m…\u001b[0m\u001b[0m",
         "\u001b[2m3 d\u001b[0m…\u001b[0m →\u001b[0m \u001b[31mExample error\u001b[0m\u001b[0m",
         "  \u001b[31mExample error\u001b[0m     \u001b[0m"
       ]
@@ -1733,7 +1733,7 @@
       "expanded": true,
       "width": 80,
       "lines": [
-        "\u001b[34m󰏘\u001b[0m Example                                                                       \u001b[0m",
+        "\u001b[34m󰏘 \u001b[1mvisual artifact\u001b[0m Example                                                       \u001b[0m",
         "\u001b[2m3 directions\u001b[0m \u001b[2m→\u001b[0m \u001b[31mExample error\u001b[0m                                                    \u001b[0m",
         "  \u001b[31mExample error\u001b[0m                                                                 \u001b[0m"
       ]
@@ -1742,7 +1742,7 @@
       "expanded": true,
       "width": 120,
       "lines": [
-        "\u001b[34m󰏘\u001b[0m Example                                                                                                               \u001b[0m",
+        "\u001b[34m󰏘 \u001b[1mvisual artifact\u001b[0m Example                                                                                               \u001b[0m",
         "\u001b[2m3 directions\u001b[0m \u001b[2m→\u001b[0m \u001b[31mExample error\u001b[0m                                                                                            \u001b[0m",
         "  \u001b[31mExample error\u001b[0m                                                                                                         \u001b[0m"
       ]
@@ -1753,7 +1753,7 @@
       "expanded": false,
       "width": 20,
       "lines": [
-        "\u001b[33m󰀳\u001b[0m enable web tools  \u001b[0m",
+        "\u001b[33m󰀳 \u001b[1mweb\u001b[0m enable web to\u001b[0m…\u001b[0m\u001b[0m",
         "\u001b[32m4 tools enabled\u001b[0m     \u001b[0m"
       ]
     },
@@ -1761,7 +1761,7 @@
       "expanded": false,
       "width": 80,
       "lines": [
-        "\u001b[33m󰀳\u001b[0m enable web tools                                                              \u001b[0m",
+        "\u001b[33m󰀳 \u001b[1mweb\u001b[0m enable web tools                                                          \u001b[0m",
         "\u001b[32m4 tools enabled\u001b[0m                                                                 \u001b[0m"
       ]
     },
@@ -1769,7 +1769,7 @@
       "expanded": false,
       "width": 120,
       "lines": [
-        "\u001b[33m󰀳\u001b[0m enable web tools                                                                                                      \u001b[0m",
+        "\u001b[33m󰀳 \u001b[1mweb\u001b[0m enable web tools                                                                                                  \u001b[0m",
         "\u001b[32m4 tools enabled\u001b[0m                                                                                                         \u001b[0m"
       ]
     },
@@ -1777,7 +1777,7 @@
       "expanded": true,
       "width": 20,
       "lines": [
-        "\u001b[33m󰀳\u001b[0m enable web tools  \u001b[0m",
+        "\u001b[33m󰀳 \u001b[1mweb\u001b[0m enable web to\u001b[0m…\u001b[0m\u001b[0m",
         "\u001b[32m4 tools enabled\u001b[0m     \u001b[0m",
         "  \u001b[2mExample output\u001b[0m    \u001b[0m"
       ]
@@ -1786,7 +1786,7 @@
       "expanded": true,
       "width": 80,
       "lines": [
-        "\u001b[33m󰀳\u001b[0m enable web tools                                                              \u001b[0m",
+        "\u001b[33m󰀳 \u001b[1mweb\u001b[0m enable web tools                                                          \u001b[0m",
         "\u001b[32m4 tools enabled\u001b[0m                                                                 \u001b[0m",
         "  \u001b[2mExample output\u001b[0m                                                                \u001b[0m"
       ]
@@ -1795,7 +1795,7 @@
       "expanded": true,
       "width": 120,
       "lines": [
-        "\u001b[33m󰀳\u001b[0m enable web tools                                                                                                      \u001b[0m",
+        "\u001b[33m󰀳 \u001b[1mweb\u001b[0m enable web tools                                                                                                  \u001b[0m",
         "\u001b[32m4 tools enabled\u001b[0m                                                                                                         \u001b[0m",
         "  \u001b[2mExample output\u001b[0m                                                                                                        \u001b[0m"
       ]
@@ -1806,7 +1806,7 @@
       "expanded": false,
       "width": 20,
       "lines": [
-        "\u001b[35m󱐋\u001b[0m activate skill    \u001b[0m",
+        "\u001b[35m󱐋 \u001b[1mcursor\u001b[0m activate s\u001b[0m…\u001b[0m\u001b[0m",
         "\u001b[2mexamp\u001b[0m…\u001b[0m →\u001b[0m \u001b[32m0 resources\u001b[0m\u001b[0m"
       ]
     },
@@ -1814,7 +1814,7 @@
       "expanded": false,
       "width": 80,
       "lines": [
-        "\u001b[35m󱐋\u001b[0m activate skill                                                                \u001b[0m",
+        "\u001b[35m󱐋 \u001b[1mcursor\u001b[0m activate skill                                                         \u001b[0m",
         "\u001b[2mexample\u001b[0m \u001b[2m→\u001b[0m \u001b[32m0 resources\u001b[0m                                                           \u001b[0m"
       ]
     },
@@ -1822,7 +1822,7 @@
       "expanded": false,
       "width": 120,
       "lines": [
-        "\u001b[35m󱐋\u001b[0m activate skill                                                                                                        \u001b[0m",
+        "\u001b[35m󱐋 \u001b[1mcursor\u001b[0m activate skill                                                                                                 \u001b[0m",
         "\u001b[2mexample\u001b[0m \u001b[2m→\u001b[0m \u001b[32m0 resources\u001b[0m                                                                                                   \u001b[0m"
       ]
     },
@@ -1830,7 +1830,7 @@
       "expanded": true,
       "width": 20,
       "lines": [
-        "\u001b[35m󱐋\u001b[0m activate skill    \u001b[0m",
+        "\u001b[35m󱐋 \u001b[1mcursor\u001b[0m activate s\u001b[0m…\u001b[0m\u001b[0m",
         "\u001b[2mexamp\u001b[0m…\u001b[0m →\u001b[0m \u001b[32m0 resources\u001b[0m\u001b[0m",
         "  \u001b[2mExample output\u001b[0m    \u001b[0m"
       ]
@@ -1839,7 +1839,7 @@
       "expanded": true,
       "width": 80,
       "lines": [
-        "\u001b[35m󱐋\u001b[0m activate skill                                                                \u001b[0m",
+        "\u001b[35m󱐋 \u001b[1mcursor\u001b[0m activate skill                                                         \u001b[0m",
         "\u001b[2mexample\u001b[0m \u001b[2m→\u001b[0m \u001b[32m0 resources\u001b[0m                                                           \u001b[0m",
         "  \u001b[2mExample output\u001b[0m                                                                \u001b[0m"
       ]
@@ -1848,7 +1848,7 @@
       "expanded": true,
       "width": 120,
       "lines": [
-        "\u001b[35m󱐋\u001b[0m activate skill                                                                                                        \u001b[0m",
+        "\u001b[35m󱐋 \u001b[1mcursor\u001b[0m activate skill                                                                                                 \u001b[0m",
         "\u001b[2mexample\u001b[0m \u001b[2m→\u001b[0m \u001b[32m0 resources\u001b[0m                                                                                                   \u001b[0m",
         "  \u001b[2mExample output\u001b[0m                                                                                                        \u001b[0m"
       ]
@@ -1859,7 +1859,7 @@
       "expanded": false,
       "width": 20,
       "lines": [
-        "\u001b[35m󰒪\u001b[0m workflow          \u001b[0m",
+        "\u001b[35m󰒪 \u001b[1msubagents\u001b[0m workflow\u001b[0m",
         "\u001b[2mexampl\u001b[0m…\u001b[0m →\u001b[0m \u001b[32mbackground\u001b[0m\u001b[0m"
       ]
     },
@@ -1867,7 +1867,7 @@
       "expanded": false,
       "width": 80,
       "lines": [
-        "\u001b[35m󰒪\u001b[0m workflow                                                                      \u001b[0m",
+        "\u001b[35m󰒪 \u001b[1msubagents\u001b[0m workflow                                                            \u001b[0m",
         "\u001b[2mexample-id\u001b[0m \u001b[2m→\u001b[0m \u001b[32mbackground\u001b[0m                                                         \u001b[0m"
       ]
     },
@@ -1875,7 +1875,7 @@
       "expanded": false,
       "width": 120,
       "lines": [
-        "\u001b[35m󰒪\u001b[0m workflow                                                                                                              \u001b[0m",
+        "\u001b[35m󰒪 \u001b[1msubagents\u001b[0m workflow                                                                                                    \u001b[0m",
         "\u001b[2mexample-id\u001b[0m \u001b[2m→\u001b[0m \u001b[32mbackground\u001b[0m                                                                                                 \u001b[0m"
       ]
     },
@@ -1883,7 +1883,7 @@
       "expanded": true,
       "width": 20,
       "lines": [
-        "\u001b[35m󰒪\u001b[0m workflow          \u001b[0m",
+        "\u001b[35m󰒪 \u001b[1msubagents\u001b[0m workflow\u001b[0m",
         "\u001b[2mexampl\u001b[0m…\u001b[0m →\u001b[0m \u001b[32mbackground\u001b[0m\u001b[0m",
         "  \u001b[2mExample output\u001b[0m    \u001b[0m"
       ]
@@ -1892,7 +1892,7 @@
       "expanded": true,
       "width": 80,
       "lines": [
-        "\u001b[35m󰒪\u001b[0m workflow                                                                      \u001b[0m",
+        "\u001b[35m󰒪 \u001b[1msubagents\u001b[0m workflow                                                            \u001b[0m",
         "\u001b[2mexample-id\u001b[0m \u001b[2m→\u001b[0m \u001b[32mbackground\u001b[0m                                                         \u001b[0m",
         "  \u001b[2mExample output\u001b[0m                                                                \u001b[0m"
       ]
@@ -1901,7 +1901,7 @@
       "expanded": true,
       "width": 120,
       "lines": [
-        "\u001b[35m󰒪\u001b[0m workflow                                                                                                              \u001b[0m",
+        "\u001b[35m󰒪 \u001b[1msubagents\u001b[0m workflow                                                                                                    \u001b[0m",
         "\u001b[2mexample-id\u001b[0m \u001b[2m→\u001b[0m \u001b[32mbackground\u001b[0m                                                                                                 \u001b[0m",
         "  \u001b[2mExample output\u001b[0m                                                                                                        \u001b[0m"
       ]
@@ -1912,7 +1912,7 @@
       "expanded": false,
       "width": 20,
       "lines": [
-        "\u001b[34m󱜺\u001b[0m Example           \u001b[0m",
+        "\u001b[34m󱜺 \u001b[1mcursor\u001b[0m Example    \u001b[0m",
         "\u001b[2m1 question\u001b[0m \u001b[2m→\u001b[0m \u001b[32mExample\u001b[0m\u001b[0m"
       ]
     },
@@ -1920,7 +1920,7 @@
       "expanded": false,
       "width": 80,
       "lines": [
-        "\u001b[34m󱜺\u001b[0m Example                                                                       \u001b[0m",
+        "\u001b[34m󱜺 \u001b[1mcursor\u001b[0m Example                                                                \u001b[0m",
         "\u001b[2m1 question\u001b[0m \u001b[2m→\u001b[0m \u001b[32mExample\u001b[0m                                                            \u001b[0m"
       ]
     },
@@ -1928,7 +1928,7 @@
       "expanded": false,
       "width": 120,
       "lines": [
-        "\u001b[34m󱜺\u001b[0m Example                                                                                                               \u001b[0m",
+        "\u001b[34m󱜺 \u001b[1mcursor\u001b[0m Example                                                                                                        \u001b[0m",
         "\u001b[2m1 question\u001b[0m \u001b[2m→\u001b[0m \u001b[32mExample\u001b[0m                                                                                                    \u001b[0m"
       ]
     },
@@ -1936,7 +1936,7 @@
       "expanded": true,
       "width": 20,
       "lines": [
-        "\u001b[34m󱜺\u001b[0m Example           \u001b[0m",
+        "\u001b[34m󱜺 \u001b[1mcursor\u001b[0m Example    \u001b[0m",
         "\u001b[2m1 question\u001b[0m \u001b[2m→\u001b[0m \u001b[32mExample\u001b[0m\u001b[0m",
         "  \u001b[2mExample output\u001b[0m    \u001b[0m"
       ]
@@ -1945,7 +1945,7 @@
       "expanded": true,
       "width": 80,
       "lines": [
-        "\u001b[34m󱜺\u001b[0m Example                                                                       \u001b[0m",
+        "\u001b[34m󱜺 \u001b[1mcursor\u001b[0m Example                                                                \u001b[0m",
         "\u001b[2m1 question\u001b[0m \u001b[2m→\u001b[0m \u001b[32mExample\u001b[0m                                                            \u001b[0m",
         "  \u001b[2mExample output\u001b[0m                                                                \u001b[0m"
       ]
@@ -1954,7 +1954,7 @@
       "expanded": true,
       "width": 120,
       "lines": [
-        "\u001b[34m󱜺\u001b[0m Example                                                                                                               \u001b[0m",
+        "\u001b[34m󱜺 \u001b[1mcursor\u001b[0m Example                                                                                                        \u001b[0m",
         "\u001b[2m1 question\u001b[0m \u001b[2m→\u001b[0m \u001b[32mExample\u001b[0m                                                                                                    \u001b[0m",
         "  \u001b[2mExample output\u001b[0m                                                                                                        \u001b[0m"
       ]
@@ -1965,7 +1965,7 @@
       "expanded": false,
       "width": 20,
       "lines": [
-        "\u001b[34m󱜺\u001b[0m Example           \u001b[0m",
+        "\u001b[34m󱜺 \u001b[1mcursor\u001b[0m Example    \u001b[0m",
         "\u001b[2m1 q\u001b[0m…\u001b[0m →\u001b[0m \u001b[31mExample error\u001b[0m\u001b[0m"
       ]
     },
@@ -1973,7 +1973,7 @@
       "expanded": false,
       "width": 80,
       "lines": [
-        "\u001b[34m󱜺\u001b[0m Example                                                                       \u001b[0m",
+        "\u001b[34m󱜺 \u001b[1mcursor\u001b[0m Example                                                                \u001b[0m",
         "\u001b[2m1 question\u001b[0m \u001b[2m→\u001b[0m \u001b[31mExample error\u001b[0m                                                      \u001b[0m"
       ]
     },
@@ -1981,7 +1981,7 @@
       "expanded": false,
       "width": 120,
       "lines": [
-        "\u001b[34m󱜺\u001b[0m Example                                                                                                               \u001b[0m",
+        "\u001b[34m󱜺 \u001b[1mcursor\u001b[0m Example                                                                                                        \u001b[0m",
         "\u001b[2m1 question\u001b[0m \u001b[2m→\u001b[0m \u001b[31mExample error\u001b[0m                                                                                              \u001b[0m"
       ]
     },
@@ -1989,7 +1989,7 @@
       "expanded": true,
       "width": 20,
       "lines": [
-        "\u001b[34m󱜺\u001b[0m Example           \u001b[0m",
+        "\u001b[34m󱜺 \u001b[1mcursor\u001b[0m Example    \u001b[0m",
         "\u001b[2m1 q\u001b[0m…\u001b[0m →\u001b[0m \u001b[31mExample error\u001b[0m\u001b[0m",
         "  \u001b[31mExample error\u001b[0m     \u001b[0m"
       ]
@@ -1998,7 +1998,7 @@
       "expanded": true,
       "width": 80,
       "lines": [
-        "\u001b[34m󱜺\u001b[0m Example                                                                       \u001b[0m",
+        "\u001b[34m󱜺 \u001b[1mcursor\u001b[0m Example                                                                \u001b[0m",
         "\u001b[2m1 question\u001b[0m \u001b[2m→\u001b[0m \u001b[31mExample error\u001b[0m                                                      \u001b[0m",
         "  \u001b[31mExample error\u001b[0m                                                                 \u001b[0m"
       ]
@@ -2007,7 +2007,7 @@
       "expanded": true,
       "width": 120,
       "lines": [
-        "\u001b[34m󱜺\u001b[0m Example                                                                                                               \u001b[0m",
+        "\u001b[34m󱜺 \u001b[1mcursor\u001b[0m Example                                                                                                        \u001b[0m",
         "\u001b[2m1 question\u001b[0m \u001b[2m→\u001b[0m \u001b[31mExample error\u001b[0m                                                                                              \u001b[0m",
         "  \u001b[31mExample error\u001b[0m                                                                                                         \u001b[0m"
       ]
@@ -2018,7 +2018,7 @@
       "expanded": false,
       "width": 20,
       "lines": [
-        "\u001b[33m\u001b[0m search            \u001b[0m",
+        "\u001b[33m \u001b[1mnotion\u001b[0m search     \u001b[0m",
         "→\u001b[0m \u001b[32m[redacted single-\u001b[0m…\u001b[0m\u001b[0m"
       ]
     },
@@ -2026,7 +2026,7 @@
       "expanded": false,
       "width": 80,
       "lines": [
-        "\u001b[33m\u001b[0m search                                                                        \u001b[0m",
+        "\u001b[33m \u001b[1mnotion\u001b[0m search                                                                 \u001b[0m",
         "\u001b[2mnotion · Example\u001b[0m \u001b[2m→\u001b[0m \u001b[32m[redacted single-line result]\u001b[0m                                \u001b[0m"
       ]
     },
@@ -2034,7 +2034,7 @@
       "expanded": false,
       "width": 120,
       "lines": [
-        "\u001b[33m\u001b[0m search                                                                                                                \u001b[0m",
+        "\u001b[33m \u001b[1mnotion\u001b[0m search                                                                                                         \u001b[0m",
         "\u001b[2mnotion · Example\u001b[0m \u001b[2m→\u001b[0m \u001b[32m[redacted single-line result]\u001b[0m                                                                        \u001b[0m"
       ]
     },
@@ -2042,7 +2042,7 @@
       "expanded": true,
       "width": 20,
       "lines": [
-        "\u001b[33m\u001b[0m search            \u001b[0m",
+        "\u001b[33m \u001b[1mnotion\u001b[0m search     \u001b[0m",
         "→\u001b[0m \u001b[32m[redacted single-\u001b[0m…\u001b[0m\u001b[0m",
         "  \u001b[2mtool: Example\u001b[0m     \u001b[0m",
         "  \u001b[2margs:             \u001b[0m",
@@ -2058,7 +2058,7 @@
       "expanded": true,
       "width": 80,
       "lines": [
-        "\u001b[33m\u001b[0m search                                                                        \u001b[0m",
+        "\u001b[33m \u001b[1mnotion\u001b[0m search                                                                 \u001b[0m",
         "\u001b[2mnotion · Example\u001b[0m \u001b[2m→\u001b[0m \u001b[32m[redacted single-line result]\u001b[0m                                \u001b[0m",
         "  \u001b[2mtool: Example\u001b[0m                                                                 \u001b[0m",
         "  \u001b[2margs: {\"query\":\"Example\"}\u001b[0m                                                     \u001b[0m",
@@ -2070,7 +2070,7 @@
       "expanded": true,
       "width": 120,
       "lines": [
-        "\u001b[33m\u001b[0m search                                                                                                                \u001b[0m",
+        "\u001b[33m \u001b[1mnotion\u001b[0m search                                                                                                         \u001b[0m",
         "\u001b[2mnotion · Example\u001b[0m \u001b[2m→\u001b[0m \u001b[32m[redacted single-line result]\u001b[0m                                                                        \u001b[0m",
         "  \u001b[2mtool: Example\u001b[0m                                                                                                         \u001b[0m",
         "  \u001b[2margs: {\"query\":\"Example\"}\u001b[0m                                                                                             \u001b[0m",
@@ -2084,7 +2084,7 @@
       "expanded": false,
       "width": 20,
       "lines": [
-        "\u001b[35m󰅩\u001b[0m verify cards      \u001b[0m",
+        "\u001b[35m󰅩 \u001b[1mcodemode\u001b[0m verify c\u001b[0m…\u001b[0m\u001b[0m",
         "\u001b[2m1 \u001b[0m…\u001b[0m →\u001b[0m \u001b[31mExample output\u001b[0m\u001b[0m"
       ]
     },
@@ -2092,7 +2092,7 @@
       "expanded": false,
       "width": 80,
       "lines": [
-        "\u001b[35m󰅩\u001b[0m verify cards                                                                  \u001b[0m",
+        "\u001b[35m󰅩 \u001b[1mcodemode\u001b[0m verify cards                                                         \u001b[0m",
         "\u001b[2m1 call\u001b[0m \u001b[2m→\u001b[0m \u001b[31mExample output\u001b[0m                                                         \u001b[0m"
       ]
     },
@@ -2100,7 +2100,7 @@
       "expanded": false,
       "width": 120,
       "lines": [
-        "\u001b[35m󰅩\u001b[0m verify cards                                                                                                          \u001b[0m",
+        "\u001b[35m󰅩 \u001b[1mcodemode\u001b[0m verify cards                                                                                                 \u001b[0m",
         "\u001b[2m1 call\u001b[0m \u001b[2m→\u001b[0m \u001b[31mExample output\u001b[0m                                                                                                 \u001b[0m"
       ]
     },
@@ -2108,7 +2108,7 @@
       "expanded": true,
       "width": 20,
       "lines": [
-        "\u001b[35m󰅩\u001b[0m verify cards      \u001b[0m",
+        "\u001b[35m󰅩 \u001b[1mcodemode\u001b[0m verify c\u001b[0m…\u001b[0m\u001b[0m",
         "\u001b[2m1 \u001b[0m…\u001b[0m →\u001b[0m \u001b[31mExample output\u001b[0m\u001b[0m",
         "  \u001b[31m// verify cards\u001b[0m   \u001b[0m",
         "  \u001b[31mtext('Example     \u001b[0m",
@@ -2124,7 +2124,7 @@
       "expanded": true,
       "width": 80,
       "lines": [
-        "\u001b[35m󰅩\u001b[0m verify cards                                                                  \u001b[0m",
+        "\u001b[35m󰅩 \u001b[1mcodemode\u001b[0m verify cards                                                         \u001b[0m",
         "\u001b[2m1 call\u001b[0m \u001b[2m→\u001b[0m \u001b[31mExample output\u001b[0m                                                         \u001b[0m",
         "  \u001b[31m// verify cards\u001b[0m                                                               \u001b[0m",
         "  \u001b[31mtext('Example output');\u001b[0m                                                       \u001b[0m",
@@ -2138,7 +2138,7 @@
       "expanded": true,
       "width": 120,
       "lines": [
-        "\u001b[35m󰅩\u001b[0m verify cards                                                                                                          \u001b[0m",
+        "\u001b[35m󰅩 \u001b[1mcodemode\u001b[0m verify cards                                                                                                 \u001b[0m",
         "\u001b[2m1 call\u001b[0m \u001b[2m→\u001b[0m \u001b[31mExample output\u001b[0m                                                                                                 \u001b[0m",
         "  \u001b[31m// verify cards\u001b[0m                                                                                                       \u001b[0m",
         "  \u001b[31mtext('Example output');\u001b[0m                                                                                               \u001b[0m",
@@ -2154,7 +2154,7 @@
       "expanded": false,
       "width": 20,
       "lines": [
-        "\u001b[35m󰔰\u001b[0m Example           \u001b[0m",
+        "\u001b[35m󰔰 \u001b[1msessions\u001b[0m Example  \u001b[0m",
         "\u001b[2mspl\u001b[0m…\u001b[0m →\u001b[0m \u001b[31mExample error\u001b[0m\u001b[0m"
       ]
     },
@@ -2162,7 +2162,7 @@
       "expanded": false,
       "width": 80,
       "lines": [
-        "\u001b[35m󰔰\u001b[0m Example                                                                       \u001b[0m",
+        "\u001b[35m󰔰 \u001b[1msessions\u001b[0m Example                                                              \u001b[0m",
         "\u001b[2msplit\u001b[0m \u001b[2m→\u001b[0m \u001b[31mExample error\u001b[0m                                                           \u001b[0m"
       ]
     },
@@ -2170,7 +2170,7 @@
       "expanded": false,
       "width": 120,
       "lines": [
-        "\u001b[35m󰔰\u001b[0m Example                                                                                                               \u001b[0m",
+        "\u001b[35m󰔰 \u001b[1msessions\u001b[0m Example                                                                                                      \u001b[0m",
         "\u001b[2msplit\u001b[0m \u001b[2m→\u001b[0m \u001b[31mExample error\u001b[0m                                                                                                   \u001b[0m"
       ]
     },
@@ -2178,7 +2178,7 @@
       "expanded": true,
       "width": 20,
       "lines": [
-        "\u001b[35m󰔰\u001b[0m Example           \u001b[0m",
+        "\u001b[35m󰔰 \u001b[1msessions\u001b[0m Example  \u001b[0m",
         "\u001b[2mspl\u001b[0m…\u001b[0m →\u001b[0m \u001b[31mExample error\u001b[0m\u001b[0m",
         "  \u001b[31mExample error\u001b[0m     \u001b[0m"
       ]
@@ -2187,7 +2187,7 @@
       "expanded": true,
       "width": 80,
       "lines": [
-        "\u001b[35m󰔰\u001b[0m Example                                                                       \u001b[0m",
+        "\u001b[35m󰔰 \u001b[1msessions\u001b[0m Example                                                              \u001b[0m",
         "\u001b[2msplit\u001b[0m \u001b[2m→\u001b[0m \u001b[31mExample error\u001b[0m                                                           \u001b[0m",
         "  \u001b[31mExample error\u001b[0m                                                                 \u001b[0m"
       ]
@@ -2196,7 +2196,7 @@
       "expanded": true,
       "width": 120,
       "lines": [
-        "\u001b[35m󰔰\u001b[0m Example                                                                                                               \u001b[0m",
+        "\u001b[35m󰔰 \u001b[1msessions\u001b[0m Example                                                                                                      \u001b[0m",
         "\u001b[2msplit\u001b[0m \u001b[2m→\u001b[0m \u001b[31mExample error\u001b[0m                                                                                                   \u001b[0m",
         "  \u001b[31mExample error\u001b[0m                                                                                                         \u001b[0m"
       ]
@@ -2207,7 +2207,7 @@
       "expanded": false,
       "width": 20,
       "lines": [
-        "\u001b[36m󰧑\u001b[0m recall memory     \u001b[0m",
+        "\u001b[36m󰧑 \u001b[1mmemory\u001b[0m recall mem\u001b[0m…\u001b[0m\u001b[0m",
         "\u001b[2m/Exampl\u001b[0m…\u001b[0m →\u001b[0m \u001b[32m3 matches\u001b[0m\u001b[0m"
       ]
     },
@@ -2215,7 +2215,7 @@
       "expanded": false,
       "width": 80,
       "lines": [
-        "\u001b[36m󰧑\u001b[0m recall memory                                                                 \u001b[0m",
+        "\u001b[36m󰧑 \u001b[1mmemory\u001b[0m recall memory                                                          \u001b[0m",
         "\u001b[2m/Example/\u001b[0m \u001b[2m→\u001b[0m \u001b[32m3 matches\u001b[0m                                                           \u001b[0m"
       ]
     },
@@ -2223,7 +2223,7 @@
       "expanded": false,
       "width": 120,
       "lines": [
-        "\u001b[36m󰧑\u001b[0m recall memory                                                                                                         \u001b[0m",
+        "\u001b[36m󰧑 \u001b[1mmemory\u001b[0m recall memory                                                                                                  \u001b[0m",
         "\u001b[2m/Example/\u001b[0m \u001b[2m→\u001b[0m \u001b[32m3 matches\u001b[0m                                                                                                   \u001b[0m"
       ]
     },
@@ -2231,7 +2231,7 @@
       "expanded": true,
       "width": 20,
       "lines": [
-        "\u001b[36m󰧑\u001b[0m recall memory     \u001b[0m",
+        "\u001b[36m󰧑 \u001b[1mmemory\u001b[0m recall mem\u001b[0m…\u001b[0m\u001b[0m",
         "\u001b[2m/Exampl\u001b[0m…\u001b[0m →\u001b[0m \u001b[32m3 matches\u001b[0m\u001b[0m",
         "  \u001b[2m#31 [redacted     \u001b[0m",
         "  \u001b[2mmemory]\u001b[0m           \u001b[0m",
@@ -2246,7 +2246,7 @@
       "expanded": true,
       "width": 80,
       "lines": [
-        "\u001b[36m󰧑\u001b[0m recall memory                                                                 \u001b[0m",
+        "\u001b[36m󰧑 \u001b[1mmemory\u001b[0m recall memory                                                          \u001b[0m",
         "\u001b[2m/Example/\u001b[0m \u001b[2m→\u001b[0m \u001b[32m3 matches\u001b[0m                                                           \u001b[0m",
         "  \u001b[2m#31 [redacted memory]\u001b[0m                                                         \u001b[0m",
         "  \u001b[2m#47 [redacted memory]\u001b[0m                                                         \u001b[0m",
@@ -2258,7 +2258,7 @@
       "expanded": true,
       "width": 120,
       "lines": [
-        "\u001b[36m󰧑\u001b[0m recall memory                                                                                                         \u001b[0m",
+        "\u001b[36m󰧑 \u001b[1mmemory\u001b[0m recall memory                                                                                                  \u001b[0m",
         "\u001b[2m/Example/\u001b[0m \u001b[2m→\u001b[0m \u001b[32m3 matches\u001b[0m                                                                                                   \u001b[0m",
         "  \u001b[2m#31 [redacted memory]\u001b[0m                                                                                                 \u001b[0m",
         "  \u001b[2m#47 [redacted memory]\u001b[0m                                                                                                 \u001b[0m",
@@ -2272,7 +2272,7 @@
       "expanded": false,
       "width": 20,
       "lines": [
-        "\u001b[35m󰾔\u001b[0m browser back      \u001b[0m",
+        "\u001b[35m󰾔 \u001b[1mcmux\u001b[0m browser back \u001b[0m",
         "\u001b[32mExample response\u001b[0m    \u001b[0m"
       ]
     },
@@ -2280,7 +2280,7 @@
       "expanded": false,
       "width": 80,
       "lines": [
-        "\u001b[35m󰾔\u001b[0m browser back                                                                  \u001b[0m",
+        "\u001b[35m󰾔 \u001b[1mcmux\u001b[0m browser back                                                             \u001b[0m",
         "\u001b[32mExample response\u001b[0m                                                                \u001b[0m"
       ]
     },
@@ -2288,7 +2288,7 @@
       "expanded": false,
       "width": 120,
       "lines": [
-        "\u001b[35m󰾔\u001b[0m browser back                                                                                                          \u001b[0m",
+        "\u001b[35m󰾔 \u001b[1mcmux\u001b[0m browser back                                                                                                     \u001b[0m",
         "\u001b[32mExample response\u001b[0m                                                                                                        \u001b[0m"
       ]
     },
@@ -2296,7 +2296,7 @@
       "expanded": true,
       "width": 20,
       "lines": [
-        "\u001b[35m󰾔\u001b[0m browser back      \u001b[0m",
+        "\u001b[35m󰾔 \u001b[1mcmux\u001b[0m browser back \u001b[0m",
         "\u001b[32mExample response\u001b[0m    \u001b[0m",
         "  \u001b[2mExample response\u001b[0m  \u001b[0m"
       ]
@@ -2305,7 +2305,7 @@
       "expanded": true,
       "width": 80,
       "lines": [
-        "\u001b[35m󰾔\u001b[0m browser back                                                                  \u001b[0m",
+        "\u001b[35m󰾔 \u001b[1mcmux\u001b[0m browser back                                                             \u001b[0m",
         "\u001b[32mExample response\u001b[0m                                                                \u001b[0m",
         "  \u001b[2mExample response\u001b[0m                                                              \u001b[0m"
       ]
@@ -2314,7 +2314,7 @@
       "expanded": true,
       "width": 120,
       "lines": [
-        "\u001b[35m󰾔\u001b[0m browser back                                                                                                          \u001b[0m",
+        "\u001b[35m󰾔 \u001b[1mcmux\u001b[0m browser back                                                                                                     \u001b[0m",
         "\u001b[32mExample response\u001b[0m                                                                                                        \u001b[0m",
         "  \u001b[2mExample response\u001b[0m                                                                                                      \u001b[0m"
       ]
@@ -2325,7 +2325,7 @@
       "expanded": false,
       "width": 20,
       "lines": [
-        "\u001b[35m󰯌\u001b[0m pane list         \u001b[0m",
+        "\u001b[35m󰯌 \u001b[1mcmux\u001b[0m pane list    \u001b[0m",
         "\u001b[32mExample response\u001b[0m    \u001b[0m"
       ]
     },
@@ -2333,7 +2333,7 @@
       "expanded": false,
       "width": 80,
       "lines": [
-        "\u001b[35m󰯌\u001b[0m pane list                                                                     \u001b[0m",
+        "\u001b[35m󰯌 \u001b[1mcmux\u001b[0m pane list                                                                \u001b[0m",
         "\u001b[32mExample response\u001b[0m                                                                \u001b[0m"
       ]
     },
@@ -2341,7 +2341,7 @@
       "expanded": false,
       "width": 120,
       "lines": [
-        "\u001b[35m󰯌\u001b[0m pane list                                                                                                             \u001b[0m",
+        "\u001b[35m󰯌 \u001b[1mcmux\u001b[0m pane list                                                                                                        \u001b[0m",
         "\u001b[32mExample response\u001b[0m                                                                                                        \u001b[0m"
       ]
     },
@@ -2349,7 +2349,7 @@
       "expanded": true,
       "width": 20,
       "lines": [
-        "\u001b[35m󰯌\u001b[0m pane list         \u001b[0m",
+        "\u001b[35m󰯌 \u001b[1mcmux\u001b[0m pane list    \u001b[0m",
         "\u001b[32mExample response\u001b[0m    \u001b[0m",
         "  \u001b[2mExample response\u001b[0m  \u001b[0m"
       ]
@@ -2358,7 +2358,7 @@
       "expanded": true,
       "width": 80,
       "lines": [
-        "\u001b[35m󰯌\u001b[0m pane list                                                                     \u001b[0m",
+        "\u001b[35m󰯌 \u001b[1mcmux\u001b[0m pane list                                                                \u001b[0m",
         "\u001b[32mExample response\u001b[0m                                                                \u001b[0m",
         "  \u001b[2mExample response\u001b[0m                                                              \u001b[0m"
       ]
@@ -2367,7 +2367,7 @@
       "expanded": true,
       "width": 120,
       "lines": [
-        "\u001b[35m󰯌\u001b[0m pane list                                                                                                             \u001b[0m",
+        "\u001b[35m󰯌 \u001b[1mcmux\u001b[0m pane list                                                                                                        \u001b[0m",
         "\u001b[32mExample response\u001b[0m                                                                                                        \u001b[0m",
         "  \u001b[2mExample response\u001b[0m                                                                                                      \u001b[0m"
       ]
@@ -2378,7 +2378,7 @@
       "expanded": false,
       "width": 20,
       "lines": [
-        "\u001b[34m󰂞\u001b[0m Example           \u001b[0m",
+        "\u001b[34m󰂞 \u001b[1mcmux\u001b[0m Example      \u001b[0m",
         "\u001b[32msent\u001b[0m                \u001b[0m"
       ]
     },
@@ -2386,7 +2386,7 @@
       "expanded": false,
       "width": 80,
       "lines": [
-        "\u001b[34m󰂞\u001b[0m Example                                                                       \u001b[0m",
+        "\u001b[34m󰂞 \u001b[1mcmux\u001b[0m Example                                                                  \u001b[0m",
         "\u001b[32msent\u001b[0m                                                                            \u001b[0m"
       ]
     },
@@ -2394,7 +2394,7 @@
       "expanded": false,
       "width": 120,
       "lines": [
-        "\u001b[34m󰂞\u001b[0m Example                                                                                                               \u001b[0m",
+        "\u001b[34m󰂞 \u001b[1mcmux\u001b[0m Example                                                                                                          \u001b[0m",
         "\u001b[32msent\u001b[0m                                                                                                                    \u001b[0m"
       ]
     },
@@ -2402,7 +2402,7 @@
       "expanded": true,
       "width": 20,
       "lines": [
-        "\u001b[34m󰂞\u001b[0m Example           \u001b[0m",
+        "\u001b[34m󰂞 \u001b[1mcmux\u001b[0m Example      \u001b[0m",
         "\u001b[32msent\u001b[0m                \u001b[0m",
         "  \u001b[2mExample response\u001b[0m  \u001b[0m"
       ]
@@ -2411,7 +2411,7 @@
       "expanded": true,
       "width": 80,
       "lines": [
-        "\u001b[34m󰂞\u001b[0m Example                                                                       \u001b[0m",
+        "\u001b[34m󰂞 \u001b[1mcmux\u001b[0m Example                                                                  \u001b[0m",
         "\u001b[32msent\u001b[0m                                                                            \u001b[0m",
         "  \u001b[2mExample response\u001b[0m                                                              \u001b[0m"
       ]
@@ -2420,7 +2420,7 @@
       "expanded": true,
       "width": 120,
       "lines": [
-        "\u001b[34m󰂞\u001b[0m Example                                                                                                               \u001b[0m",
+        "\u001b[34m󰂞 \u001b[1mcmux\u001b[0m Example                                                                                                          \u001b[0m",
         "\u001b[32msent\u001b[0m                                                                                                                    \u001b[0m",
         "  \u001b[2mExample response\u001b[0m                                                                                                      \u001b[0m"
       ]
@@ -2431,7 +2431,7 @@
       "expanded": false,
       "width": 20,
       "lines": [
-        "\u001b[36m󰉹\u001b[0m list MCP resources\u001b[0m",
+        "\u001b[36m󰉹 \u001b[1mmcp\u001b[0m list MCP reso\u001b[0m…\u001b[0m\u001b[0m",
         "\u001b[2mall s\u001b[0m…\u001b[0m →\u001b[0m \u001b[32m0 resources\u001b[0m\u001b[0m"
       ]
     },
@@ -2439,7 +2439,7 @@
       "expanded": false,
       "width": 80,
       "lines": [
-        "\u001b[36m󰉹\u001b[0m list MCP resources                                                            \u001b[0m",
+        "\u001b[36m󰉹 \u001b[1mmcp\u001b[0m list MCP resources                                                        \u001b[0m",
         "\u001b[2mall servers\u001b[0m \u001b[2m→\u001b[0m \u001b[32m0 resources\u001b[0m                                                       \u001b[0m"
       ]
     },
@@ -2447,7 +2447,7 @@
       "expanded": false,
       "width": 120,
       "lines": [
-        "\u001b[36m󰉹\u001b[0m list MCP resources                                                                                                    \u001b[0m",
+        "\u001b[36m󰉹 \u001b[1mmcp\u001b[0m list MCP resources                                                                                                \u001b[0m",
         "\u001b[2mall servers\u001b[0m \u001b[2m→\u001b[0m \u001b[32m0 resources\u001b[0m                                                                                               \u001b[0m"
       ]
     },
@@ -2455,7 +2455,7 @@
       "expanded": true,
       "width": 20,
       "lines": [
-        "\u001b[36m󰉹\u001b[0m list MCP resources\u001b[0m",
+        "\u001b[36m󰉹 \u001b[1mmcp\u001b[0m list MCP reso\u001b[0m…\u001b[0m\u001b[0m",
         "\u001b[2mall s\u001b[0m…\u001b[0m →\u001b[0m \u001b[32m0 resources\u001b[0m\u001b[0m"
       ]
     },
@@ -2463,7 +2463,7 @@
       "expanded": true,
       "width": 80,
       "lines": [
-        "\u001b[36m󰉹\u001b[0m list MCP resources                                                            \u001b[0m",
+        "\u001b[36m󰉹 \u001b[1mmcp\u001b[0m list MCP resources                                                        \u001b[0m",
         "\u001b[2mall servers\u001b[0m \u001b[2m→\u001b[0m \u001b[32m0 resources\u001b[0m                                                       \u001b[0m"
       ]
     },
@@ -2471,7 +2471,7 @@
       "expanded": true,
       "width": 120,
       "lines": [
-        "\u001b[36m󰉹\u001b[0m list MCP resources                                                                                                    \u001b[0m",
+        "\u001b[36m󰉹 \u001b[1mmcp\u001b[0m list MCP resources                                                                                                \u001b[0m",
         "\u001b[2mall servers\u001b[0m \u001b[2m→\u001b[0m \u001b[32m0 resources\u001b[0m                                                                                               \u001b[0m"
       ]
     }
@@ -2481,7 +2481,7 @@
       "expanded": false,
       "width": 20,
       "lines": [
-        "\u001b[36m󰠲\u001b[0m list MCP resource\u001b[0m…\u001b[0m\u001b[0m",
+        "\u001b[36m󰠲 \u001b[1mmcp\u001b[0m list MCP reso\u001b[0m…\u001b[0m\u001b[0m",
         "\u001b[2mall s\u001b[0m…\u001b[0m →\u001b[0m \u001b[32m0 templates\u001b[0m\u001b[0m"
       ]
     },
@@ -2489,7 +2489,7 @@
       "expanded": false,
       "width": 80,
       "lines": [
-        "\u001b[36m󰠲\u001b[0m list MCP resource templates                                                   \u001b[0m",
+        "\u001b[36m󰠲 \u001b[1mmcp\u001b[0m list MCP resource templates                                               \u001b[0m",
         "\u001b[2mall servers\u001b[0m \u001b[2m→\u001b[0m \u001b[32m0 templates\u001b[0m                                                       \u001b[0m"
       ]
     },
@@ -2497,7 +2497,7 @@
       "expanded": false,
       "width": 120,
       "lines": [
-        "\u001b[36m󰠲\u001b[0m list MCP resource templates                                                                                           \u001b[0m",
+        "\u001b[36m󰠲 \u001b[1mmcp\u001b[0m list MCP resource templates                                                                                       \u001b[0m",
         "\u001b[2mall servers\u001b[0m \u001b[2m→\u001b[0m \u001b[32m0 templates\u001b[0m                                                                                               \u001b[0m"
       ]
     },
@@ -2505,7 +2505,7 @@
       "expanded": true,
       "width": 20,
       "lines": [
-        "\u001b[36m󰠲\u001b[0m list MCP resource\u001b[0m…\u001b[0m\u001b[0m",
+        "\u001b[36m󰠲 \u001b[1mmcp\u001b[0m list MCP reso\u001b[0m…\u001b[0m\u001b[0m",
         "\u001b[2mall s\u001b[0m…\u001b[0m →\u001b[0m \u001b[32m0 templates\u001b[0m\u001b[0m"
       ]
     },
@@ -2513,7 +2513,7 @@
       "expanded": true,
       "width": 80,
       "lines": [
-        "\u001b[36m󰠲\u001b[0m list MCP resource templates                                                   \u001b[0m",
+        "\u001b[36m󰠲 \u001b[1mmcp\u001b[0m list MCP resource templates                                               \u001b[0m",
         "\u001b[2mall servers\u001b[0m \u001b[2m→\u001b[0m \u001b[32m0 templates\u001b[0m                                                       \u001b[0m"
       ]
     },
@@ -2521,7 +2521,7 @@
       "expanded": true,
       "width": 120,
       "lines": [
-        "\u001b[36m󰠲\u001b[0m list MCP resource templates                                                                                           \u001b[0m",
+        "\u001b[36m󰠲 \u001b[1mmcp\u001b[0m list MCP resource templates                                                                                       \u001b[0m",
         "\u001b[2mall servers\u001b[0m \u001b[2m→\u001b[0m \u001b[32m0 templates\u001b[0m                                                                                               \u001b[0m"
       ]
     }
@@ -2531,7 +2531,7 @@
       "expanded": false,
       "width": 20,
       "lines": [
-        "\u001b[36m󰷊\u001b[0m read MCP resource \u001b[0m",
+        "\u001b[36m󰷊 \u001b[1mmcp\u001b[0m read MCP reso\u001b[0m…\u001b[0m\u001b[0m",
         "\u001b[2mexample \u001b[0m…\u001b[0m →\u001b[0m \u001b[32m16 chars\u001b[0m\u001b[0m"
       ]
     },
@@ -2539,7 +2539,7 @@
       "expanded": false,
       "width": 80,
       "lines": [
-        "\u001b[36m󰷊\u001b[0m read MCP resource                                                             \u001b[0m",
+        "\u001b[36m󰷊 \u001b[1mmcp\u001b[0m read MCP resource                                                         \u001b[0m",
         "\u001b[2mexample · example://resource\u001b[0m \u001b[2m→\u001b[0m \u001b[32m16 chars\u001b[0m                                         \u001b[0m"
       ]
     },
@@ -2547,7 +2547,7 @@
       "expanded": false,
       "width": 120,
       "lines": [
-        "\u001b[36m󰷊\u001b[0m read MCP resource                                                                                                     \u001b[0m",
+        "\u001b[36m󰷊 \u001b[1mmcp\u001b[0m read MCP resource                                                                                                 \u001b[0m",
         "\u001b[2mexample · example://resource\u001b[0m \u001b[2m→\u001b[0m \u001b[32m16 chars\u001b[0m                                                                                 \u001b[0m"
       ]
     },
@@ -2555,7 +2555,7 @@
       "expanded": true,
       "width": 20,
       "lines": [
-        "\u001b[36m󰷊\u001b[0m read MCP resource \u001b[0m",
+        "\u001b[36m󰷊 \u001b[1mmcp\u001b[0m read MCP reso\u001b[0m…\u001b[0m\u001b[0m",
         "\u001b[2mexample \u001b[0m…\u001b[0m →\u001b[0m \u001b[32m16 chars\u001b[0m\u001b[0m",
         "  \u001b[2mExample resource\u001b[0m  \u001b[0m"
       ]
@@ -2564,7 +2564,7 @@
       "expanded": true,
       "width": 80,
       "lines": [
-        "\u001b[36m󰷊\u001b[0m read MCP resource                                                             \u001b[0m",
+        "\u001b[36m󰷊 \u001b[1mmcp\u001b[0m read MCP resource                                                         \u001b[0m",
         "\u001b[2mexample · example://resource\u001b[0m \u001b[2m→\u001b[0m \u001b[32m16 chars\u001b[0m                                         \u001b[0m",
         "  \u001b[2mExample resource\u001b[0m                                                              \u001b[0m"
       ]
@@ -2573,7 +2573,7 @@
       "expanded": true,
       "width": 120,
       "lines": [
-        "\u001b[36m󰷊\u001b[0m read MCP resource                                                                                                     \u001b[0m",
+        "\u001b[36m󰷊 \u001b[1mmcp\u001b[0m read MCP resource                                                                                                 \u001b[0m",
         "\u001b[2mexample · example://resource\u001b[0m \u001b[2m→\u001b[0m \u001b[32m16 chars\u001b[0m                                                                                 \u001b[0m",
         "  \u001b[2mExample resource\u001b[0m                                                                                                      \u001b[0m"
       ]
@@ -2584,7 +2584,7 @@
       "expanded": false,
       "width": 20,
       "lines": [
-        "\u001b[33m󰄴\u001b[0m mark step done    \u001b[0m",
+        "\u001b[33m󰄴 \u001b[1mplannotator\u001b[0m mark \u001b[0m…\u001b[0m\u001b[0m",
         "→\u001b[0m \u001b[31mError: No approve\u001b[0m…\u001b[0m\u001b[0m"
       ]
     },
@@ -2592,7 +2592,7 @@
       "expanded": false,
       "width": 80,
       "lines": [
-        "\u001b[33m󰄴\u001b[0m mark step done                                                                \u001b[0m",
+        "\u001b[33m󰄴 \u001b[1mplannotator\u001b[0m mark step done                                                    \u001b[0m",
         "\u001b[2mstep 1\u001b[0m \u001b[2m→\u001b[0m \u001b[31mError: No approved plan is executing.\u001b[0m                                  \u001b[0m"
       ]
     },
@@ -2600,7 +2600,7 @@
       "expanded": false,
       "width": 120,
       "lines": [
-        "\u001b[33m󰄴\u001b[0m mark step done                                                                                                        \u001b[0m",
+        "\u001b[33m󰄴 \u001b[1mplannotator\u001b[0m mark step done                                                                                            \u001b[0m",
         "\u001b[2mstep 1\u001b[0m \u001b[2m→\u001b[0m \u001b[31mError: No approved plan is executing.\u001b[0m                                                                          \u001b[0m"
       ]
     },
@@ -2608,7 +2608,7 @@
       "expanded": true,
       "width": 20,
       "lines": [
-        "\u001b[33m󰄴\u001b[0m mark step done    \u001b[0m",
+        "\u001b[33m󰄴 \u001b[1mplannotator\u001b[0m mark \u001b[0m…\u001b[0m\u001b[0m",
         "→\u001b[0m \u001b[31mError: No approve\u001b[0m…\u001b[0m\u001b[0m",
         "  \u001b[31mError: No approved\u001b[0m",
         "  \u001b[31mplan is executing.\u001b[0m\u001b[0m"
@@ -2618,7 +2618,7 @@
       "expanded": true,
       "width": 80,
       "lines": [
-        "\u001b[33m󰄴\u001b[0m mark step done                                                                \u001b[0m",
+        "\u001b[33m󰄴 \u001b[1mplannotator\u001b[0m mark step done                                                    \u001b[0m",
         "\u001b[2mstep 1\u001b[0m \u001b[2m→\u001b[0m \u001b[31mError: No approved plan is executing.\u001b[0m                                  \u001b[0m",
         "  \u001b[31mError: No approved plan is executing.\u001b[0m                                         \u001b[0m"
       ]
@@ -2627,7 +2627,7 @@
       "expanded": true,
       "width": 120,
       "lines": [
-        "\u001b[33m󰄴\u001b[0m mark step done                                                                                                        \u001b[0m",
+        "\u001b[33m󰄴 \u001b[1mplannotator\u001b[0m mark step done                                                                                            \u001b[0m",
         "\u001b[2mstep 1\u001b[0m \u001b[2m→\u001b[0m \u001b[31mError: No approved plan is executing.\u001b[0m                                                                          \u001b[0m",
         "  \u001b[31mError: No approved plan is executing.\u001b[0m                                                                                 \u001b[0m"
       ]
@@ -2638,7 +2638,7 @@
       "expanded": false,
       "width": 20,
       "lines": [
-        "\u001b[34m󰳽\u001b[0m Cursor web search \u001b[0m",
+        "\u001b[34m󰳽 \u001b[1mcursor\u001b[0m Cursor web\u001b[0m…\u001b[0m\u001b[0m",
         "\u001b[32m3 results\u001b[0m           \u001b[0m"
       ]
     },
@@ -2646,7 +2646,7 @@
       "expanded": false,
       "width": 80,
       "lines": [
-        "\u001b[34m󰳽\u001b[0m Cursor web search                                                             \u001b[0m",
+        "\u001b[34m󰳽 \u001b[1mcursor\u001b[0m Cursor web search                                                      \u001b[0m",
         "\u001b[32m3 results\u001b[0m                                                                       \u001b[0m"
       ]
     },
@@ -2654,7 +2654,7 @@
       "expanded": false,
       "width": 120,
       "lines": [
-        "\u001b[34m󰳽\u001b[0m Cursor web search                                                                                                     \u001b[0m",
+        "\u001b[34m󰳽 \u001b[1mcursor\u001b[0m Cursor web search                                                                                              \u001b[0m",
         "\u001b[32m3 results\u001b[0m                                                                                                               \u001b[0m"
       ]
     },
@@ -2662,7 +2662,7 @@
       "expanded": true,
       "width": 20,
       "lines": [
-        "\u001b[34m󰳽\u001b[0m Cursor web search \u001b[0m",
+        "\u001b[34m󰳽 \u001b[1mcursor\u001b[0m Cursor web\u001b[0m…\u001b[0m\u001b[0m",
         "\u001b[32m3 results\u001b[0m           \u001b[0m",
         "  \u001b[2mExample response\u001b[0m  \u001b[0m"
       ]
@@ -2671,7 +2671,7 @@
       "expanded": true,
       "width": 80,
       "lines": [
-        "\u001b[34m󰳽\u001b[0m Cursor web search                                                             \u001b[0m",
+        "\u001b[34m󰳽 \u001b[1mcursor\u001b[0m Cursor web search                                                      \u001b[0m",
         "\u001b[32m3 results\u001b[0m                                                                       \u001b[0m",
         "  \u001b[2mExample response\u001b[0m                                                              \u001b[0m"
       ]
@@ -2680,7 +2680,7 @@
       "expanded": true,
       "width": 120,
       "lines": [
-        "\u001b[34m󰳽\u001b[0m Cursor web search                                                                                                     \u001b[0m",
+        "\u001b[34m󰳽 \u001b[1mcursor\u001b[0m Cursor web search                                                                                              \u001b[0m",
         "\u001b[32m3 results\u001b[0m                                                                                                               \u001b[0m",
         "  \u001b[2mExample response\u001b[0m                                                                                                      \u001b[0m"
       ]
@@ -2691,7 +2691,7 @@
       "expanded": false,
       "width": 20,
       "lines": [
-        "\u001b[34m󰳽\u001b[0m Cursor web search \u001b[0m",
+        "\u001b[34m󰳽 \u001b[1mcursor\u001b[0m Cursor web\u001b[0m…\u001b[0m\u001b[0m",
         "\u001b[31mError: failed\u001b[0m       \u001b[0m"
       ]
     },
@@ -2699,7 +2699,7 @@
       "expanded": false,
       "width": 80,
       "lines": [
-        "\u001b[34m󰳽\u001b[0m Cursor web search                                                             \u001b[0m",
+        "\u001b[34m󰳽 \u001b[1mcursor\u001b[0m Cursor web search                                                      \u001b[0m",
         "\u001b[31mError: failed\u001b[0m                                                                   \u001b[0m"
       ]
     },
@@ -2707,7 +2707,7 @@
       "expanded": false,
       "width": 120,
       "lines": [
-        "\u001b[34m󰳽\u001b[0m Cursor web search                                                                                                     \u001b[0m",
+        "\u001b[34m󰳽 \u001b[1mcursor\u001b[0m Cursor web search                                                                                              \u001b[0m",
         "\u001b[31mError: failed\u001b[0m                                                                                                           \u001b[0m"
       ]
     },
@@ -2715,7 +2715,7 @@
       "expanded": true,
       "width": 20,
       "lines": [
-        "\u001b[34m󰳽\u001b[0m Cursor web search \u001b[0m",
+        "\u001b[34m󰳽 \u001b[1mcursor\u001b[0m Cursor web\u001b[0m…\u001b[0m\u001b[0m",
         "\u001b[31mError: failed\u001b[0m       \u001b[0m",
         "  \u001b[31mError: failed\u001b[0m     \u001b[0m"
       ]
@@ -2724,7 +2724,7 @@
       "expanded": true,
       "width": 80,
       "lines": [
-        "\u001b[34m󰳽\u001b[0m Cursor web search                                                             \u001b[0m",
+        "\u001b[34m󰳽 \u001b[1mcursor\u001b[0m Cursor web search                                                      \u001b[0m",
         "\u001b[31mError: failed\u001b[0m                                                                   \u001b[0m",
         "  \u001b[31mError: failed\u001b[0m                                                                 \u001b[0m"
       ]
@@ -2733,7 +2733,7 @@
       "expanded": true,
       "width": 120,
       "lines": [
-        "\u001b[34m󰳽\u001b[0m Cursor web search                                                                                                     \u001b[0m",
+        "\u001b[34m󰳽 \u001b[1mcursor\u001b[0m Cursor web search                                                                                              \u001b[0m",
         "\u001b[31mError: failed\u001b[0m                                                                                                           \u001b[0m",
         "  \u001b[31mError: failed\u001b[0m                                                                                                         \u001b[0m"
       ]

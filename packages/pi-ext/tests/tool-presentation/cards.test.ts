@@ -38,7 +38,9 @@ for (const [name, spec] of Object.entries(cardSpecs)) {
     const noIcon = renderCard({ spec, args, result: {} }, { icons: false });
     assert.ok(plain(noIcon[0]).startsWith(spec.label));
     assert.ok(!noIcon[0].includes(spec.icon));
-    assert.ok(spec.label.length <= 8);
+    assert.ok(spec.label.length <= 16);
+    const withIcon = renderCard({ spec, args, result: {} });
+    assert.ok(plain(withIcon[0]).startsWith(`${spec.icon} ${spec.label}`), `${name} names its provider group after the icon`);
   });
 }
 test("counts of one are singular and cards without a target have no dangling arrow", () => {

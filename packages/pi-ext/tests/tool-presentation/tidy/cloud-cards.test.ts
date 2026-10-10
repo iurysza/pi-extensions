@@ -22,7 +22,7 @@ test("cloud completion summary distinguishes finished, failed and cancelled runs
   assert.equal(spec.summary({ details: { ...agent, status: "cancelled", elapsedMs: 12000 } }, {}), "cancelled · 0:12 · 7 tools · pi-voice @ main");
   const rows = renderCard({ spec, args: { prompt: agent.prompt }, result: { details: agent } }).map(plain);
   assert.equal(rows.length, 2);
-  assert.equal(rows[0], "󰅟 Review the docs");
+  assert.equal(rows[0], "󰅟 cursor cloud Review the docs");
   assert.match(rows[1], /^docs → finished/);
 });
 
@@ -99,15 +99,15 @@ test("assistant text folds a cloud completion with tools and counts cloud failur
     assert.ok(backgrounds.every(key => key === "toolErrorBg"));
     await h.emit("message_start", { message: { role: "assistant", content: [] } });
     await h.emit("message_update", { message: { role: "assistant", content: [{ type: "thinking", thinking: "Wait" }] } });
-    assert.doesNotMatch(plain(card.render(200).join("\n")), /Worked/);
+    assert.doesNotMatch(plain(card.render(200).join("\n")), /(?:memory|cursor cloud)(?: \d+)? · <?\d/);
     await h.emit("message_update", { message: { role: "assistant", content: [{ type: "text", text: "Here is the summary" }] } });
     const folded = card.render(200).join("\n");
-    assert.match(plain(folded), /Worked · 3 tools · 1 cloud agent · 29s · 1 failed/);
+    assert.match(plain(folded), /memory 3 · cursor cloud · 29s · 1 failed/);
     assert.match(folded, /\x1b\[31m/);
     for (const tool of toolCards) assert.deepEqual(tool.render(200), []);
     const expanded = request(h, failed, true);
     assert.match(plain(expanded.render(200).join("\n")), /│ \*\*plain text\*\*/);
-    assert.doesNotMatch(plain(expanded.render(200).join("\n")), /Worked/);
+    assert.doesNotMatch(plain(expanded.render(200).join("\n")), /(?:memory|cursor cloud)(?: \d+)? · <?\d/);
     const click = { type: "click", button: "left", x: 0, y: 0 };
     assert.deepEqual(card.handleMouse(click), { handled: true });
     assert.match(plain(toolCards[0].render(200).join("\n")), /Saved/);
@@ -124,9 +124,9 @@ test("cloud-only grace folding requests a host redraw without visible widget con
     } }, sessionManager: { getBranch: () => [] } });
     await h.emit("message_start", { message: message() });
     const component = request(h);
-    assert.doesNotMatch(plain(component.render(200).join("\n")), /Worked/);
+    assert.doesNotMatch(plain(component.render(200).join("\n")), /(?:memory|cursor cloud)(?: \d+)? · <?\d/);
     t.mock.timers.tick(5000);
-    assert.match(plain(component.render(200).join("\n")), /Worked · 1 cloud agent · 26s/);
+    assert.match(plain(component.render(200).join("\n")), / cursor cloud · 26s/);
     assert.ok(redraws > 0);
   } finally { await h.emit("session_shutdown"); }
 });
@@ -142,10 +142,10 @@ test("chill restores direct custom_message entries and repeated cloud follow-ups
     for (const event of ["session_start", "session_tree"]) {
       await h.emit(event, {}, { sessionManager: { getBranch: () => branch } });
       assert.deepEqual(request(h, first).render(200), []);
-      assert.match(plain(request(h, second).render(200).join("\n")), /Worked · 2 cloud agents · 52s · 1 failed/);
+      assert.match(plain(request(h, second).render(200).join("\n")), /cursor cloud 2 · 52s · 1 failed/);
       assert.equal(JSON.stringify(branch), before);
     }
     await h.emit("session_tree", {}, { sessionManager: { getBranch: () => [entry(first)] } });
-    assert.match(plain(request(h, first).render(200).join("\n")), /Worked · 1 cloud agent/);
+    assert.match(plain(request(h, first).render(200).join("\n")), / cursor cloud · /);
   } finally { await h.emit("session_shutdown"); }
 });

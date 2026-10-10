@@ -26,7 +26,7 @@ export function mcpSpec(tool: { name: string; label?: string; title?: string; an
   const label = server.replace(/^cloudflare/, "cf").replaceAll("_", " ");
   return {
     icon: server === "notion" ? "\ue848" : server.startsWith("cloudflare") ? "\ue792" : "󰚥", color: tool.annotations?.readOnlyHint ? CYAN : YELLOW,
-    label: label.slice(0, 8), headline: () => tool.title ?? tool.label ?? name.replace(new RegExp(`^${server}_`), "").replaceAll("_", " "),
+    label: label.slice(0, 16), headline: () => tool.title ?? tool.label ?? name.replace(new RegExp(`^${server}_`), "").replaceAll("_", " "),
     target: (a) => joinFacts(label, identity(a)), summary: mcpSummary, failed: (r) => !!r.isError || detailsError(r),
     expanded: (r, a) => [...Object.entries(a).map(([k, v]) => `${k}: ${typeof v === "string" ? v : JSON.stringify(v)}`), "", ...rawExpanded(r)],
   };
@@ -36,7 +36,7 @@ export const resourceSpecs: Record<string, CardSpec> = Object.fromEntries([
   ["list_mcp_resource_templates", "󰠲", "list MCP resource templates", "resourceTemplates"],
   ["read_mcp_resource", "󰷊", "read MCP resource", "contents"],
 ].map(([name, icon, headline, key]) => [name, {
-  icon, color: CYAN, label: "resource", headline: () => headline,
+  icon, color: CYAN, label: "mcp", headline: () => headline,
   target: (a: CardArgs) => joinFacts(a.server ?? "all servers", a.uri, a.cursor ? "page 2" : ""), failed: detailsError,
   summary: (r: CardResult) => {
     const value = parsed(r);

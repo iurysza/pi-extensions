@@ -368,7 +368,8 @@ export function cardParts({ spec, args = {}, result = {} }: CardModel, opts: Car
 		: `${isPartial ? DIM : isError ? RED : GREEN}${fact || (isPartial ? duration ?? "preparing" : isError ? "error" : "done")}${RESET}${duration === undefined || (isPartial && !fact) ? "" : ` ${DIM}· ${duration}${RESET}`}`) + linkSuffix;
 
 	const { icon, color } = spec;
-	const label = icons && (!spec.legacy || BUILT_INS.has(spec.label)) ? icon : `${icons && spec.legacy ? `${icon} ` : ""}${BOLD}${spec.label}`;
+	// Built-ins stay icon-only; every other card names its provider group in bold after the icon.
+	const label = icons && spec.legacy && BUILT_INS.has(spec.label) ? icon : `${icons ? `${icon} ` : ""}${BOLD}${spec.label}`;
 	const toolLabel = `${color}${label}${RESET}`;
 	const headline = oneLine(reasoning || spec.headline(rest) || spec.target(rest, result));
 	const detail = singleLine(spec.target(rest, result));

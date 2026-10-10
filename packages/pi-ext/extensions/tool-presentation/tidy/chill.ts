@@ -8,7 +8,13 @@ import { readToolTiming, type ToolTimeline } from "./timeline.js";
 const builtins = new Set(["read", "write", "edit", "bash", "grep", "find", "ls"]);
 const hasCard = (name: string) => builtins.has(name) || !!specForTool({ name });
 type Group = { calls: Call[]; open?: boolean };
-type Call = { id: string; group: Group; done: boolean; failed: boolean; elapsedMs?: number; settled?: boolean; cloud?: boolean };
+type Call = { id: string; name: string; group: Group; done: boolean; failed: boolean; elapsedMs?: number; settled?: boolean; cloud?: boolean };
+
+// Built-ins have no card label, so the header groups them by what they did.
+const builtinGroups: Record<string, string> = { read: "read", ls: "read", find: "read", grep: "read", write: "edit", edit: "edit", bash: "shell" };
+const groupName = (name: string): string => builtinGroups[name] ?? specForTool({ name })?.label ?? name;
+/** Columns the open group's cards shift right, so they sit under the header text past its arrow. */
+export const CHILL_INDENT = 2;
 
 export const CLOUD_COMPLETION_TYPE = "cursor-cloud-completion";
 /** New completions carry a stable identity in details, shared by live and restored messages. */
@@ -41,7 +47,7 @@ export class ChillState {
   start(id: string, name: string): void {
     if (!hasCard(name) || this.calls.has(id)) return;
     const group = this.current ??= { calls: [] };
-    const call: Call = { id, group, done: false, failed: false, cloud: name === "cursor_cloud_completion" };
+    const call: Call = { id, name, group, done: false, failed: false, cloud: name === "cursor_cloud_completion" };
     group.calls.push(call);
     this.calls.set(id, call);
     this.refresh();
@@ -100,17 +106,25 @@ export class ChillState {
     return [`${DIM} ${this.summary(call.group)}${RESET}`];
   }
 
+  /** Provider groups in first-run order, e.g. "read 3 · edit · shell · 20s · 1 failed". */
   private summary(group: Group): string {
     const finished = group.calls.filter((item) => this.isFolded(item));
     const running = group.calls.some((item) => !this.isFolded(item));
     const failures = finished.filter((item) => item.failed).length;
     const timed = finished.filter((item) => item.elapsedMs !== undefined);
-    const duration = timed.length ? ` · ${formatElapsed(timed.reduce((total, item) => total + item.elapsedMs!, 0))}` : "";
-    const cloudCount = finished.filter(item => item.cloud).length;
-    const toolCount = finished.length - cloudCount;
-    const counts = [toolCount || !cloudCount ? `${toolCount} ${toolCount === 1 ? "tool" : "tools"}` : "",
-      cloudCount ? `${cloudCount} cloud ${cloudCount === 1 ? "agent" : "agents"}` : ""].filter(Boolean).join(" · ");
-    return `${running ? "Working" : "Worked"} · ${counts}${duration}${RESET}${failures ? ` ${RED}· ${failures} failed` : ""}`;
+    const duration = timed.length ? formatElapsed(timed.reduce((total, item) => total + item.elapsedMs!, 0)) : "";
+    const counts = new Map<string, number>();
+    for (const item of finished) counts.set(groupName(item.name), (counts.get(groupName(item.name)) ?? 0) + 1);
+    const names = [...counts].map(([name, n]) => n > 1 ? `${name} ${n}` : name);
+    const shown = names.length > 4 ? [...names.slice(0, 3), `+${names.length - 3}`] : names;
+    const facts = [...shown, duration, running ? "running" : ""].filter(Boolean).join(" · ");
+    return `${facts}${RESET}${failures ? ` ${RED}· ${failures} failed` : ""}`;
+  }
+
+  /** Cards inside an open group render indented, like children in a file tree. */
+  indented(id: string): boolean {
+    const call = this.calls.get(id);
+    return !!(this.enabled && call?.group.open && this.isFolded(call));
   }
 
   restore(entries: readonly { type: string; message?: any; customType?: string; timestamp?: string; details?: any; display?: boolean }[]): void {
@@ -156,16 +170,19 @@ export function chillComponent(component: Component, chill: ChillState, context:
       const folded = expanded ? undefined : chill.folded(id, kind === "message" ? "result" : kind);
       summary = !!folded?.length;
       if (folded !== undefined) return new WidthAwareLines(folded).render(width);
+      const indent = chill.indented(id) ? CHILL_INDENT : 0;
+      const body = indent ? component.render(Math.max(1, width - indent)).map((line) => " ".repeat(indent) + line) : component.render(width);
       const header = kind !== "result" ? chill.header(id) : undefined;
-      if (header === undefined) return component.render(width);
+      if (header === undefined) return body;
       offset = 1;
-      return [...new WidthAwareLines([header]).render(width), ...component.render(width)];
+      return [...new WidthAwareLines([header]).render(width), ...body];
     },
     handleMouse(event) {
       const click = event.type === "click" && event.button === "left";
       if (summary) return click ? (chill.toggleGroup(id), { handled: true }) : undefined;
       if (offset && event.y < offset) return click ? (chill.toggleGroup(id), { handled: true }) : undefined;
-      return component.handleMouse?.({ ...event, y: event.y - offset });
+      const shift = chill.indented(id) ? CHILL_INDENT : 0;
+      return component.handleMouse?.({ ...event, y: event.y - offset, ...(typeof (event as any).x === "number" ? { x: (event as any).x - shift } : {}) });
     },
   };
 }
