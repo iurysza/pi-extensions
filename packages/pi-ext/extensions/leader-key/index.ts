@@ -54,7 +54,7 @@ const HOME_GROUPS: { key: string; label: string; children: string[] }[] = [
 // Home order and dividers. Unlisted entries land in "Other" above the footer.
 const HOME_SECTIONS: HomeSection[] = [
 	{ title: "Find", keys: ["k", "e"] },
-	{ title: "Agent", keys: ["m", "c", "b", "v", "g"] },
+	{ title: "Agent", keys: ["n", "m", "c", "b", "v", "g"] },
 	{ title: "This session", keys: ["s", "r", "a", "y"] },
 ];
 const HOME_FOOTER = ["o", "q"];
@@ -333,6 +333,18 @@ function buildEntries(
 					action: stageSpec("/opsx-archive ", "Optionally add a change name, then Enter"),
 				},
 			],
+		},
+	});
+
+	// ── New lead (spawn-lead skill) ─────────────────────────────────────
+	entries.push({
+		type: "action",
+		key: "n",
+		label: "New lead",
+		description: "worktree workspace + delegating lead",
+		action: (ctx) => {
+			ctx.ui.setEditorText("/spawn-lead ");
+			ctx.ui.notify("Type the lead name and task, then press Enter", "info");
 		},
 	});
 
