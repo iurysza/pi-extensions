@@ -48,6 +48,7 @@ Keep only decisions and their reasons, user preferences, facts about Iury's life
 Store pointers, not payloads: name the vault note or file that holds the details.
 Never store IDs, credentials, tokens or other secrets. No document numbers, phone numbers, addresses, emails or amounts of money.
 Do not register redundant memories. Skip anything already represented in the existing wake view, even if worded differently.
+Never record work that was just finished: no commit hashes, CI results, or pushed or applied status. The commit or file already records it.
 Invent nothing. Ignore routine task chatter, tool output and temporary debugging details. Most spans deserve zero or one line.
 ${job.session ? `Session pointer for unfinished work: ${job.session}\n` : ""}
 Existing wake view:\n${JSON.stringify(wake)}
