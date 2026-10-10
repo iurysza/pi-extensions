@@ -90,3 +90,28 @@ test("reports malformed JSON without replacing the user file", async (t) => {
   await assert.rejects(loadOrCreateFollowUpConfig(path), new RegExp(`Invalid JSON in ${path}`));
   assert.equal(await readFile(path, "utf8"), "{invalid");
 });
+
+test("settings.json followUpModel overrides provider, model and thinking", async (t) => {
+  const { applyFollowUpModelSetting, loadFollowUpModelSetting, parseFollowUpModelSetting } = await import("../src/config.js");
+  const agentDir = await mkdtemp(join(tmpdir(), "pi-follow-up-settings-"));
+  t.after(() => rm(agentDir, { recursive: true, force: true }));
+
+  assert.equal(await loadFollowUpModelSetting(agentDir), undefined);
+  await writeFile(join(agentDir, "settings.json"), JSON.stringify({ theme: "x" }));
+  assert.equal(await loadFollowUpModelSetting(agentDir), undefined);
+
+  await writeFile(join(agentDir, "settings.json"), JSON.stringify({ followUpModel: { model: "claude-code/claude-haiku-5-5", thinking: "high" } }));
+  const setting = await loadFollowUpModelSetting(agentDir);
+  assert.deepEqual(setting, { provider: "claude-code", model: "claude-haiku-5-5", thinking: "high" });
+  assert.deepEqual(applyFollowUpModelSetting({ ...DEFAULT_CONFIG, threshold: 120 }, setting), {
+    ...DEFAULT_CONFIG,
+    threshold: 120,
+    provider: "claude-code",
+    model: "claude-haiku-5-5",
+    thinking: "high",
+  });
+
+  assert.deepEqual(parseFollowUpModelSetting({ followUpModel: { model: "a/b" } }), { provider: "a", model: "b" });
+  assert.throws(() => parseFollowUpModelSetting({ followUpModel: { model: "no-slash" } }), /provider\/model/);
+  assert.throws(() => parseFollowUpModelSetting({ followUpModel: { model: "a/b", thinking: "huge" } }), /thinking/);
+});

@@ -34,6 +34,18 @@ You may omit properties to keep their defaults. Unknown properties and invalid
 values stop the extension from loading and name the problem in Pi's extension
 error. Pi does not replace an invalid file.
 
+### Model override in settings.json
+
+`followUpModel` in `~/.pi/agent/settings.json` overrides `provider`, `model`
+and `thinking` from `pi-follow-up.json`. Use it when a managed profile should
+choose the model:
+
+```json
+{ "followUpModel": { "model": "claude-code/claude-haiku-5-5", "thinking": "high" } }
+```
+
+`thinking` is optional. An invalid value stops the extension from loading.
+
 After editing the file, run `/reload` or restart Pi. Run `/follow-up` to see the
 active values and configuration path.
 

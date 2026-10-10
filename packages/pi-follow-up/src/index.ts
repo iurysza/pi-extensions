@@ -4,7 +4,9 @@ import type { ExtensionAPI, ExtensionContext, SessionEntry } from "@earendil-wor
 import { isKeyRelease, matchesKey, truncateToWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import {
+  applyFollowUpModelSetting,
   followUpConfigPath,
+  loadFollowUpModelSetting,
   loadOrCreateFollowUpConfig,
   type FollowUpConfig,
 } from "./config.js";
@@ -310,6 +312,6 @@ export function registerFollowUp(
 
 export default async function followUp(pi: ExtensionAPI): Promise<void> {
   const configPath = followUpConfigPath();
-  const config = await loadOrCreateFollowUpConfig(configPath);
+  const config = applyFollowUpModelSetting(await loadOrCreateFollowUpConfig(configPath), await loadFollowUpModelSetting());
   registerFollowUp(pi, config, configPath);
 }

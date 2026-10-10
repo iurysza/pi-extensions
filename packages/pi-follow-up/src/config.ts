@@ -150,3 +150,42 @@ export async function loadOrCreateFollowUpConfig(path = followUpConfigPath()): P
     throw new Error(`Failed to create ${path}: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
   }
 }
+
+/** Profile-managed override in Pi's settings.json: `followUpModel: { model: "provider/model", thinking? }`. */
+export type FollowUpModelSetting = { readonly provider: string; readonly model: string; readonly thinking?: ThinkingLevel };
+
+export function parseFollowUpModelSetting(settings: unknown): FollowUpModelSetting | undefined {
+  if (!isRecord(settings) || settings.followUpModel === undefined) return undefined;
+  const section = settings.followUpModel;
+  if (!isRecord(section)) throw new Error("followUpModel must be an object");
+  const id = section.model;
+  const slash = typeof id === "string" ? id.indexOf("/") : -1;
+  if (typeof id !== "string" || slash <= 0 || slash === id.length - 1) {
+    throw new Error("followUpModel.model must be a provider/model string");
+  }
+  const thinking = section.thinking;
+  if (thinking !== undefined && (typeof thinking !== "string" || !THINKING_LEVELS.has(thinking as ThinkingLevel))) {
+    throw new Error("followUpModel.thinking must be one of minimal, low, medium, high, xhigh, or max");
+  }
+  return { provider: id.slice(0, slash), model: id.slice(slash + 1), ...(thinking ? { thinking: thinking as ThinkingLevel } : {}) };
+}
+
+export function applyFollowUpModelSetting(config: FollowUpConfig, setting: FollowUpModelSetting | undefined): FollowUpConfig {
+  return setting ? { ...config, ...setting } : config;
+}
+
+export async function loadFollowUpModelSetting(agentDir = getAgentDir()): Promise<FollowUpModelSetting | undefined> {
+  const path = join(agentDir, "settings.json");
+  let source: string;
+  try {
+    source = await readFile(path, "utf8");
+  } catch (error) {
+    if (isFileError(error, "ENOENT")) return undefined;
+    throw error;
+  }
+  try {
+    return parseFollowUpModelSetting(JSON.parse(source));
+  } catch (error) {
+    throw new Error(`Invalid followUpModel in ${path}: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
+  }
+}
