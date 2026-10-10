@@ -10,7 +10,7 @@ const plain = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, "");
 
 test("a used report renders as a two-line tidy card", () => {
   const report: CompactionReport = { kind: "used", model: "claude-code/claude-haiku-5-5", name: "haiku-5.5", reason: "threshold", sessionModel: "opus-5.5", tokensBefore: 182_000, summaryTokens: 4100, inputTokens: 150_000, keepRecentTokens: 20_000, elapsedMs: 9800 };
-  assert.deepEqual(reportRows(report).map(plain), ["󰘕 compact compacted with haiku-5.5 · threshold", "182k → 4.1k tokens → kept 20k recent · 9s"]);
+  assert.deepEqual(reportRows(report).map(plain), ["󰘕 compacted with haiku-5.5 · threshold", "182k → 4.1k tokens → kept 20k recent · 9s"]);
   const expanded = reportRows(report, { expanded: true }).map(plain);
   assert.match(expanded[2], /model\s+claude-code\/claude-haiku-5-5/);
   assert.match(expanded[3], /150,000 tokens/);
@@ -20,13 +20,13 @@ test("a used report renders as a two-line tidy card", () => {
 
 test("fallback and failure cards say why", () => {
   const fallback = reportRows({ kind: "fallback", model: "a/b", reason: "manual", sessionModel: "opus-5.5", why: "model not found: a/b" }).map(plain);
-  assert.deepEqual(fallback, ["󰘕 compact fell back to opus-5.5 · manual", "a/b → model not found: a/b"]);
+  assert.deepEqual(fallback, ["󰘕 fell back to opus-5.5 · manual", "a/b → model not found: a/b"]);
   assert.match(plain(reportRows({ kind: "failed", model: "a/b", reason: "manual", why: "boom" })[1]), /a\/b → boom/);
 });
 
 test("a running card is pending with elapsed time", () => {
   const head = runningParts({ name: "haiku-5.5", reason: "manual", tokensBefore: 182_000, elapsedMs: 3200 }).head.map(plain);
-  assert.deepEqual(head, ["· 󰘕 compact compacting with haiku-5.5 · manual", "182k tokens → 3s"]);
+  assert.deepEqual(head, ["· 󰘕 compacting with haiku-5.5 · manual", "182k tokens → 3s"]);
 });
 
 function fakePi() {

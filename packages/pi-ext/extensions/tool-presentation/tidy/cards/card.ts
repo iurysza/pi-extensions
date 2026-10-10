@@ -368,9 +368,14 @@ export function cardParts({ spec, args = {}, result = {} }: CardModel, opts: Car
 		: `${isPartial ? DIM : isError ? RED : GREEN}${fact || (isPartial ? duration ?? "preparing" : isError ? "error" : "done")}${RESET}${duration === undefined || (isPartial && !fact) ? "" : ` ${DIM}· ${duration}${RESET}`}`) + linkSuffix;
 
 	const { icon, color } = spec;
-	// Built-ins stay icon-only; every other card names its provider group in bold after the icon.
-	const label = icons && spec.legacy && BUILT_INS.has(spec.label) ? icon : `${icons ? `${icon} ` : ""}${BOLD}${spec.label}`;
-	const toolLabel = `${color}${label}${RESET}`;
+	// Built-ins stay icon-only. Custom cards name their provider group in bold after the icon,
+	// unless the spec opts out because the headline already uses that word.
+	const hideGroup = spec.showGroupLabel === false;
+	const iconOnly = icons && (hideGroup || (spec.legacy && BUILT_INS.has(spec.label)));
+	let visible = "";
+	if (iconOnly) visible = icon;
+	else if (!hideGroup) visible = `${icons ? `${icon} ` : ""}${BOLD}${spec.label}`;
+	const toolLabel = visible ? `${color}${visible}${RESET}` : "";
 	const headline = oneLine(reasoning || spec.headline(rest) || spec.target(rest, result));
 	const detail = singleLine(spec.target(rest, result));
 	// Keep the target on failures too; width fitting preserves the useful error
@@ -381,15 +386,17 @@ export function cardParts({ spec, args = {}, result = {} }: CardModel, opts: Car
 	const line2 = !detail
 		? `${bareArrow}${summary}`
 		: `${DIM}${detail}${RESET} ${DIM}→${RESET} ${summary}`;
+	const lead = (text: string) => toolLabel ? `${toolLabel} ${text}` : text;
 	let lines: string[];
 	if (mode === "reasoning") {
-		lines = [`${runningPrefix}${toolLabel} ${headline} ${DIM}→${RESET} ${summary}`];
+		lines = [`${runningPrefix}${lead(`${headline} ${DIM}→${RESET} ${summary}`)}`];
 	} else if (mode === "result") {
 		const resultDetail = !detail ? "" : ` ${DIM}${detail}${RESET}`;
-		lines = [`${runningPrefix}${toolLabel}${resultDetail}${resultDetail || spec.legacy ? ` ${DIM}→${RESET}` : ""} ${summary}`];
+		const row = `${toolLabel}${resultDetail}${resultDetail || spec.legacy ? ` ${DIM}→${RESET}` : ""} ${summary}`;
+		lines = [`${runningPrefix}${toolLabel ? row : row.trimStart()}`];
 	} else {
 		lines = [
-			`${runningPrefix}${toolLabel} ${headline}`,
+			`${runningPrefix}${lead(headline)}`,
 			line2,
 		];
 	}
