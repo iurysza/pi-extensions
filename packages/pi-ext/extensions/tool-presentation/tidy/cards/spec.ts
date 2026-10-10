@@ -6,6 +6,8 @@ export interface CardSpec {
   icon: string;
   color: string;
   label: string;
+  /** Custom cards print `label` after the icon. Set false when the headline already uses that word. */
+  showGroupLabel?: boolean;
   headline(args: CardArgs): string;
   target(args: CardArgs, result?: CardResult): string;
   summary(result: CardResult, args: CardArgs): string;

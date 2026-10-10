@@ -41,6 +41,8 @@ const spec = (color: string): CardSpec => ({
   icon: ICON,
   color,
   label: "compact",
+  // Icon only. The group name would repeat the headline ("compact compacted").
+  showGroupLabel: false,
   headline: (a) => a.headline,
   target: (a) => a.target,
   summary: (r) => r.details?.summary ?? "",
