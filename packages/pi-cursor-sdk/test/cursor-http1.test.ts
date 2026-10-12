@@ -43,18 +43,18 @@ describe("Cursor SDK HTTP/1.1 configuration", () => {
 			/void 0!==([A-Za-z_$][\w$]*)\.local&&"useHttp1ForAgent"in \1\.local&&\(\w+=\1\.local\.useHttp1ForAgent\?\?void 0\)/,
 		);
 		expect(sdkImplementation).toContain('e.d(r,{Mu:()=>c,it:()=>u,xP:()=>a})');
-		const httpVersionSelection = sdkImplementation.indexOf('httpVersion:c?"1.1":"2"');
+		const httpVersionSelection = sdkImplementation.indexOf('httpVersion:u?"1.1":"2"');
 		expect(httpVersionSelection).toBeGreaterThan(-1);
 		expect(
 			sdkImplementation.slice(httpVersionSelection - 700, httpVersionSelection),
-		).toContain("const e=(0,Yt.it)(),n=lr(t)||(e??mr())");
+		).toContain("const e=(0,rr.it)(),n=pr(t)||(e??fr())");
 		const cacheKeyStart = sdkImplementation.indexOf("workingDirectory:t.workingDirectory");
 		const cacheKeyEnd = sdkImplementation.indexOf("customSubagents:t.customSubagents", cacheKeyStart);
 		expect(cacheKeyStart).toBeGreaterThan(-1);
 		expect(cacheKeyEnd).toBeGreaterThan(cacheKeyStart);
 		expect(sdkImplementation.slice(cacheKeyStart, cacheKeyEnd)).not.toContain("useHttp1ForAgent");
 		expect(sdkImplementation).toContain(
-			"r.refs-=1,!(r.refs>0||ir.get(t)!==r)){ir.delete(t)",
+			"r.refs-=1,!(r.refs>0||or.get(t)!==r)){or.delete(t)",
 		);
 	});
 
