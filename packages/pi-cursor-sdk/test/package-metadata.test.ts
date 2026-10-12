@@ -27,6 +27,12 @@ const PI_PACKAGES = [
 	"@earendil-works/pi-tui",
 ] as const;
 
+const PI_PACKAGE_VERSIONS: Record<(typeof PI_PACKAGES)[number], string> = {
+	"@earendil-works/pi-ai": "1.1.0",
+	"@earendil-works/pi-coding-agent": "1.0.4",
+	"@earendil-works/pi-tui": "1.1.0",
+};
+
 const BUNDLED_MCP_HONO_CLOSURE = ["@hono/node-server", "@modelcontextprotocol/sdk"] as const;
 
 function lockPackageVersion(packageName: string): string | undefined {
@@ -75,15 +81,15 @@ describe("package metadata cutover baselines", () => {
 	});
 
 	it("pins Cursor SDK exactly", () => {
-		expect(packageJson.dependencies["@cursor/sdk"]).toBe("1.0.35");
-		expect(lockPackageVersion("@cursor/sdk")).toBe("1.0.35");
+		expect(packageJson.dependencies["@cursor/sdk"]).toBe("1.0.37");
+		expect(lockPackageVersion("@cursor/sdk")).toBe("1.0.37");
 	});
 
 	it("ships an exact MCP/Hono bundledDependencies closure for published installs", () => {
-		expect(packageJson.dependencies["@modelcontextprotocol/sdk"]).toBe("1.32.0");
-		expect(lockPackageVersion("@modelcontextprotocol/sdk")).toBe("1.32.0");
-		expect(packageJson.dependencies["@hono/node-server"]).toBe("2.0.12");
-		expect(lockPackageVersion("@hono/node-server")).toBe("2.0.12");
+		expect(packageJson.dependencies["@modelcontextprotocol/sdk"]).toBe("1.32.1");
+		expect(lockPackageVersion("@modelcontextprotocol/sdk")).toBe("1.32.1");
+		expect(packageJson.dependencies["@hono/node-server"]).toBe("2.1.4");
+		expect(lockPackageVersion("@hono/node-server")).toBe("2.1.4");
 		expect(packageJson.bundledDependencies).toEqual([...BUNDLED_MCP_HONO_CLOSURE]);
 	});
 
@@ -162,8 +168,8 @@ describe("package metadata cutover baselines", () => {
 				dependencies?: Record<string, string>;
 			};
 			expect(packedPackageJson.bundledDependencies).toEqual([...BUNDLED_MCP_HONO_CLOSURE]);
-			expect(packedPackageJson.dependencies?.["@modelcontextprotocol/sdk"]).toBe("1.32.0");
-			expect(packedPackageJson.dependencies?.["@hono/node-server"]).toBe("2.0.12");
+			expect(packedPackageJson.dependencies?.["@modelcontextprotocol/sdk"]).toBe("1.32.1");
+			expect(packedPackageJson.dependencies?.["@hono/node-server"]).toBe("2.1.4");
 
 			const hostRoot = join(tempRoot, "host");
 			const hostNodeModules = join(hostRoot, "node_modules");
@@ -181,7 +187,7 @@ describe("package metadata cutover baselines", () => {
 
 			const mcpPackageJsonPath = join(packageDir, "node_modules", "@modelcontextprotocol", "sdk", "package.json");
 			const bundledMcpPackageJson = JSON.parse(readFileSync(mcpPackageJsonPath, "utf8")) as { version: string };
-			expect(bundledMcpPackageJson.version).toBe("1.32.0");
+			expect(bundledMcpPackageJson.version).toBe("1.32.1");
 			const mcpRequire = createRequire(mcpPackageJsonPath);
 			const resolvedHonoEntry = realpathSync(mcpRequire.resolve("@hono/node-server"));
 			const bundledHonoRoot = realpathSync(join(packageDir, "node_modules", "@hono", "node-server"));
@@ -191,7 +197,7 @@ describe("package metadata cutover baselines", () => {
 			const resolvedVersion = (
 				JSON.parse(readFileSync(join(bundledHonoRoot, "package.json"), "utf8")) as { version: string }
 			).version;
-			expect(resolvedVersion).toBe("2.0.12");
+			expect(resolvedVersion).toBe("2.1.4");
 		} finally {
 			rmSync(tempRoot, { recursive: true, force: true });
 		}
@@ -199,8 +205,8 @@ describe("package metadata cutover baselines", () => {
 
 	it("pins pi validation baselines", () => {
 		for (const packageName of PI_PACKAGES) {
-			expect(packageJson.devDependencies[packageName]).toBe("1.0.4");
-			expect(lockPackageVersion(packageName)).toBe("1.0.4");
+			expect(packageJson.devDependencies[packageName]).toBe(PI_PACKAGE_VERSIONS[packageName]);
+			expect(lockPackageVersion(packageName)).toBe(PI_PACKAGE_VERSIONS[packageName]);
 		}
 	});
 

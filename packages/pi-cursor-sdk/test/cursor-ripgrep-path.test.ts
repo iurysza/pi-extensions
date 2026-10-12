@@ -70,19 +70,19 @@ describe("Cursor ripgrep path", () => {
 		}
 	});
 
-	it("locks installed @cursor/sdk 1.0.35 Agent.create ripgrep contract", () => {
+	it("locks installed @cursor/sdk 1.0.37 Agent.create ripgrep contract", () => {
 		const require = createRequire(import.meta.url);
 		const sdkEntry = require.resolve("@cursor/sdk");
 		const sdkRoot = join(dirname(sdkEntry), "..", "..");
 		const sdkPackage = JSON.parse(readFileSync(join(sdkRoot, "package.json"), "utf8")) as { version: string };
-		expect(sdkPackage.version).toBe("1.0.35");
+		expect(sdkPackage.version).toBe("1.0.37");
 
 		// Agent.create lives in the local-runtime chunk.
-		const bundle = readFileSync(join(sdkRoot, "dist", "esm", "689.js"), "utf8");
+		const bundle = readFileSync(join(sdkRoot, "dist", "esm", "464.js"), "utf8");
 
 		// Absolute CURSOR_RIPGREP_PATH wins; otherwise the SDK searches, then configureRipgrepPath().
 		expect(bundle).toContain(
-			'g=process.env.CURSOR_RIPGREP_PATH;f=g&&(0,n.isAbsolute)(g)?g:(0,qx.hQ)({binaryName:m,excludedWorkspaceDir:h}),f||(f=(0,sn.xS)()),f&&(0,sn.J)(f)',
+			'g=process.env.CURSOR_RIPGREP_PATH;p=g&&(0,n.isAbsolute)(g)?g:(0,P_.hQ)({binaryName:f,excludedWorkspaceDir:d}),p||(p=(0,wn.xS)()),p&&(0,wn.J)(p)',
 		);
 		expect(bundle).toContain('throw new Error("configureRipgrepPath: path must not be empty")');
 		expect(bundle).toContain("Ripgrep path not configured. Call configureRipgrepPath() at startup.");

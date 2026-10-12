@@ -13,7 +13,7 @@ const handoffEntry = resolve(packageRoot, "extensions/handoff/index.ts");
 describe("handoff dependency contract", () => {
 	it("pins and loads the internal modules shipped by its dependencies", async () => {
 		const manifest = JSON.parse(await readFile(resolve(packageRoot, "package.json"), "utf8"));
-		assert.equal(manifest.dependencies["@sting8k/pi-vcc"], "0.8.1");
+		assert.equal(manifest.dependencies["@sting8k/pi-vcc"], "0.10.0");
 		assert.equal(manifest.dependencies["@tintinweb/pi-tasks"], "0.9.0");
 
 		const agentDir = await mkdtemp(join(tmpdir(), "pi-ext-handoff-loader-"));
