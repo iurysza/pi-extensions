@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { stripVTControlCharacters } from "node:util";
 import { visibleWidth } from "@earendil-works/pi-tui";
 import { SettingsManager, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import customFooter, { formatResponseTime } from "../../extensions/custom-footer/custom-footer.js";
@@ -86,7 +85,7 @@ describe("custom footer", () => {
       [443, "7m"], [3599, "59m"], [3600, "1h"],
       [86399, "23h"], [86400, "1d"], [172800, "2d"],
     ] as const) {
-      assert.equal(formatResponseTime(0, seconds * 1000), `◷ ${expected} ago`);
+      assert.equal(formatResponseTime(0, seconds * 1000), `󰋚 ${expected} ago`);
     }
   });
 
@@ -159,53 +158,44 @@ describe("custom footer", () => {
 
     const widget = widgetFactory?.({ requestRender() {} }, theme);
     const footer = widget?.render(200).join("\n") ?? "";
-    assert.match(footer, /󱂵 \/repo 󰘬 │/);
+    assert.match(footer, /󱂵 \/repo 󰘬 main/);
     assert.doesNotMatch(footer, /YOLO|SAFE|READ-ONLY|\(main\)/);
-    assert.match(widget?.render(200)[1] ?? "", /◷ 7m ago/);
+    assert.match(widget?.render(200)[0] ?? "", /󰋚 7m ago/);
     await handlers.get("agent_start")?.({}, ctx);
-    assert.match(widget?.render(200)[1] ?? "", /◷ 7m ago/);
+    assert.match(widget?.render(200)[0] ?? "", /󰋚 7m ago/);
 
     branch = "feature/very-long-branch";
-    const feature = widget?.render(200)[0] ?? "";
-    assert.match(feature, /󰘬 feature\/very-long-branch │/);
-    assert.doesNotMatch(feature, /󱂵|\/repo/);
-    const narrow = widget?.render(45)[0] ?? "";
-    assert.match(stripVTControlCharacters(narrow), /󰘬 feature\/.*… │ 󱜙/);
-    assert.ok(visibleWidth(narrow) <= 45);
+    assert.match(widget?.render(200)[1] ?? "", /󱂵 \/repo 󰘬 feature\/very-long-branch$/);
+    const narrow = widget?.render(45) ?? [];
+    assert.ok(narrow.every((line) => visibleWidth(line) <= 45));
     usedTokens = 100_000;
     const countdown = widget?.render(60)[0] ?? "";
-    assert.match(countdown, /8\.0k left/);
+    assert.match(countdown, /^ ▰+▱* 8\.0k left/);
     assert.ok(visibleWidth(countdown) <= 60);
     ctx.model.id = "other-model";
     assert.match(widget?.render(200).join("\n") ?? "", /3\.0k left/);
     settings.setCompactionEnabled(false);
     assert.doesNotMatch(widget?.render(200).join("\n") ?? "", /left/);
     branch = undefined;
-    const withoutBranch = widget?.render(200)[0] ?? "";
-    assert.match(withoutBranch, /󱂵 \/repo │/);
-    assert.doesNotMatch(withoutBranch, /󰘬/);
+    const withoutBranch = widget?.render(200)[1] ?? "";
+    assert.match(withoutBranch, /󱂵 \/repo$/);
     branch = "main";
-    assert.match(widget?.render(200)[0] ?? "", /󱂵 \/repo 󰘬 │/);
     ctx.cwd = "/repo/nested";
-    ctx.getSystemPrompt = () => '<project_instructions path="/repo/nested/AGENTS.md">\nfixture\n</project_instructions>';
     await handlers.get("session_start")?.({ reason: "reload" }, ctx);
-    assert.match(widgetFactory?.({ requestRender() {} }, theme).render(200).join("\n") ?? "", /\/repo\/nested/);
-    ctx.getSystemPrompt = () => "No project instructions";
-    await handlers.get("session_start")?.({ reason: "reload" }, ctx);
-    assert.match(widgetFactory?.({ requestRender() {} }, theme).render(200).join("\n") ?? "", /no AGENTS\.md/);
-    assert.match(widgetFactory?.({ requestRender() {} }, theme).render(200)[1] ?? "", /◷ 7m ago/);
+    assert.match(widgetFactory?.({ requestRender() {} }, theme).render(200)[1] ?? "", /󱂵 \/repo\/nested 󰘬 main/);
+    assert.match(widgetFactory?.({ requestRender() {} }, theme).render(200)[0] ?? "", /󰋚 7m ago/);
     history = [];
     await handlers.get("session_start")?.({ reason: "new" }, ctx);
     const newWidget = widgetFactory?.({ requestRender() {} }, theme);
-    assert.doesNotMatch(newWidget?.render(200).join("\n") ?? "", /◷/);
+    assert.doesNotMatch(newWidget?.render(200).join("\n") ?? "", /󰋚/);
     history = [completed];
     await handlers.get("session_tree")?.({}, ctx);
-    assert.match(newWidget?.render(200)[1] ?? "", /◷ 7m ago/);
+    assert.match(newWidget?.render(200)[0] ?? "", /󰋚 7m ago/);
     await handlers.get("agent_end")?.({}, ctx);
-    assert.match(newWidget?.render(200)[1] ?? "", /◷ 0s ago/);
+    assert.match(newWidget?.render(200)[0] ?? "", /󰋚 0s ago/);
     history = [];
     await handlers.get("session_tree")?.({}, ctx);
-    assert.doesNotMatch(newWidget?.render(200).join("\n") ?? "", /◷/);
+    assert.doesNotMatch(newWidget?.render(200).join("\n") ?? "", /󰋚/);
     await handlers.get("session_shutdown")?.({}, ctx);
   });
 
@@ -278,12 +268,11 @@ describe("custom footer", () => {
     handlers.get("agent_end")?.({}, ctx);
 
     const lines = widgetFactory?.({ requestRender() {} }, theme).render(200) ?? [];
-    assert.match(lines[0] ?? "", /^ 󱂵 \/repo 󰘬 │ 󱜙 test-model │ ▰▱▱▱▱ 128k  󱘿 │ 🎙/);
-    assert.doesNotMatch(lines[0] ?? "", /tokens|MCP|◷/);
-    assert.match(lines[1] ?? "", /^ tokens.*MCP connected.*archived.*◷ \d+s ago/);
-    assert.doesNotMatch(lines[1] ?? "", /🎙|󱘿/);
+    assert.match(lines[0] ?? "", /^ ▰▱▱▱▱ 128k  󱘿  ·  󱜙 test-model  ·  🎙  ·  MCP connected.*archived.*󰋚 \d+s ago/);
+    assert.doesNotMatch(lines[0] ?? "", /tokens/);
+    assert.match(lines[1] ?? "", /^ tokens  ·  󱂵 \/repo 󰘬 main$/);
     const compact = widgetFactory?.({ requestRender() {} }, theme).render(60)[0] ?? "";
-    assert.match(compact, /128k  󱘿/);
+    assert.match(compact, /^ ▰▱▱▱▱ 128k  󱘿/);
     assert.ok(visibleWidth(compact) <= 60);
     ctx.getContextUsage = () => ({ percent: 80, tokens: 100_000, contextWindow: 128_000 });
     const countdown = widgetFactory?.({ requestRender() {} }, theme).render(200)[0] ?? "";
@@ -296,8 +285,7 @@ describe("custom footer", () => {
       placement: "aux",
     });
     const tiered = widgetFactory?.({ requestRender() {} }, theme).render(200) ?? [];
-    assert.doesNotMatch(tiered[0] ?? "", /🎙/);
-    assert.match(tiered[1] ?? "", /tokens.*🎙.*MCP connected.*archived.*◷ \d+s ago/);
+    assert.match(tiered[0] ?? "", /test-model  ·  🎙.*MCP connected.*archived.*󰋚 \d+s ago/);
   });
 });
 

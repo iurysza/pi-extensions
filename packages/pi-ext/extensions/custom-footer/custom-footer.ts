@@ -1,17 +1,15 @@
 /**
  * Two-line custom footer.
  *
- * Line 1 shows the nearest loaded AGENTS.md folder, model, and context usage.
- * Line 2 packs quota, integrations, and transient statuses in that order.
+ * Line 1: context usage · model · core slots · integrations and response age.
+ * Line 2: usage quota · working folder and git branch.
  * Ordinary setStatus() values remain visible as legacy priority-zero slots.
  */
 
 import { SettingsManager, type ExtensionAPI, type SessionEntry } from "@earendil-works/pi-coding-agent";
 import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 import {
-  agentsFolderFromPrompt,
   buildPathString,
-  nearestAgentsFolder,
   renderContextUsage,
   renderModelInfo,
   renderPath,
@@ -22,6 +20,9 @@ import {
   packFooterStatuses,
   partitionFooterStatuses,
 } from "./footer-slots.js";
+
+/** Usage-limit bar: line 2, before the folder. */
+const QUOTA_SLOT = "pi-token-tank";
 
 type FooterData = {
   getExtensionStatuses(): ReadonlyMap<string, string>;
@@ -35,12 +36,12 @@ type FooterTheme = {
 
 export function formatResponseTime(endedAt: number, now = Date.now()): string {
   const seconds = Math.max(0, Math.floor((now - endedAt) / 1000));
-  if (seconds < 60) return `◷ ${seconds}s ago`;
+  if (seconds < 60) return `󰋚 ${seconds}s ago`;
   const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `◷ ${minutes}m ago`;
+  if (minutes < 60) return `󰋚 ${minutes}m ago`;
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `◷ ${hours}h ago`;
-  return `◷ ${Math.floor(hours / 24)}d ago`;
+  if (hours < 24) return `󰋚 ${hours}h ago`;
+  return `󰋚 ${Math.floor(hours / 24)}d ago`;
 }
 
 function lastResponseEndedAt(entries: readonly SessionEntry[]): number | null {
@@ -69,7 +70,6 @@ export default function customFooter(
   let tuiRef: { requestRender(): void } | null = null;
   let footerDataRef: FooterData | null = null;
   let responseEndedAt: number | null = null;
-  let instructionFolder: string | undefined;
   let settings: FooterSettings | undefined;
   let responseAgeTimer: ReturnType<typeof setInterval> | undefined;
 
@@ -80,7 +80,6 @@ export default function customFooter(
 
   pi.on("session_start", async (_event, ctx) => {
     settings = loadSettings(ctx.cwd, ctx.isProjectTrusted());
-    instructionFolder = agentsFolderFromPrompt(ctx.getSystemPrompt(), ctx.cwd);
     responseEndedAt = lastResponseEndedAt(ctx.sessionManager.getBranch());
     clearTimer();
     responseAgeTimer = setInterval(() => {
@@ -114,19 +113,23 @@ export default function customFooter(
           render(width: number): string[] {
             const statuses = footerDataRef?.getExtensionStatuses() ?? new Map<string, string>();
             const { core, aux, context } = partitionFooterStatuses(statuses, slots.placements);
-            const lines = [renderLine1(width, theme, ctx,
-              orderedStatusValues(core, slots.priorities),
-              orderedStatusValues(context, slots.priorities))];
-            const separator = theme.fg("dim", "  ·  ");
             const priorities = new Map(slots.priorities);
             if (!priorities.has("mcp")) priorities.set("mcp", 80);
             if (responseEndedAt !== null) {
               aux.set("response-age", theme.fg("dim", formatResponseTime(responseEndedAt)));
               priorities.set("response-age", -1);
             }
-            const slotLine = packFooterStatuses(aux, priorities, width, separator);
-            if (slotLine) lines.push(slotLine);
-            return lines;
+            const quota = aux.get(QUOTA_SLOT);
+            aux.delete(QUOTA_SLOT);
+            const line1 = renderLine1(width, theme, ctx,
+              orderedStatusValues(core, slots.priorities),
+              orderedStatusValues(context, slots.priorities));
+            const separator = theme.fg("dim", "  ·  ");
+            const auxLine = packFooterStatuses(aux, priorities, width - visibleWidth(line1) - 4, separator);
+            return [
+              auxLine ? `${line1}${theme.fg("dim", "  · ")}${auxLine}` : line1,
+              renderLine2(width, theme, ctx.cwd, quota),
+            ];
           },
           invalidate() {},
         };
@@ -136,8 +139,7 @@ export default function customFooter(
     slots.announceHost();
   });
 
-  pi.on("before_agent_start", async (event) => {
-    instructionFolder = nearestAgentsFolder(event.systemPromptOptions.contextFiles, event.systemPromptOptions.cwd);
+  pi.on("before_agent_start", async () => {
     await settings?.reload();
     tuiRef?.requestRender();
   });
@@ -160,7 +162,6 @@ export default function customFooter(
     footerDataRef = null;
     tuiRef = null;
     responseEndedAt = null;
-    instructionFolder = undefined;
     settings = undefined;
   });
 
@@ -175,14 +176,7 @@ export default function customFooter(
     coreValues: readonly string[],
     contextValues: readonly string[],
   ): string {
-    const separator = theme.fg("dim", " │ ");
-    const separatorWidth = 3;
-    const branch = footerDataRef?.getGitBranch();
-    const featureBranch = branch && branch !== "main" ? branch : undefined;
-    const icon = featureBranch ? "󰘬 " : "󱂵 ";
-    const mainMarker = branch === "main" ? " 󰘬" : "";
-    const pathRaw = buildPathString(instructionFolder ?? "no AGENTS.md", null);
-
+    const separator = theme.fg("dim", "  ·  ");
     const usage = ctx.getContextUsage();
     const percent = usage?.percent ?? 0;
     const contextWindow = usage?.contextWindow ?? ctx.model?.contextWindow ?? 0;
@@ -191,20 +185,22 @@ export default function customFooter(
       : undefined;
     const context = [renderContextUsage(percent, contextWindow, usage?.tokens ?? null, theme,
       settings?.getCompactionSettings(activeModel)), ...contextValues].join("  ");
-
-    const modelName = ctx.model?.id || "no-model";
-    const model = renderModelInfo(modelName, pi.getThinkingLevel(), theme);
-    const coreWidth = coreValues.reduce((sum, value) => sum + separatorWidth + visibleWidth(value), 0);
-    const rightBlockWidth = model.rawWidth + separatorWidth + visibleWidth(context) + coreWidth;
-    const pathBudget = width - 1 - rightBlockWidth - separatorWidth;
-    const labelBudget = pathBudget - visibleWidth(icon) - visibleWidth(mainMarker);
-    const pathDisplay = labelBudget <= 0 ? "" : featureBranch
-      ? theme.fg("text", truncateToWidth(featureBranch, labelBudget, "…"))
-      : renderPath(pathRaw, labelBudget, theme);
-
-    const segments: string[] = [];
-    if (pathDisplay) segments.push(theme.fg("text", icon) + pathDisplay + theme.fg("text", mainMarker));
-    segments.push(model.text, context, ...coreValues);
+    const model = renderModelInfo(ctx.model?.id || "no-model", pi.getThinkingLevel(), theme);
+    const segments = [context, model.text, ...coreValues];
     return truncateToWidth(` ${segments.join(separator)}`, width);
+  }
+
+  function renderLine2(width: number, theme: FooterTheme, cwd: string, quota: string | undefined): string {
+    const separator = theme.fg("dim", "  ·  ");
+    const branch = footerDataRef?.getGitBranch();
+    const icon = "󱂵 ";
+    const branchLabel = branch ? ` 󰘬 ${branch}` : "";
+    const lead = quota ? ` ${quota}` : "";
+    const used = visibleWidth(lead) + (quota ? 5 : 1);
+    const pathBudget = width - used - visibleWidth(icon) - visibleWidth(branchLabel);
+    const path = pathBudget > 0 ? renderPath(buildPathString(cwd, null), pathBudget, theme) : "";
+    const folder = path ? theme.fg("text", icon) + path + theme.fg("dim", branchLabel) : "";
+    const parts = [lead.trimStart(), folder].filter(Boolean);
+    return truncateToWidth(` ${parts.join(separator)}`, width);
   }
 }
