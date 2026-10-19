@@ -88,8 +88,8 @@ describe("package metadata cutover baselines", () => {
 	it("ships an exact MCP/Hono bundledDependencies closure for published installs", () => {
 		expect(packageJson.dependencies["@modelcontextprotocol/sdk"]).toBe("1.32.1");
 		expect(lockPackageVersion("@modelcontextprotocol/sdk")).toBe("1.32.1");
-		expect(packageJson.dependencies["@hono/node-server"]).toBe("2.1.4");
-		expect(lockPackageVersion("@hono/node-server")).toBe("2.1.4");
+		expect(packageJson.dependencies["@hono/node-server"]).toBe("2.1.5");
+		expect(lockPackageVersion("@hono/node-server")).toBe("2.1.5");
 		expect(packageJson.bundledDependencies).toEqual([...BUNDLED_MCP_HONO_CLOSURE]);
 	});
 
@@ -169,7 +169,7 @@ describe("package metadata cutover baselines", () => {
 			};
 			expect(packedPackageJson.bundledDependencies).toEqual([...BUNDLED_MCP_HONO_CLOSURE]);
 			expect(packedPackageJson.dependencies?.["@modelcontextprotocol/sdk"]).toBe("1.32.1");
-			expect(packedPackageJson.dependencies?.["@hono/node-server"]).toBe("2.1.4");
+			expect(packedPackageJson.dependencies?.["@hono/node-server"]).toBe("2.1.5");
 
 			const hostRoot = join(tempRoot, "host");
 			const hostNodeModules = join(hostRoot, "node_modules");
@@ -197,7 +197,7 @@ describe("package metadata cutover baselines", () => {
 			const resolvedVersion = (
 				JSON.parse(readFileSync(join(bundledHonoRoot, "package.json"), "utf8")) as { version: string }
 			).version;
-			expect(resolvedVersion).toBe("2.1.4");
+			expect(resolvedVersion).toBe("2.1.5");
 		} finally {
 			rmSync(tempRoot, { recursive: true, force: true });
 		}
@@ -210,9 +210,9 @@ describe("package metadata cutover baselines", () => {
 		}
 	});
 
-	it("pins Pi 1.0.4's TypeBox validation baseline", () => {
-		expect(packageJson.devDependencies.typebox).toBe("^1.3.34");
-		expect(lockPackageVersion("typebox")).toBe("1.3.36");
+	it("pins the TypeBox devDependency to the installed baseline", () => {
+		expect(packageJson.devDependencies.typebox).toBe("^1.3.37");
+		expect(lockPackageVersion("typebox")).toBe("1.3.37");
 	});
 
 	it("tracks Pi 1.0.4 GPT-5.6 Codex metadata", () => {
