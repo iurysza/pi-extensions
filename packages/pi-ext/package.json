@@ -28,7 +28,7 @@
     "@sting8k/pi-vcc": "0.10.2",
     "@tintinweb/pi-tasks": "0.9.1",
     "better-sqlite3": "^13.0.3",
-    "diff": "^7.0.0",
+    "diff": "^9.0.0",
     "semver": "^7.8.5"
   },
   "peerDependencies": {
