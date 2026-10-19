@@ -28,9 +28,9 @@ const PI_PACKAGES = [
 ] as const;
 
 const PI_PACKAGE_VERSIONS: Record<(typeof PI_PACKAGES)[number], string> = {
-	"@earendil-works/pi-ai": "1.1.0",
-	"@earendil-works/pi-coding-agent": "1.0.4",
-	"@earendil-works/pi-tui": "1.1.0",
+	"@earendil-works/pi-ai": "1.3.0",
+	"@earendil-works/pi-coding-agent": "1.3.0",
+	"@earendil-works/pi-tui": "1.3.0",
 };
 
 const BUNDLED_MCP_HONO_CLOSURE = ["@hono/node-server", "@modelcontextprotocol/sdk"] as const;

@@ -79,12 +79,15 @@ export function createCredentialSource(
       if (!oauth) return null;
 
       try {
-        const refreshed = await oauth.refreshToken({
-          ...stored,
-          access: stored.access ?? currentKey,
-          refresh: stored.refresh,
-          expires: stored.expires ?? 0,
-        });
+        const refreshed = await oauth.refreshToken(
+          {
+            ...stored,
+            access: stored.access ?? currentKey,
+            refresh: stored.refresh,
+            expires: stored.expires ?? 0,
+          },
+          new AbortController().signal,
+        );
         const access = oauth.getApiKey(refreshed);
         if (!access || access === currentKey || !refreshed.refresh || !Number.isFinite(refreshed.expires)) {
           return null;
