@@ -29,7 +29,7 @@ const PI_PACKAGES = [
 
 const PI_PACKAGE_VERSIONS: Record<(typeof PI_PACKAGES)[number], string> = {
 	"@earendil-works/pi-ai": "1.3.0",
-	"@earendil-works/pi-coding-agent": "1.0.4",
+	"@earendil-works/pi-coding-agent": "1.3.0",
 	"@earendil-works/pi-tui": "1.3.0",
 };
 
