@@ -53,7 +53,9 @@ export default function topologyStudio(pi: ExtensionAPI) {
       }
       stop();
 
-      if (!existsSync(path.join(STUDIO_DIR, "bin/studio.js"))) {
+      // bin/studio.ts since the TypeScript chunk (Node 22.18+ runs it directly); bin/studio.js on older checkouts.
+      const entry = ["bin/studio.ts", "bin/studio.js"].find(e => existsSync(path.join(STUDIO_DIR, e)));
+      if (!entry) {
         return ctx.ui.notify(`Topology studio not found at ${STUDIO_DIR}. Set TOPOLOGY_STUDIO_DIR.`, "error");
       }
       if (!existsSync(path.join(project, ".pi/workflows"))) {
@@ -61,7 +63,7 @@ export default function topologyStudio(pi: ExtensionAPI) {
       }
 
       ctx.ui.notify(`Starting Topology studio for ${path.basename(project)}…`, "info");
-      const server = spawn(process.execPath, ["bin/studio.js", "--project", project, "--no-open"], {
+      const server = spawn(process.execPath, [entry, "--project", project, "--no-open"], {
         cwd: STUDIO_DIR, stdio: ["ignore", "pipe", "pipe"],
       });
       let url: string, port: string;
