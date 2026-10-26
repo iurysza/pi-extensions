@@ -363,7 +363,7 @@ describe("Cursor SDK process error guard", () => {
 	});
 
 	it("tracks the installed Cursor SDK closed-writable error contract", () => {
-		const localRuntimeBundle = readFileSync("node_modules/@cursor/sdk/dist/esm/464.js", "utf8");
+		const localRuntimeBundle = readFileSync("node_modules/@cursor/sdk/dist/esm/331.js", "utf8");
 		expect(localRuntimeBundle).toContain('this.name="WriteIterableClosedError"');
 		expect(localRuntimeBundle).toContain('"WritableIterable is closed"');
 		expect(localRuntimeBundle).toContain('SimpleControlledExecManager');
@@ -686,16 +686,18 @@ setTimeout(() => {
 	it("tracks the installed Cursor SDK local-executor stdin write contract", () => {
 		// Premise behind the closed-pipe containment: the shell executor writes spawned
 		// child stdin without a stream 'error' listener, so a mid-write child exit
-		// surfaces as an uncaught raw `write EPIPE`. The MCP stdio transport, by
-		// contrast, attaches its own stdin error listener and needs no containment.
-		const shellExecBundle = readFileSync("node_modules/@cursor/sdk/dist/esm/464.js", "utf8");
+		// surfaces as an uncaught raw `write EPIPE`. writeCommandHookStdinPayload
+		// swallows that EPIPE itself. The MCP stdio transport attaches its own
+		// stdin error listener and needs no containment.
+		const shellExecBundle = readFileSync("node_modules/@cursor/sdk/dist/esm/331.js", "utf8");
 		expect(shellExecBundle).toContain("writeCommandHookStdinPayload");
+		expect(shellExecBundle).toContain('if("EPIPE"===t||"ERR_STREAM_DESTROYED"===t||"ERR_STREAM_PREMATURE_CLOSE"===t)return;');
 		expect(shellExecBundle).toContain("r.stdin.write(e,(e=>{e?o(e):t(void 0)}))");
-		expect(shellExecBundle).toContain("s.stdin.write(`${t.join(\"\\n\")}\\n`),s.stdin.end()");
+		expect(shellExecBundle).toContain("n.stdin.write(`${t.join(\"\\n\")}\\n`),n.stdin.end()");
 		expect(shellExecBundle).not.toContain('stdin.on("error"');
 		expect(shellExecBundle).not.toContain('stdin?.on("error"');
 		expect(shellExecBundle).not.toContain('stdin.once("error"');
-		const mcpStdioBundle = readFileSync("node_modules/@cursor/sdk/dist/esm/801.js", "utf8");
+		const mcpStdioBundle = readFileSync("node_modules/@cursor/sdk/dist/esm/116.js", "utf8");
 		expect(mcpStdioBundle).toContain('stdin?.on("error"');
 	});
 

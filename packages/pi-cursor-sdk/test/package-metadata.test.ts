@@ -28,9 +28,9 @@ const PI_PACKAGES = [
 ] as const;
 
 const PI_PACKAGE_VERSIONS: Record<(typeof PI_PACKAGES)[number], string> = {
-	"@earendil-works/pi-ai": "1.3.0",
+	"@earendil-works/pi-ai": "1.4.0",
 	"@earendil-works/pi-coding-agent": "1.0.4",
-	"@earendil-works/pi-tui": "1.3.0",
+	"@earendil-works/pi-tui": "1.4.0",
 };
 
 const BUNDLED_MCP_HONO_CLOSURE = ["@hono/node-server", "@modelcontextprotocol/sdk"] as const;
@@ -81,8 +81,8 @@ describe("package metadata cutover baselines", () => {
 	});
 
 	it("pins Cursor SDK exactly", () => {
-		expect(packageJson.dependencies["@cursor/sdk"]).toBe("1.0.37");
-		expect(lockPackageVersion("@cursor/sdk")).toBe("1.0.37");
+		expect(packageJson.dependencies["@cursor/sdk"]).toBe("1.0.40");
+		expect(lockPackageVersion("@cursor/sdk")).toBe("1.0.40");
 	});
 
 	it("ships an exact MCP/Hono bundledDependencies closure for published installs", () => {
@@ -211,8 +211,8 @@ describe("package metadata cutover baselines", () => {
 	});
 
 	it("pins the TypeBox devDependency to the installed baseline", () => {
-		expect(packageJson.devDependencies.typebox).toBe("^1.3.37");
-		expect(lockPackageVersion("typebox")).toBe("1.3.37");
+		expect(packageJson.devDependencies.typebox).toBe("^1.4.3");
+		expect(lockPackageVersion("typebox")).toBe("1.4.3");
 	});
 
 	it("tracks Pi 1.0.4 GPT-5.6 Codex metadata", () => {
