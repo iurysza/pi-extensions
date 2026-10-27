@@ -8,7 +8,7 @@
     "packages/*"
   ],
   "devDependencies": {
-    "@earendil-works/pi-ai": "1.3.0"
+    "@earendil-works/pi-ai": "1.4.0"
   },
   "allowScripts": {
     "@google/genai@1.52.0": true,
