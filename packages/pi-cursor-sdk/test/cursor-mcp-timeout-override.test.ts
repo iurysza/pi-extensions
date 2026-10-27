@@ -165,7 +165,7 @@ describe("Cursor MCP timeout override", () => {
 	it("tracks the installed Cursor SDK MCP callTool timeout seam", () => {
 		const sdkMcpBundle = readCursorSdkEsmBundleContaining(
 			'withName("McpSdkClient.callTool")',
-			"this.client.callTool(e,void 0,t)",
+			"this.client.callTool(e,void 0,o)",
 		);
 		const sdkProtocolBundle = readCursorSdkEsmBundleContaining(
 			'this.request({method:"initialize"',
@@ -173,7 +173,7 @@ describe("Cursor MCP timeout override", () => {
 		);
 
 		expect(sdkMcpBundle).toContain('withName("McpSdkClient.callTool")');
-		expect(sdkMcpBundle).toContain("this.client.callTool(e,void 0,t)");
+		expect(sdkMcpBundle).toContain("this.client.callTool(e,void 0,o)");
 		expect(sdkMcpBundle).toContain('withName("McpSdkClient.getTools")');
 		expect(sdkMcpBundle).toContain('this.client.listTools({cursor:e})');
 		expect(sdkProtocolBundle).toContain('this.request({method:"initialize"');
