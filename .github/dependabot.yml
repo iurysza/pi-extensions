@@ -7,10 +7,19 @@ updates:
       day: monday
     open-pull-requests-limit: 3
     groups:
+      earendil-works:
+        patterns:
+          - "@earendil-works/*"
+        update-types:
+          - major
+          - minor
+          - patch
       npm-patch-and-minor:
         update-types:
           - minor
           - patch
+        exclude-patterns:
+          - "@earendil-works/*"
 
   - package-ecosystem: github-actions
     directory: /

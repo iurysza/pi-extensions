@@ -28,9 +28,9 @@ const PI_PACKAGES = [
 ] as const;
 
 const PI_PACKAGE_VERSIONS: Record<(typeof PI_PACKAGES)[number], string> = {
-	"@earendil-works/pi-ai": "1.3.0",
-	"@earendil-works/pi-coding-agent": "1.0.4",
-	"@earendil-works/pi-tui": "1.3.0",
+	"@earendil-works/pi-ai": "1.4.0",
+	"@earendil-works/pi-coding-agent": "1.4.0",
+	"@earendil-works/pi-tui": "1.4.0",
 };
 
 const BUNDLED_MCP_HONO_CLOSURE = ["@hono/node-server", "@modelcontextprotocol/sdk"] as const;
@@ -211,11 +211,11 @@ describe("package metadata cutover baselines", () => {
 	});
 
 	it("pins the TypeBox devDependency to the installed baseline", () => {
-		expect(packageJson.devDependencies.typebox).toBe("^1.3.37");
-		expect(lockPackageVersion("typebox")).toBe("1.3.37");
+		expect(packageJson.devDependencies.typebox).toBe("^1.4.3");
+		expect(lockPackageVersion("typebox")).toBe("1.4.3");
 	});
 
-	it("tracks Pi 1.0.4 GPT-5.6 Codex metadata", () => {
+	it("tracks installed GPT-5.6 Codex metadata", () => {
 		for (const modelId of ["gpt-5.6-luna", "gpt-5.6-sol", "gpt-5.6-terra"] as const) {
 			expect(OPENAI_CODEX_MODELS[modelId]).toMatchObject({
 				contextWindow: 272000,

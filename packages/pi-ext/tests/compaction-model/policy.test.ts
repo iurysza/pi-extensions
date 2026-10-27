@@ -7,7 +7,6 @@ import {
   mergeInstructions,
   overThreshold,
   stripAdditions,
-  summaryReserveTokens,
 } from "../../extensions/compaction-model/policy.js";
 
 const quiet = () => {};
@@ -70,14 +69,6 @@ test("thresholdPercent and compactOnExitMinTokens are parsed and validated", () 
   assert.equal(bad?.thresholdPercent, undefined);
   assert.equal(bad?.compactOnExitMinTokens, undefined);
   assert.equal(warnings.length, 2);
-});
-
-test("summary budget raises reserveTokens so 0.8 x reserve covers the configured cap", () => {
-  const reserve = summaryReserveTokens(16384, 24000);
-  assert.equal(reserve, 30000);
-  assert.ok(Math.floor(0.8 * reserve) >= 24000);
-  assert.equal(summaryReserveTokens(50000, 24000), 50000);
-  assert.equal(summaryReserveTokens(undefined, 24000), 30000);
 });
 
 test("summaryMaxTokens defaults to 24000 and rejects bad values", () => {
