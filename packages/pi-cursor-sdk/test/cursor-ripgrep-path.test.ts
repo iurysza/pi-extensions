@@ -14,6 +14,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
+import { readCursorSdkEsmBundleContaining } from "./helpers/installed-package.js";
 import {
 	ensureCursorRipgrepPath,
 	resolveBundledCursorRipgrepPath,
@@ -70,19 +71,19 @@ describe("Cursor ripgrep path", () => {
 		}
 	});
 
-	it("locks installed @cursor/sdk 1.0.37 Agent.create ripgrep contract", () => {
+	it("locks installed @cursor/sdk 1.2.0 Agent.create ripgrep contract", () => {
 		const require = createRequire(import.meta.url);
 		const sdkEntry = require.resolve("@cursor/sdk");
 		const sdkRoot = join(dirname(sdkEntry), "..", "..");
 		const sdkPackage = JSON.parse(readFileSync(join(sdkRoot, "package.json"), "utf8")) as { version: string };
-		expect(sdkPackage.version).toBe("1.0.37");
+		expect(sdkPackage.version).toBe("1.2.0");
 
 		// Agent.create lives in the local-runtime chunk.
-		const bundle = readFileSync(join(sdkRoot, "dist", "esm", "464.js"), "utf8");
+		const bundle = readCursorSdkEsmBundleContaining("CURSOR_RIPGREP_PATH", "configureRipgrepPath: path must not be empty");
 
 		// Absolute CURSOR_RIPGREP_PATH wins; otherwise the SDK searches, then configureRipgrepPath().
 		expect(bundle).toContain(
-			'g=process.env.CURSOR_RIPGREP_PATH;p=g&&(0,n.isAbsolute)(g)?g:(0,P_.hQ)({binaryName:f,excludedWorkspaceDir:d}),p||(p=(0,wn.xS)()),p&&(0,wn.J)(p)',
+			'g=process.env.CURSOR_RIPGREP_PATH;f=g&&(0,s.isAbsolute)(g)?g:(0,PF.hQ)({binaryName:m,excludedWorkspaceDir:d}),f||(f=(0,Zs.xS)()),f&&(0,Zs.J)(f)',
 		);
 		expect(bundle).toContain('throw new Error("configureRipgrepPath: path must not be empty")');
 		expect(bundle).toContain("Ripgrep path not configured. Call configureRipgrepPath() at startup.");

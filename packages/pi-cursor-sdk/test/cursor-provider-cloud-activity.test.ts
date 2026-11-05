@@ -21,9 +21,7 @@ import {
 	registerBridgeForProviderTest,
 	resetCursorProviderTestState,
 } from "./helpers/cursor-provider-harness.js";
-import { readInstalledPackageVersion } from "./helpers/installed-package.js";
 
-const installedSdkVersion = readInstalledPackageVersion("@cursor/sdk");
 const CLOUD_RUN_ID_PATTERN = /^run-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const RENDER_WIDTH = 80;
 
@@ -67,7 +65,8 @@ describe("cloud provider captured activity callbacks", () => {
 	});
 
 	it("routes normalized captured onDelta/onStep activity through the cloud coordinator without local replay or bridge leakage", async () => {
-		expect(fixture.sdkVersion).toBe(installedSdkVersion);
+		// Historical capture, replayed against the current provider. No 1.2.0 cloud capture is claimed.
+		expect(fixture.sdkVersion).toBe("1.0.37");
 		expect(fixture.sourceCapture.agentId).toMatch(CLOUD_AGENT_ID_PATTERN);
 		expect(fixture.sourceCapture.runId).toMatch(CLOUD_RUN_ID_PATTERN);
 		expect(fixture.sourceCapture.terminalStatus).toBe("finished");
