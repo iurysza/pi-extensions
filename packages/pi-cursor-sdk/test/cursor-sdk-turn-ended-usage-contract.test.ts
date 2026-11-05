@@ -1,5 +1,4 @@
 import { readFileSync } from "node:fs";
-import { createRequire } from "node:module";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { TurnEndedUpdateSchema } from "@cursor/sdk";
@@ -9,10 +8,9 @@ import {
 	isCursorSdkUsageSafeForPiMessage,
 	readCursorSdkTurnUsageFromUpdate,
 } from "../src/cursor-usage-accounting.js";
-import { readInstalledPackageVersion, resolveInstalledPackageRoot } from "./helpers/installed-package.js";
+import { readCursorSdkUsageModule, readInstalledPackageVersion, resolveInstalledPackageRoot } from "./helpers/installed-package.js";
 import { makeModel } from "./helpers/pi-harness.js";
 
-const require = createRequire(import.meta.url);
 const sdkRoot = resolveInstalledPackageRoot("@cursor/sdk");
 const installedSdkVersion = readInstalledPackageVersion("@cursor/sdk");
 
@@ -80,19 +78,27 @@ const fixture = JSON.parse(
 ) as TurnEndedUsageContractFixture;
 
 describe("installed Cursor SDK turn-ended usage contract", () => {
-	it("locks published SDK TokenUsage transform separately from observed raw turn-ended semantics", () => {
-		expect(fixture.provenance.sdkPackage).toBe("@cursor/sdk");
-		expect(fixture.provenance.sdkVersion).toBe(installedSdkVersion);
-		expect(fixture.provenance.issue).toContain("/issues/196");
-
+	it("locks the installed 1.2.0 transform to input plus output, excluding cache and reasoning", () => {
+		expect(installedSdkVersion).toBe("1.2.0");
 		const usageTypes = readFileSync(join(sdkRoot, "dist/esm/usage-types.d.ts"), "utf8");
 		expect(usageTypes).toContain("`totalTokens` excludes `reasoningTokens`");
 		expect(usageTypes).toContain("Build a `TokenUsage` from a turn-ended payload");
 
-		const sdkBundle = readFileSync(require.resolve("@cursor/sdk"), "utf8");
-		expect(sdkBundle).toMatch(/"\.\/src\/agent\/usage-types\.ts"/);
-		// Published toTokenUsage/sumTokenUsage: additive totalTokens = input+output+cacheRead+cacheWrite.
-		expect(sdkBundle).toMatch(/totalTokens:\w\+\w\+\w\+\w/);
+		const usageModule = readCursorSdkUsageModule();
+		// Both toTokenUsage and sumTokenUsage preserve cache fields but exclude them from the total.
+		expect(usageModule.match(/\{inputTokens:(\w+),outputTokens:(\w+),cacheReadTokens:\w+,cacheWriteTokens:\w+,totalTokens:\1\+\2,/g)).toHaveLength(2);
+		expect(usageModule).toContain('const{inputTokens:r,outputTokens:e,cacheReadTokens:n,cacheWriteTokens:s,reasoningTokens:i}=t');
+		expect(usageModule).toContain('r+=u.inputTokens,e+=u.outputTokens,n+=u.cacheReadTokens,s+=u.cacheWriteTokens');
+		expect(usageModule).toContain('void 0!==u.reasoningTokens&&(a=!0,i+=u.reasoningTokens)');
+		expect(usageModule).toContain('...void 0!==i?{reasoningTokens:i}:{}');
+		expect(usageModule).toContain('...a?{reasoningTokens:i}:{}');
+	});
+
+	it("retains the historical additive-transform evidence and raw capture provenance", () => {
+		expect(fixture.provenance.sdkPackage).toBe("@cursor/sdk");
+		expect(fixture.provenance.sdkVersion).toBe("1.0.37");
+		expect(fixture.provenance.issue).toContain("/issues/196");
+		expect(fixture.provenance.notes).toContain("Raw turn-ended samples were captured on @cursor/sdk 1.0.23. The published TokenUsage transform was rechecked against 1.0.37.");
 		expect(fixture.installedSdkPublishedTransform.totalTokensFormula).toBe(
 			"inputTokens + outputTokens + cacheReadTokens + cacheWriteTokens",
 		);
@@ -114,7 +120,7 @@ describe("installed Cursor SDK turn-ended usage contract", () => {
 		expect(second!.usage.inputTokens).toBeGreaterThan(second!.usage.cacheWriteTokens);
 	});
 
-	it("maps observed raw turn-ended.usage with full-prompt partition semantics, not published additive totalTokens", () => {
+	it("maps historical raw turn-ended.usage with full-prompt partition semantics, not the old additive total", () => {
 		const model = makeModel();
 		const context: Context = {
 			systemPrompt: "Be helpful.",
@@ -135,7 +141,7 @@ describe("installed Cursor SDK turn-ended usage contract", () => {
 			expect(
 				partial.usage.input + partial.usage.cacheRead + partial.usage.cacheWrite + partial.usage.output,
 			).toBe(partial.usage.totalTokens);
-			// Explicitly reject the published SDK additive total for raw local turn-ended samples.
+			// Reject the historical 1.0.37 additive total. The installed 1.2.0 total now agrees with Pi.
 			const publishedAdditiveTotal =
 				sample.usage.inputTokens +
 				sample.usage.outputTokens +

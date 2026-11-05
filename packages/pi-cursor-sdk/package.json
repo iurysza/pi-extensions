@@ -156,9 +156,9 @@
     "smoke:platform:all": "npm run smoke:platform:doctor && node scripts/platform-smoke.mjs run --target macos,ubuntu,windows-native"
   },
   "dependencies": {
-    "@cursor/sdk": "1.0.37",
-    "@hono/node-server": "2.1.5",
-    "@modelcontextprotocol/sdk": "1.32.1"
+    "@cursor/sdk": "1.2.0",
+    "@hono/node-server": "2.1.6",
+    "@modelcontextprotocol/sdk": "1.32.2"
   },
   "bundledDependencies": [
     "@hono/node-server",
@@ -174,7 +174,7 @@
     "@earendil-works/pi-ai": "1.5.0",
     "@earendil-works/pi-coding-agent": "1.5.0",
     "@earendil-works/pi-tui": "1.5.0",
-    "@types/node": "26.6.5",
+    "@types/node": "26.6.6",
     "@xterm/xterm": "^6.0.0",
     "node-pty": "^1.1.0",
     "playwright": "^1.64.1",

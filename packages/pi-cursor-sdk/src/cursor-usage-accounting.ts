@@ -87,7 +87,8 @@ export function estimateCursorContextTotalTokens(partial: AssistantMessage, mode
 
 function getCursorSdkUncachedInputTokens(turnUsage: CursorSdkTurnUsage): number {
 	// Observed raw local turn-ended.usage: inputTokens is the full prompt; cache fields partition it.
-	// Published SDK toTokenUsage instead sums all four into totalTokens — do not use that transform here.
+	// SDK 1.0.37 summed all four fields into totalTokens; 1.2.0 totals input plus output.
+	// Pi still needs the uncached remainder because its prompt components are disjoint.
 	return turnUsage.inputTokens - turnUsage.cacheReadTokens - turnUsage.cacheWriteTokens;
 }
 
