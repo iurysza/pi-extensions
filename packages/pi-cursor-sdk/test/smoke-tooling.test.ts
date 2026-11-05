@@ -1,13 +1,16 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
-import { parseArgs as parsePiArgs } from "../node_modules/@earendil-works/pi-coding-agent/dist/cli/args.js";
-import { buildInitialMessage } from "../node_modules/@earendil-works/pi-coding-agent/dist/cli/initial-message.js";
+import { parseArgs as parsePiArgs } from "../../../node_modules/@earendil-works/pi-coding-agent/dist/cli/args.js";
+import { buildInitialMessage } from "../../../node_modules/@earendil-works/pi-coding-agent/dist/cli/initial-message.js";
 import { CURSOR_TOOL_PRESENTATION_SPECS } from "../src/cursor-tool-presentation-registry.js";
 import { getScenario, renderPrompt, SCENARIOS } from "../scripts/platform-smoke/scenarios.mjs";
+
+const piCodingAgentRoot = dirname(dirname(fileURLToPath(import.meta.resolve("@earendil-works/pi-coding-agent"))));
 
 function run(command: string, args: string[], env = process.env, cwd = process.cwd()) {
 	return spawnSync(command, args, { cwd, encoding: "utf8", env, shell: process.platform === "win32" && command === "npm" });
@@ -234,7 +237,7 @@ try {
 		expect(buildInitialMessage({ parsed }).initialMessage).toBe(prompt);
 		expect(parsed.messages).toEqual([]);
 
-		const piArgs = readFileSync("node_modules/@earendil-works/pi-coding-agent/dist/cli/args.js", "utf8");
+		const piArgs = readFileSync(join(piCodingAgentRoot, "dist/cli/args.js"), "utf8");
 		expect(piArgs).toContain("# Interactive mode with initial prompt");
 		expect(piArgs).toContain('${APP_NAME} "List all .ts files in src/"');
 		expect(piArgs).toContain("PI_OFFLINE");

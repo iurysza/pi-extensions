@@ -24,6 +24,7 @@ describe("pi-harness before_agent_start results", () => {
 
 		const result = await pi.invokeEvent("before_agent_start", {
 			type: "before_agent_start",
+			messageType: "user",
 			prompt: "hello",
 			systemPrompt: "base",
 			systemPromptOptions: createDefaultSystemPromptOptions("/repo"),
@@ -46,6 +47,7 @@ describe("pi-harness before_agent_start results", () => {
 
 		const result = await pi.invokeEvent("before_agent_start", {
 			type: "before_agent_start",
+			messageType: "user",
 			prompt: "hello",
 			systemPrompt: "base",
 			systemPromptOptions: createDefaultSystemPromptOptions("/repo"),
@@ -61,6 +63,7 @@ describe("pi-harness before_agent_start results", () => {
 
 		const result = await pi.invokeEvent("before_agent_start", {
 			type: "before_agent_start",
+			messageType: "user",
 			prompt: "hello",
 			systemPrompt: "base",
 			systemPromptOptions: createDefaultSystemPromptOptions("/repo"),
@@ -86,6 +89,7 @@ describe("pi-harness before_agent_start results", () => {
 
 		const result = await pi.invokeEvent("before_agent_start", {
 			type: "before_agent_start",
+			messageType: "user",
 			prompt: "hello",
 			systemPrompt: "base",
 			systemPromptOptions: createDefaultSystemPromptOptions("/repo"),

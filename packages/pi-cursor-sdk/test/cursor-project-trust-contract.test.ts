@@ -1,7 +1,8 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { ProjectTrustStore } from "@earendil-works/pi-coding-agent";
 import {
@@ -18,7 +19,7 @@ import { streamCursor } from "../src/cursor-provider.js";
 import { __testUtils as cursorSessionScopeTestUtils } from "../src/cursor-session-scope.js";
 
 const packageRoot = process.cwd();
-const piCli = resolve("node_modules/@earendil-works/pi-coding-agent/dist/cli.js");
+const piCli = join(dirname(dirname(fileURLToPath(import.meta.resolve("@earendil-works/pi-coding-agent")))), "dist/cli.js");
 
 type PiMode = "print" | "json" | "rpc";
 type MarkerEvent = {

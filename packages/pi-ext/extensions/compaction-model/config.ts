@@ -26,7 +26,10 @@ export interface CompactionModelConfig {
   thresholdPercent?: number;
   /** On quit, compact in a detached process when context is at least this many tokens. */
   compactOnExitMinTokens?: number;
-  /** Output budget for the summary. Pi's default is 0.8 × reserveTokens (about 13K), too small for long sessions. */
+  /**
+   * Parsed so existing settings stay valid. Pi 1.4 summaries use the model
+   * output limit and do not apply this budget.
+   */
   summaryMaxTokens: number;
 }
 
