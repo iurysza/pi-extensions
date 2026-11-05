@@ -28,9 +28,9 @@ const PI_PACKAGES = [
 ] as const;
 
 const PI_PACKAGE_VERSIONS: Record<(typeof PI_PACKAGES)[number], string> = {
-	"@earendil-works/pi-ai": "1.4.0",
-	"@earendil-works/pi-coding-agent": "1.4.0",
-	"@earendil-works/pi-tui": "1.4.0",
+	"@earendil-works/pi-ai": "1.5.0",
+	"@earendil-works/pi-coding-agent": "1.5.0",
+	"@earendil-works/pi-tui": "1.5.0",
 };
 
 const BUNDLED_MCP_HONO_CLOSURE = ["@hono/node-server", "@modelcontextprotocol/sdk"] as const;
@@ -207,6 +207,20 @@ describe("package metadata cutover baselines", () => {
 		for (const packageName of PI_PACKAGES) {
 			expect(packageJson.devDependencies[packageName]).toBe(PI_PACKAGE_VERSIONS[packageName]);
 			expect(lockPackageVersion(packageName)).toBe(PI_PACKAGE_VERSIONS[packageName]);
+		}
+	});
+
+	it("locks one aligned copy of each Pi package", () => {
+		for (const packageName of [
+			...PI_PACKAGES,
+			"@earendil-works/pi-agent-core",
+			"@earendil-works/pi-schema",
+			"@earendil-works/pi-telemetry",
+		]) {
+			const entries = Object.entries(packageLock.packages)
+				.filter(([path]) => path.endsWith(`node_modules/${packageName}`))
+				.map(([path, metadata]) => [path, metadata.version]);
+			expect(entries).toEqual([[`node_modules/${packageName}`, "1.5.0"]]);
 		}
 	});
 

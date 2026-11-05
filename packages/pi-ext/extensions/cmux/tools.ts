@@ -378,7 +378,7 @@ export function wireTools(pi: ExtensionAPI, client: CmuxClient): void {
 
         // --- Find ---
         case "find": {
-          if (!params.find_by) return errorResult("find_by is required (role/text/label/placeholder/testid/title)");
+          if (typeof params.find_by !== "string" || !params.find_by) return errorResult("find_by is required (role/text/label/placeholder/testid/title)");
           if (!params.find_value) return errorResult("find_value is required for find");
           const result = await client.request(`browser.find.${params.find_by}`, {
             [params.find_by]: params.find_value, ...sp,
