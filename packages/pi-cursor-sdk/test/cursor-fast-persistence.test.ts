@@ -367,22 +367,37 @@ describe("Cursor fast preference persistence", () => {
 		expect(getEffectiveFastForModelId("composer-2.5")).toBe(false);
 	});
 
-	it("contracts Pi append failure as a possible in-memory partial commit", () => {
+	it("contracts Pi 1.5 append failure rollback and subsequent journal recovery", () => {
 		const manager = SessionManager.create(tmpAgentDir, tmpAgentDir, { id: "fast-append-contract" });
 		manager.appendMessage({ role: "user", content: "hello", timestamp: 1 });
 		manager.appendMessage(makeAssistantMessage("ready"));
 		const sessionFile = manager.getSessionFile()!;
+		const journal = readFileSync(sessionFile, "utf8");
+		const branch = manager.getBranch();
+		const entries = manager.getEntries();
+		const leafId = manager.getLeafId();
 		rmSync(sessionFile);
 		mkdirSync(sessionFile);
 
 		expect(() => manager.appendCustomEntry(__testUtils.FAST_ENTRY_TYPE, { modelId: "composer-2", fast: false })).toThrow();
-		expect(manager.getBranch()).toEqual(expect.arrayContaining([
+		expect(manager.getBranch()).toEqual(branch);
+		expect(manager.getEntries()).toEqual(entries);
+		expect(manager.getLeafId()).toBe(leafId);
+
+		rmSync(sessionFile, { recursive: true });
+		writeFileSync(sessionFile, journal);
+		const id = manager.appendCustomEntry(__testUtils.FAST_ENTRY_TYPE, { modelId: "composer-2", fast: false });
+		expect(manager.getBranch()).toEqual([
+			...branch,
 			expect.objectContaining({
+				id,
+				parentId: leafId,
 				type: "custom",
 				customType: __testUtils.FAST_ENTRY_TYPE,
 				data: { modelId: "composer-2", fast: false },
 			}),
-		]));
+		]);
+		expect(SessionManager.open(sessionFile).getBranch()).toEqual(manager.getBranch());
 	});
 
 });

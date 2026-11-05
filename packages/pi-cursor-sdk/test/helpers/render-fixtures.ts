@@ -40,6 +40,8 @@ export function createRenderContext(overrides: Partial<HarnessRenderContext> & {
 		isError: false,
 		durationMs: undefined,
 		outputPad: 0,
+		keyText: () => "",
+		keyHint: (_keybinding, description) => description,
 		...overrides,
 	};
 }

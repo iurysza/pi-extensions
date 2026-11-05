@@ -218,12 +218,13 @@ lock_mtime() {
 }
 
 acquire_watcher_lock() {
-    local owner attempt lock_age lock_mtime_value now stale_seconds max_attempts
+    local node_bin="$1" owner attempt lock_age lock_mtime_value now stale_seconds max_attempts
     stale_seconds="${GHOST_WATCH_LOCK_STALE_SECONDS:-5}"
     [[ "$stale_seconds" =~ ^[0-9]+$ ]] || stale_seconds=5
     max_attempts=$((stale_seconds * 20 + 40))
     for attempt in $(seq 1 "$max_attempts"); do
-        if mkdir "$WATCH_LOCK" 2>/dev/null; then
+        # Affected uutils mkdir versions can report success on concurrent EEXIST.
+        if "$node_bin" -e 'require("node:fs").mkdirSync(process.argv[1])' "$WATCH_LOCK" 2>/dev/null; then
             printf '%s\n' "$$" > "$WATCH_LOCK/owner.pid"
             return 0
         fi
@@ -255,16 +256,6 @@ start_watcher() {
     watcher_paths || return
     mkdir -p "$WATCH_DIR"
     watcher_running && return 0
-    if ! acquire_watcher_lock; then
-        watcher_running && return 0
-        echo "could not acquire watcher start lock for $WATCH_SOCKET" >&2
-        return 1
-    fi
-    if watcher_running; then
-        release_watcher_lock
-        return 0
-    fi
-
     if [[ -n "${NODE_BIN_PATH:-}" ]]; then
         node_bin="$NODE_BIN_PATH"
     elif command -v node >/dev/null 2>&1; then
@@ -273,9 +264,18 @@ start_watcher() {
         node_bin=""
     fi
     if [[ -z "$node_bin" ]]; then
-        release_watcher_lock
         echo "node is required for the sidebar watcher" >&2
         return 127
+    fi
+
+    if ! acquire_watcher_lock "$node_bin"; then
+        watcher_running && return 0
+        echo "could not acquire watcher start lock for $WATCH_SOCKET" >&2
+        return 1
+    fi
+    if watcher_running; then
+        release_watcher_lock
+        return 0
     fi
 
     rm -f "$WATCH_PID"
