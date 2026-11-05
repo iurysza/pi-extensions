@@ -275,6 +275,9 @@ export default function (pi: ExtensionAPI) {
 
   // ── session_start — catch-up scan ──
   pi.on("session_start", async (_event, ctx) => {
+    // Headless runs (--print, scheduled jobs) skip the catch-up scan; the next interactive start indexes their sessions.
+    if (!ctx.hasUI) return;
+
     try {
       const status = await catchUpScan();
       if (!status || !ctx.hasUI) return;

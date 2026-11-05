@@ -52,6 +52,8 @@ function getDb(): DatabaseSync {
 
   _db = new DatabaseSync(DB_PATH);
   _db.exec("PRAGMA journal_mode=WAL");
+  // Concurrent pi processes index the same file; wait for the writer instead of failing with SQLITE_BUSY.
+  _db.exec("PRAGMA busy_timeout = 5000");
 
   // Create metadata table
   _db.exec(`

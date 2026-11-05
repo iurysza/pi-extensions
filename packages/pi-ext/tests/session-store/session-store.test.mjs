@@ -72,3 +72,34 @@ test("cancels delayed status cleanup before the session context becomes stale", 
   assert.doesNotThrow(() => mock.timers.runAll());
   assert.equal(statusChanges.length, changesAfterShutdown);
 });
+
+test("headless runs skip the catch-up scan", async () => {
+  const handlers = new Map();
+  const pi = {
+    on: (event, handler) => handlers.set(event, handler),
+    registerCommand() {},
+    registerTool() {},
+  };
+  const sessionDir = join(home, ".pi", "agent", "sessions", "headless");
+  await mkdir(sessionDir, { recursive: true });
+  await writeFile(
+    join(sessionDir, "session.jsonl"),
+    `${JSON.stringify({ type: "session", version: 3, id: "headless", timestamp: "2026-01-02T00:00:00.000Z", cwd: "/headless" })}\n`,
+  );
+  const ctx = {
+    hasUI: false,
+    get ui() {
+      throw new Error("headless context has no UI");
+    },
+  };
+
+  sessionStore(pi);
+  await handlers.get("session_start")({}, ctx);
+
+  // The interactive start indexes the headless session, so the headless start did not.
+  const statuses = [];
+  const uiCtx = { hasUI: true, ui: { setStatus: (_id, value) => statuses.push(value) } };
+  await handlers.get("session_start")({}, uiCtx);
+  assert.match(statuses[0], /^🔍 Indexed 1 sessions/);
+  await handlers.get("session_shutdown")({}, uiCtx);
+});
