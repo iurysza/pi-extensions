@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { spawn, type ChildProcess } from "node:child_process";
+import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   chmodSync,
@@ -77,13 +77,29 @@ function waitForExit(child: ChildProcess, timeoutMs = 3000): Promise<{ code: num
   });
 }
 
-function runCommand(command: string, args: string[], env: NodeJS.ProcessEnv): Promise<void> {
+interface CommandOutcome {
+  pid: number | undefined;
+  code: number | null;
+  signal: NodeJS.Signals | null;
+  stdout: string;
+  stderr: string;
+}
+
+function runCommand(
+  command: string,
+  args: string[],
+  env: NodeJS.ProcessEnv,
+  onExit?: (outcome: CommandOutcome) => void,
+): Promise<void> {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, { env, stdio: ["ignore", "pipe", "pipe"] });
+    let stdout = "";
     let stderr = "";
+    child.stdout.on("data", (chunk) => { stdout += chunk.toString("utf8"); });
     child.stderr.on("data", (chunk) => { stderr += chunk.toString("utf8"); });
     child.once("error", reject);
-    child.once("exit", (code) => {
+    child.once("exit", (code, signal) => {
+      onExit?.({ pid: child.pid, code, signal, stdout, stderr });
       if (code === 0) resolve();
       else reject(new Error(`${command} exited ${code}: ${stderr}`));
     });
@@ -344,28 +360,49 @@ test("watcher exits after the configured consecutive failure limit and cleans it
   }
 });
 
-test("controller starts one watcher per socket under concurrent starts", async () => {
+test("controller starts one watcher per socket under concurrent starts", async (t) => {
   const directory = temporaryDirectory("gitm-singleton-");
   const stateHome = join(directory, "state");
   const fakeController = writeFakeController(directory);
   const herdr = await startFakeHerdr(directory, [{ kind: "layout", x: 36, width: 82 }]);
   const env = watcherEnvironment(stateHome, herdr.socketPath, fakeController);
   const runtime = watcherDirectory(stateHome, herdr.socketPath);
+  const outcomes: Array<{ label: string; at: string; outcome: CommandOutcome; files: Record<string, string> }> = [];
+
+  function snapshot(): Record<string, string> {
+    return Object.fromEntries(["watcher.pid", "socket-path", "start.lock/owner.pid", "watcher.log"].map((name) => {
+      try {
+        return [name, readFileSync(join(runtime, name), "utf8")];
+      } catch (error) {
+        return [name, String(error)];
+      }
+    }));
+  }
+
+  function start(label: string, environment: NodeJS.ProcessEnv): Promise<void> {
+    // Keep shell decisions, including ps identity checks, silent unless the test fails.
+    return runCommand("bash", ["-x", controller, "watch-start"], {
+      ...environment,
+      PS4: '+${EPOCHREALTIME:-$SECONDS} pid=${BASHPID:-$$} line=${LINENO}: ',
+    }, (outcome) => {
+      outcomes.push({ label, at: new Date().toISOString(), outcome, files: snapshot() });
+    });
+  }
 
   try {
     await Promise.all([
-      runCommand("bash", [controller, "watch-start"], env),
-      runCommand("bash", [controller, "watch-start"], env),
+      start("concurrent-1", env),
+      start("concurrent-2", env),
     ]);
     await waitFor(() => existsSync(join(runtime, "watcher.pid")), "singleton PID was not written");
     const firstPid = readFileSync(join(runtime, "watcher.pid"), "utf8").trim();
-    await runCommand("bash", [controller, "watch-start"], env);
+    await start("repeat", env);
     assert.equal(readFileSync(join(runtime, "watcher.pid"), "utf8").trim(), firstPid);
 
     const socketAlias = join(directory, "herdr-alias.sock");
     symlinkSync(herdr.socketPath, socketAlias);
     const aliasEnv = watcherEnvironment(stateHome, socketAlias, fakeController);
-    await runCommand("bash", [controller, "watch-start"], aliasEnv);
+    await start("socket-alias", aliasEnv);
     assert.equal(readFileSync(join(runtime, "watcher.pid"), "utf8").trim(), firstPid);
 
     const alternateScripts = join(directory, "alternate checkout", "scripts");
@@ -373,13 +410,35 @@ test("controller starts one watcher per socket under concurrent starts", async (
     mkdirSync(alternateScripts, { recursive: true });
     symlinkSync(watcher, alternateWatcher);
     const alternateEnv = { ...env, GHOST_SIDEBAR_WATCHER_PATH: alternateWatcher };
-    await runCommand("bash", [controller, "watch-start"], alternateEnv);
+    await start("alternate-script", alternateEnv);
     assert.equal(readFileSync(join(runtime, "watcher.pid"), "utf8").trim(), firstPid);
     assert.equal(readdirSync(join(stateHome, "ghost-in-the-machine", "watchers")).length, 1);
     assert.equal(readFileSync(join(runtime, "watcher.log"), "utf8").match(/watcher=start/g)?.length, 1);
 
     await runCommand("bash", [controller, "watch-stop"], alternateEnv);
     await waitFor(() => !existsSync(join(runtime, "watcher.pid")), "watch-stop did not clean the PID");
+  } catch (error) {
+    const files = snapshot();
+    const pids = [...new Set([...outcomes.map((entry) => entry.files["watcher.log"]), files["watcher.log"]]
+      .flatMap((log) => [...log.matchAll(/watcher=start pid=(\d+)/g)].map((match) => match[1])))];
+    const processes = pids.length > 0
+      ? spawnSync("ps", ["-ww", "-p", pids.join(","), "-o", "pid=,ppid=,stat=,args="], { encoding: "utf8" })
+      : undefined;
+    t.diagnostic(JSON.stringify({
+      node: process.version,
+      platform: process.platform,
+      arch: process.arch,
+      environment: Object.fromEntries([
+        "CI", "NODE_TEST_CONTEXT", "COLUMNS", "LINES",
+        "SIDEBAR_FAILURE_LIMIT", "SIDEBAR_REQUEST_TIMEOUT_MS", "SIDEBAR_POLL_INTERVAL",
+        "GHOST_WATCH_LOCK_STALE_SECONDS", "npm_lifecycle_event",
+      ].map((key) => [key, env[key]])),
+      outcomes,
+      files,
+      processes: processes && { status: processes.status, stdout: processes.stdout, stderr: processes.stderr },
+      requests: herdr.requests.length,
+    }, null, 2));
+    throw error;
   } finally {
     await runCommand("bash", [controller, "watch-stop"], env).catch(() => undefined);
     await herdr.close();
