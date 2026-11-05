@@ -380,11 +380,7 @@ test("controller starts one watcher per socket under concurrent starts", async (
   }
 
   function start(label: string, environment: NodeJS.ProcessEnv): Promise<void> {
-    // Keep shell decisions, including ps identity checks, silent unless the test fails.
-    return runCommand("bash", ["-x", controller, "watch-start"], {
-      ...environment,
-      PS4: '+${EPOCHREALTIME:-$SECONDS} pid=${BASHPID:-$$} line=${LINENO}: ',
-    }, (outcome) => {
+    return runCommand("bash", [controller, "watch-start"], environment, (outcome) => {
       outcomes.push({ label, at: new Date().toISOString(), outcome, files: snapshot() });
     });
   }
@@ -437,6 +433,60 @@ test("controller starts one watcher per socket under concurrent starts", async (
       files,
       processes: processes && { status: processes.status, stdout: processes.stdout, stderr: processes.stderr },
       requests: herdr.requests.length,
+    }, null, 2));
+    throw error;
+  } finally {
+    await runCommand("bash", [controller, "watch-stop"], env).catch(() => undefined);
+    await herdr.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("controller preserves a live lock when shell mkdir lies about exclusive creation", async (t) => {
+  const directory = temporaryDirectory("gitm-mkdir-race-");
+  const stateHome = join(directory, "state");
+  const fakeController = writeFakeController(directory);
+  const herdr = await startFakeHerdr(directory, [{ kind: "layout", x: 36, width: 82 }]);
+  const runtime = watcherDirectory(stateHome, herdr.socketPath);
+  const logFile = join(runtime, "watcher.log");
+  const ownerFile = join(runtime, "start.lock", "owner.pid");
+  const bin = join(directory, "bin");
+  const outcomes: CommandOutcome[] = [];
+  mkdirSync(join(runtime, "start.lock"), { recursive: true });
+  writeFileSync(ownerFile, `${process.pid}\n`);
+  mkdirSync(bin);
+  const realMkdir = spawnSync("bash", ["-c", "command -v mkdir"], { encoding: "utf8" }).stdout.trim();
+  assert.ok(realMkdir.startsWith("/"));
+  // Model the affected utility: EEXIST incorrectly counts as exclusive acquisition.
+  writeFileSync(join(bin, "mkdir"), `#!/usr/bin/env bash
+set -euo pipefail
+if [[ $# -eq 1 && "$1" == */start.lock ]]; then
+  exec "$REAL_MKDIR" -p "$1"
+fi
+exec "$REAL_MKDIR" "$@"
+`);
+  chmodSync(join(bin, "mkdir"), 0o755);
+  const env = watcherEnvironment(stateHome, herdr.socketPath, fakeController, {
+    PATH: `${bin}:${process.env.PATH ?? ""}`,
+    NODE_BIN_PATH: process.execPath,
+    REAL_MKDIR: realMkdir,
+    GHOST_WATCH_LOCK_STALE_SECONDS: "0",
+  });
+
+  try {
+    await assert.rejects(
+      runCommand("bash", [controller, "watch-start"], env, (outcome) => outcomes.push(outcome)),
+      /could not acquire watcher start lock/,
+    );
+    assert.equal(readFileSync(ownerFile, "utf8"), `${process.pid}\n`);
+    assert.equal(existsSync(join(runtime, "watcher.pid")), false);
+    assert.equal(existsSync(logFile), false);
+    assert.equal(herdr.requests.length, 0);
+  } catch (error) {
+    t.diagnostic(JSON.stringify({
+      outcomes,
+      owner: existsSync(ownerFile) ? readFileSync(ownerFile, "utf8") : "missing",
+      watcherLog: existsSync(logFile) ? readFileSync(logFile, "utf8") : "missing",
     }, null, 2));
     throw error;
   } finally {
