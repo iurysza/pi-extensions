@@ -12,13 +12,16 @@ vi.mock("../src/model-discovery.js", async (importOriginal) => {
 	};
 });
 
-function createMockAgentRun() {
+function createMockAgentRun(): Awaited<ReturnType<SDKAgent["summarize"]>> {
 	return {
 		id: "run-1",
 		agentId: "agent-1",
 		status: "finished",
 		wait: vi.fn().mockResolvedValue({ id: "run-1", status: "finished" }),
-		cancel: vi.fn(),
+		cancel: vi.fn().mockResolvedValue(undefined),
+		stream: async function* () {},
+		conversation: vi.fn().mockResolvedValue([]),
+		onDidChangeStatus: vi.fn().mockReturnValue(() => {}),
 		supports: () => true,
 		unsupportedReason: () => undefined,
 	};
@@ -30,6 +33,7 @@ function createMockAgent(): SDKAgent {
 		agentId: "agent-1",
 		model: undefined,
 		send: mockSend,
+		summarize: vi.fn<SDKAgent["summarize"]>().mockResolvedValue(createMockAgentRun()),
 		close: vi.fn(),
 		reload: vi.fn().mockResolvedValue(undefined),
 		listArtifacts: vi.fn().mockResolvedValue([]),

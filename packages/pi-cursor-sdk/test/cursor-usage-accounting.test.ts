@@ -1,5 +1,4 @@
 import { readFileSync } from "node:fs";
-import { createRequire } from "node:module";
 import { describe, expect, it } from "vitest";
 import { InteractionUpdateSchema, TurnEndedUpdateSchema } from "@cursor/sdk";
 import type { AssistantMessage, Context } from "@earendil-works/pi-ai";
@@ -14,6 +13,7 @@ import {
 	readCursorSdkTurnUsageFromUpdate,
 } from "../src/cursor-usage-accounting.js";
 import { makeModel } from "./helpers/pi-harness.js";
+import { readCursorSdkUsageModule } from "./helpers/installed-package.js";
 
 function makeAssistantMessage(content: AssistantMessage["content"]): AssistantMessage {
 	return {
@@ -83,7 +83,7 @@ describe("cursor usage accounting", () => {
 		};
 		const partial = makeAssistantMessage([{ type: "text", text: "A" }]);
 		// Observed raw local turn-ended.usage (issue #196): inputTokens is full prompt; cache fields partition it.
-		// Distinct from published SDK toTokenUsage additive totalTokens (see turn-ended usage contract fixture).
+		// Distinct from the historical 1.0.37 additive total; 1.2.0 now also totals input plus output.
 		const turn = {
 			inputTokens: 46_965,
 			outputTokens: 3,
@@ -180,9 +180,9 @@ describe("cursor usage accounting", () => {
 		expect(TurnEndedUpdateSchema.safeParse(update).success).toBe(true);
 		expect(InteractionUpdateSchema.safeParse(update).success).toBe(true);
 		expect(readCursorSdkTurnUsageFromUpdate(update)).toEqual({ inputTokens: 1, outputTokens: 2, cacheReadTokens: 3, cacheWriteTokens: 4 });
-		// Published SDK toTokenUsage/sumTokenUsage formula only — not the observed raw local turn-ended mapping.
-		const sdkBundle = readFileSync(createRequire(import.meta.url).resolve("@cursor/sdk"), "utf8");
-		expect(sdkBundle).toMatch(/totalTokens:\w\+\w\+\w\+\w/);
+		// Published 1.2.0 toTokenUsage and sumTokenUsage exclude cache and reasoning from the total.
+		const usageModule = readCursorSdkUsageModule();
+		expect(usageModule.match(/\{inputTokens:(\w+),outputTokens:(\w+),cacheReadTokens:\w+,cacheWriteTokens:\w+,totalTokens:\1\+\2,/g)).toHaveLength(2);
 		expect(calculateContextTokens({
 			input: 1,
 			output: 2,

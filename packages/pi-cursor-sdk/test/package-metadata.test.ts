@@ -6,6 +6,7 @@ import { isAbsolute, join, relative, sep } from "node:path";
 import { OPENAI_CODEX_MODELS } from "@earendil-works/pi-ai/providers/openai-codex.models";
 import { describe, expect, it } from "vitest";
 import { FALLBACK_MODEL_ITEMS } from "../src/cursor-fallback-models.generated.js";
+import { readInstalledPackageVersion } from "./helpers/installed-package.js";
 
 const require = createRequire(import.meta.url);
 const packageJson = require("../package.json") as {
@@ -36,8 +37,12 @@ const PI_PACKAGE_VERSIONS: Record<(typeof PI_PACKAGES)[number], string> = {
 const BUNDLED_MCP_HONO_CLOSURE = ["@hono/node-server", "@modelcontextprotocol/sdk"] as const;
 
 function lockPackageVersion(packageName: string): string | undefined {
-	return packageLock.packages[`packages/pi-cursor-sdk/node_modules/${packageName}`]?.version
-		?? packageLock.packages[`node_modules/${packageName}`]?.version;
+	// npm ci ignores stale inBundle workspace entries. Only prefer a nested lock
+	// entry when that package is installed locally, rather than resolving at the root.
+	const localVersion = existsSync(join(process.cwd(), "node_modules", packageName, "package.json"))
+		? packageLock.packages[`packages/pi-cursor-sdk/node_modules/${packageName}`]?.version
+		: undefined;
+	return localVersion ?? packageLock.packages[`node_modules/${packageName}`]?.version;
 }
 
 function isPathWithin(root: string, target: string): boolean {
@@ -81,15 +86,17 @@ describe("package metadata cutover baselines", () => {
 	});
 
 	it("pins Cursor SDK exactly", () => {
-		expect(packageJson.dependencies["@cursor/sdk"]).toBe("1.0.37");
-		expect(lockPackageVersion("@cursor/sdk")).toBe("1.0.37");
+		expect(packageJson.dependencies["@cursor/sdk"]).toBe("1.2.0");
+		expect(lockPackageVersion("@cursor/sdk")).toBe("1.2.0");
+		expect(readInstalledPackageVersion("@cursor/sdk")).toBe("1.2.0");
 	});
 
 	it("ships an exact MCP/Hono bundledDependencies closure for published installs", () => {
-		expect(packageJson.dependencies["@modelcontextprotocol/sdk"]).toBe("1.32.1");
-		expect(lockPackageVersion("@modelcontextprotocol/sdk")).toBe("1.32.1");
-		expect(packageJson.dependencies["@hono/node-server"]).toBe("2.1.5");
-		expect(lockPackageVersion("@hono/node-server")).toBe("2.1.5");
+		expect(packageJson.dependencies["@modelcontextprotocol/sdk"]).toBe("1.32.2");
+		expect(lockPackageVersion("@modelcontextprotocol/sdk")).toBe("1.32.2");
+		expect(packageJson.dependencies["@hono/node-server"]).toBe("2.1.6");
+		expect(lockPackageVersion("@hono/node-server")).toBe("2.1.6");
+		expect(readInstalledPackageVersion("@hono/node-server")).toBe("2.1.6");
 		expect(packageJson.bundledDependencies).toEqual([...BUNDLED_MCP_HONO_CLOSURE]);
 	});
 
@@ -168,8 +175,8 @@ describe("package metadata cutover baselines", () => {
 				dependencies?: Record<string, string>;
 			};
 			expect(packedPackageJson.bundledDependencies).toEqual([...BUNDLED_MCP_HONO_CLOSURE]);
-			expect(packedPackageJson.dependencies?.["@modelcontextprotocol/sdk"]).toBe("1.32.1");
-			expect(packedPackageJson.dependencies?.["@hono/node-server"]).toBe("2.1.5");
+			expect(packedPackageJson.dependencies?.["@modelcontextprotocol/sdk"]).toBe("1.32.2");
+			expect(packedPackageJson.dependencies?.["@hono/node-server"]).toBe("2.1.6");
 
 			const hostRoot = join(tempRoot, "host");
 			const hostNodeModules = join(hostRoot, "node_modules");
@@ -187,7 +194,7 @@ describe("package metadata cutover baselines", () => {
 
 			const mcpPackageJsonPath = join(packageDir, "node_modules", "@modelcontextprotocol", "sdk", "package.json");
 			const bundledMcpPackageJson = JSON.parse(readFileSync(mcpPackageJsonPath, "utf8")) as { version: string };
-			expect(bundledMcpPackageJson.version).toBe("1.32.1");
+			expect(bundledMcpPackageJson.version).toBe("1.32.2");
 			const mcpRequire = createRequire(mcpPackageJsonPath);
 			const resolvedHonoEntry = realpathSync(mcpRequire.resolve("@hono/node-server"));
 			const bundledHonoRoot = realpathSync(join(packageDir, "node_modules", "@hono", "node-server"));
@@ -197,7 +204,7 @@ describe("package metadata cutover baselines", () => {
 			const resolvedVersion = (
 				JSON.parse(readFileSync(join(bundledHonoRoot, "package.json"), "utf8")) as { version: string }
 			).version;
-			expect(resolvedVersion).toBe("2.1.5");
+			expect(resolvedVersion).toBe("2.1.6");
 		} finally {
 			rmSync(tempRoot, { recursive: true, force: true });
 		}

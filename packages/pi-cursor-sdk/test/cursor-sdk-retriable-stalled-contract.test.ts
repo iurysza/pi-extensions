@@ -1,11 +1,7 @@
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { isCursorSdkConnectionStalledError, sanitizeCursorProviderError } from "../src/cursor-provider-errors.js";
-import { readInstalledPackageVersion, resolveInstalledPackageRoot } from "./helpers/installed-package.js";
-
-const sdkRoot = resolveInstalledPackageRoot("@cursor/sdk");
-const installedSdkVersion = readInstalledPackageVersion("@cursor/sdk");
+import { readCursorSdkEsmBundleContaining, readInstalledPackageVersion } from "./helpers/installed-package.js";
 
 interface RetriableStalledContractFixture {
 	provenance: {
@@ -49,19 +45,20 @@ const fixture = JSON.parse(
 ) as RetriableStalledContractFixture;
 
 describe("installed Cursor SDK RetriableError connection-stalled contract", () => {
-	it("matches installed @cursor/sdk 1.0.37 source markers and classifier shape", () => {
+	it("retains the stalled-error shape in installed @cursor/sdk 1.2.0", () => {
+		expect(readInstalledPackageVersion("@cursor/sdk")).toBe("1.2.0");
+		const source = readCursorSdkEsmBundleContaining('get kind(){return"RetriableError"}', "Connection stalled repeatedly");
+		expect(source).toContain('class Fn extends On{get kind(){return"RetriableError"}}');
+		expect(source).toContain('get name(){return this.kind}');
+		expect(source).toContain('new Fn("Connection stalled repeatedly",{cause:t,requestId:r,displayInfo:{title:"Connection stalled",detail:`The connection stalled ${wo(n)} times. Please check your network connection and try again.`,isRetryable:!0,connectCode:o}})');
+		expect(source).toContain('new Fn("Connection stalled",{cause:t,requestId:r,displayInfo:{title:"Connection stalled",detail:"The connection stalled. Please try again.",isRetryable:!0,connectCode:o}})');
+		// 1.2.0 adds a stable code without changing the name/kind our classifier uses.
+		expect(source).toContain('Object.defineProperty(e,"code",{value:"connection_stalled",enumerable:!0,configurable:!0})');
+	});
+
+	it("keeps the 1.0.37 fixture provenance and error-classification regression", () => {
 		expect(fixture.provenance.sdkPackage).toBe("@cursor/sdk");
-		expect(fixture.provenance.sdkVersion).toBe(installedSdkVersion);
-
-		const sourcePath = join(sdkRoot, "dist/esm/464.js");
-		const source = readFileSync(sourcePath, "utf8");
-		for (const marker of fixture.sourceMarkers) {
-			expect(source).toContain(marker);
-		}
-		expect(source).toContain(fixture.errorShape.displayInfo.title);
-		expect(source).toContain("Please check your network connection and try again.");
-		expect(source).toContain(fixture.errorShape.alsoThrows.message);
-
+		expect(fixture.provenance.sdkVersion).toBe("1.0.37");
 		const messages = [fixture.errorShape.message, fixture.errorShape.alsoThrows.message] as const;
 		for (const message of messages) {
 			const error = makeFixtureRetriableStalledError(fixture, message);

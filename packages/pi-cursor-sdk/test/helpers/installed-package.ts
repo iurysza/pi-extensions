@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 
@@ -20,6 +20,29 @@ export function resolveInstalledPackageRoot(packageName: string): string {
 		directory = parent;
 	}
 	throw new Error(`could not resolve installed package root for ${packageName}`);
+}
+
+/** Locate one installed SDK chunk by semantic markers, not webpack chunk numbers. */
+export function readCursorSdkEsmBundleContaining(...markers: string[]): string {
+	const directory = join(resolveInstalledPackageRoot("@cursor/sdk"), "dist/esm");
+	const hits = readdirSync(directory).flatMap((name) => {
+		if (!name.endsWith(".js")) return [];
+		const source = readFileSync(join(directory, name), "utf8");
+		return markers.every((marker) => source.includes(marker)) ? [{ name, source }] : [];
+	});
+	if (hits.length !== 1) {
+		throw new Error(`Expected one Cursor SDK chunk containing ${JSON.stringify(markers)}; found ${hits.length}: ${hits.map((hit) => hit.name).join(", ")}`);
+	}
+	return hits[0]!.source;
+}
+
+/** Keep usage assertions inside the SDK's usage module, not unrelated totals. */
+export function readCursorSdkUsageModule(): string {
+	const source = readCursorSdkEsmBundleContaining('"./src/agent/usage-types.ts"(t,r,e){');
+	const start = source.indexOf('"./src/agent/usage-types.ts"(t,r,e){');
+	const end = source.indexOf('},"./src/agent/utils/logger.ts"', start);
+	if (end < start) throw new Error("Cursor SDK usage module boundary changed");
+	return source.slice(start, end);
 }
 
 export function readInstalledPackageVersion(packageName: string): string {
