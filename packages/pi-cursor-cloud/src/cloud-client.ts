@@ -70,7 +70,7 @@ const token = (value: unknown): string | undefined =>
   typeof value === "string" && /^[\w.:-]{1,128}$/.test(value) ? value : undefined;
 const providerName = (value: string) => ({ github: "GitHub", gitlab: "GitLab", bitbucket: "Bitbucket" })[value.toLowerCase()] ?? value;
 
-type Kind = "auth" | "integration" | "rateLimit" | "configuration" | "network" | "busy" | "notFound" | "unknown";
+type Kind = "billing" | "auth" | "integration" | "rateLimit" | "configuration" | "network" | "busy" | "notFound" | "unknown";
 
 /** instanceof first; the name fallback covers errors from another copy of the SDK. */
 function kindOf(error: Error): Kind | undefined {
@@ -78,6 +78,7 @@ function kindOf(error: Error): Kind | undefined {
   const is = (type: abstract new (...args: never[]) => Error, name: string) => error instanceof type || errorName === name;
   if (is(AgentBusyError, "AgentBusyError") || error.message.includes("[agent_busy]")) return "busy";
   if (is(IntegrationNotConnectedError, "IntegrationNotConnectedError") || field(error, "code") === "integration_not_connected") return "integration";
+  if (field(error, "code") === "usage_limit_exceeded") return "billing";
   if (is(AuthenticationError, "AuthenticationError")) return "auth";
   if (is(RateLimitError, "RateLimitError")) return "rateLimit";
   if (is(ConfigurationError, "ConfigurationError")) return "configuration";
@@ -103,6 +104,7 @@ export function cloudError(error: unknown, operation: string, key = ""): string 
   const provider = typeof field(error, "provider") === "string" ? safeText(providerName(String(field(error, "provider"))), key, 40) : "";
   const helpUrl = safeHelpUrl(field(error, "helpUrl"), key);
   const [label, hint] = {
+    billing: ["usage limit reached", "Add funds or enable auto top-up in Cursor billing settings."],
     auth: ["authentication rejected", "Check the API key. Team Admin API keys do not work for Cloud Agents; use a user or service-account key."],
     integration: [`${provider || "source control"} integration not connected`,
       helpUrl ? `Connect it: ${helpUrl}` : "Connect the integration in Cursor and grant it access to the repository."],

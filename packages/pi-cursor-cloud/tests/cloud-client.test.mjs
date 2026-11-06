@@ -113,3 +113,11 @@ test('unknown non-SDK errors keep the generic message', () => {
   assert.equal(cloudError(new TypeError('boom'), 'send'), generic);
   assert.equal(cloudError('string error', 'send'), generic);
 });
+
+test("usage limit errors get a billing hint", () => {
+  const error = Object.assign(new Error("Your prepaid balance is used up."), { name: "ConfigurationError", code: "usage_limit_exceeded", status: 400, requestId: "req-1" });
+  const text = cloudError(error, "send", "crsr_fake");
+  assert.match(text, /usage limit reached \(usage_limit_exceeded, HTTP 400\)/);
+  assert.match(text, /auto top-up/);
+  assert.doesNotMatch(text, /repository URL/);
+});
