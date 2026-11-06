@@ -5,7 +5,7 @@ import { renderWidget, formatCompletion, cleanText } from '../src/render.js';
 
 const theme = { fg: (color, text) => `[${color}:${text}]`, bold: text => `[bold:${text}]` };
 const plain = { fg: (_color, text) => text, bold: text => text };
-const make = (id = 'bc-12345678') => ({ id, name: 'docs', description: 'Review docs', repo: 'https://github.com/owner/repo', ref: 'main', model: 'composer-2-5', startedAt: 1000, status: { type: 'running', runId: 'run' }, activity: 'run_terminal_cmd: ls docs', text: '', tools: 3, toolCallIds: [] });
+const make = (id = 'bc-12345678') => ({ id, name: 'docs', description: 'Review docs', repo: 'https://github.com/owner/repo', ref: 'main', model: 'composer-2-5', startedAt: 1000, created: true, status: { type: 'running', runId: 'run' }, activity: 'run_terminal_cmd: ls docs', text: '', tools: 3, toolCallIds: [] });
 
 test('running tree matches semantic theme and subagents layout', () => {
   assert.deepEqual(renderWidget([make()], theme, 500, 0, 29000), [

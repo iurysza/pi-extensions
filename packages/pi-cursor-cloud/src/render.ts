@@ -1,6 +1,6 @@
 import type { Theme } from "@earendil-works/pi-coding-agent";
 import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
-import { elapsedMs, isActive, shortId, visibleAgents, type CloudAgent, type State } from "./state.js";
+import { elapsedMs, isActive, neverCreated, shortId, visibleAgents, type CloudAgent, type State } from "./state.js";
 
 export type WidgetTheme = Pick<Theme, "fg" | "bold">;
 export const SPINNER = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
@@ -51,31 +51,34 @@ export function renderWidget(state: State, theme: WidgetTheme, width: number, fr
 
 /** Cursor web page for a cloud agent. Full id, e.g. bc-1234…. */
 export const agentUrl = (id: string): string => `https://cursor.com/agents/${id}`;
+/** Link text for one agent: the URL once it exists on Cursor, otherwise why there is none. */
+export const agentLink = (agent: CloudAgent): string =>
+  agent.created ? agentUrl(agent.id) : neverCreated(agent) ? "not created on Cursor" : "link appears once Cursor accepts the prompt";
 
 export function formatCompletion(agent: CloudAgent): string {
   if (!("result" in agent.status)) return `Cloud agent ${shortId(agent.id)} is ${agent.status.type}.`;
   const { result } = agent.status;
   const label = agent.status.type === "idle" ? "finished" : agent.status.type === "failed" ? "failed" : "cancelled";
-  const header = `Cloud agent ${singleLine(agent.name)} (${shortId(agent.id)}) ${label} · ${duration(result.durationMs)}`;
+  const header = `Cloud agent ${singleLine(agent.name)} (${shortId(agent.id)}) ${label} · ${duration(result.durationMs)}${neverCreated(agent) ? " · not created on Cursor" : ""}`;
   const error = agent.status.type === "failed" ? `Error: ${cleanText(agent.status.error)}` : "";
   const branches = result.branches.map(b => [b.repoUrl, b.branch && `branch: ${b.branch}`, b.prUrl && `PR: ${b.prUrl}`].filter(Boolean).join(" · "));
-  return [header, error, cleanText(result.text) || "No result text.", ...branches.map(cleanText), `Open: ${agentUrl(agent.id)}`].filter(Boolean).join("\n\n");
+  return [header, error, cleanText(result.text) || "No result text.", ...branches.map(cleanText), agent.created && `Open: ${agentUrl(agent.id)}`].filter(Boolean).join("\n\n");
 }
 
 export function formatList(state: State, now: number): string {
   if (!state.length) return "No cloud agents started in this process.";
   return ["ID        NAME                  STATUS      ELAPSED  REPO", ...state.flatMap(a => [
     `${shortId(a.id).padEnd(10)}${singleLine(a.name).slice(0, 20).padEnd(22)}${a.status.type.padEnd(12)}${duration(elapsedMs(a, now)).padEnd(9)}${a.repo}`,
-    `          ${agentUrl(a.id)}`])].join("\n");
+    `          ${agentLink(a)}`])].join("\n");
 }
 
-/** Structured view of one agent. Tool results and messages carry it as `details` for renderers. */
+/** Structured view of one agent. Tool results and messages carry it as `details` for renderers. `url` is empty until the agent exists on Cursor. */
 export interface AgentSummary {
-  id: string; url: string; name: string; status: CloudAgent["status"]["type"]; repo: string; ref: string;
+  id: string; url: string; created: boolean; name: string; status: CloudAgent["status"]["type"]; repo: string; ref: string;
   model: string; elapsedMs: number; tools: number; activity: string;
 }
 export function summarize(agent: CloudAgent, now: number): AgentSummary {
-  return { id: shortId(agent.id), url: agentUrl(agent.id), name: agent.name, status: agent.status.type, repo: agent.repo,
+  return { id: shortId(agent.id), url: agent.created ? agentUrl(agent.id) : "", created: agent.created, name: agent.name, status: agent.status.type, repo: agent.repo,
     ref: agent.ref, model: agent.model, elapsedMs: elapsedMs(agent, now), tools: agent.tools, activity: singleLine(agent.activity) };
 }
 export const repoName = (url: string): string => url.replace(/\.git$/, "").split("/").filter(Boolean).pop() ?? url;
@@ -91,7 +94,8 @@ export function agentLine(a: AgentSummary, theme: WidgetTheme, clickable: boolea
   return [
     theme.fg(iconColor(a.status), statusIcon(a.status)), theme.bold(singleLine(a.name)), theme.fg("dim", a.id),
     theme.fg("dim", `${a.status} · ${duration(a.elapsedMs)}`), `${repoName(a.repo)} @ ${a.ref}`,
-    theme.fg("accent", link("Open ↗", a.url, clickable)),
+    a.url ? theme.fg("accent", link("Open ↗", a.url, clickable))
+      : theme.fg("dim", a.status === "starting" || a.status === "running" ? "starting" : "not created on Cursor"),
   ].join("  ");
 }
 
@@ -101,8 +105,8 @@ export function renderCommandView(view: CommandView, theme: WidgetTheme, clickab
   if (view.kind === "spawn") {
     const a = view.agent;
     return [
-      `${theme.fg("accent", "󰅟")} ${theme.bold(singleLine(a.name))} started ${theme.fg("dim", a.id)}  ${theme.fg("accent", link("Open in Cursor ↗", a.url, clickable))}`,
-      theme.fg("dim", `  ${repoName(a.repo)} @ ${a.ref} · local uncommitted files not included · result arrives as a follow-up`),
+      `${theme.fg("accent", "󰅟")} ${theme.bold(singleLine(a.name))} starting ${theme.fg("dim", a.id)}${a.url ? `  ${theme.fg("accent", link("Open in Cursor ↗", a.url, clickable))}` : ""}`,
+      theme.fg("dim", `  ${repoName(a.repo)} @ ${a.ref} · local uncommitted files not included · result and Cursor link arrive as a follow-up`),
     ];
   }
   if (!view.agents.length) return [theme.fg("dim", "No cloud agents started in this process.")];

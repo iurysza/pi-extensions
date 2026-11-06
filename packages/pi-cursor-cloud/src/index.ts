@@ -4,10 +4,10 @@ import { randomUUID } from "node:crypto";
 import { loadDefaultModel, saveDefaultModel } from "./config.js";
 import { Type } from "typebox";
 import { createCloudClient, type CloudClient, type CloudHandle, type CloudRun } from "./cloud-client.js";
-import { agentUrl, cleanText, formatCompletion, formatList, renderCommandView, singleLine, summarize, type CommandView } from "./render.js";
+import { agentLink, agentUrl, cleanText, formatCompletion, formatList, renderCommandView, singleLine, summarize, type CommandView } from "./render.js";
 import { resolveRepo } from "./repo.js";
 import { COMMAND_MENU_COLLECT, cursorMenu } from "./menu.js";
-import { elapsedMs, isActive, reduce, shortId, type CloudAgent, type Event, type State } from "./state.js";
+import { elapsedMs, isActive, NEVER_CREATED, neverCreated, reduce, shortId, type CloudAgent, type Event, type State } from "./state.js";
 import { createWidget } from "./widget.js";
 
 const MESSAGE_TYPE = "cursor-cloud-completion";
@@ -134,16 +134,17 @@ export function registerCloudExtension(pi: ExtensionAPI, dependencies: Dependenc
     if (stopped) { handle.close(); throw new Error("Session shut down while creating the cloud agent. No prompt was sent."); }
     handles.set(handle.id, handle);
     const agent: CloudAgent = { id: handle.id, name, description: params.prompt, repo, ref, model,
-      startedAt: now(), status: { type: "starting" }, activity: "starting…", text: "", tools: 0, toolCallIds: [] };
+      startedAt: now(), created: false, status: { type: "starting" }, activity: "starting…", text: "", tools: 0, toolCallIds: [] };
     dispatch({ type: "spawned", agent });
     startRun(agent, handle, params.prompt);
-    return `Cloud agent ${shortId(handle.id)} (${name}) runs in the background. Results arrive later as a follow-up message. It sees ${repo} at ${ref}, not local uncommitted files. Open: ${agentUrl(handle.id)}`;
+    return `Cloud agent ${shortId(handle.id)} (${name}) runs in the background. Results arrive later as a follow-up message. It sees ${repo} at ${ref}, not local uncommitted files. The Cursor link is in the result once Cursor accepts the prompt.`;
   }
 
   function send(id: string, prompt: string, ctx: ExtensionContext): string {
     checkSession(ctx);
     requirePrompt(prompt);
     const agent = find(id);
+    if (neverCreated(agent)) throw new Error(NEVER_CREATED);
     if (deleting.has(agent.id)) throw new Error("Cloud agent deletion is in progress. Start a new agent instead.");
     if (isActive(agent)) throw new Error("Agent already has an active run. Wait until it is idle before sending a follow-up.");
     const handle = handles.get(agent.id);
@@ -207,7 +208,7 @@ export function registerCloudExtension(pi: ExtensionAPI, dependencies: Dependenc
     parameters: Type.Object({ id: Type.Optional(idSchema) }),
     async execute(_id, params) {
       const agents = params.id ? [find(params.id)] : state;
-      const rows = agents.map(a => ({ id: shortId(a.id), url: agentUrl(a.id), name: a.name, status: a.status.type, repo: a.repo,
+      const rows = agents.map(a => ({ id: shortId(a.id), url: agentLink(a), name: a.name, status: a.status.type, repo: a.repo,
         ref: a.ref, model: a.model, elapsedMs: elapsedMs(a, now()), tools: a.tools, activity: cleanText(a.activity),
         text: "result" in a.status ? a.status.result.text : a.text,
         error: a.status.type === "failed" ? a.status.error : undefined,
@@ -275,12 +276,14 @@ export function registerCloudExtension(pi: ExtensionAPI, dependencies: Dependenc
           view = { kind: "spawn", agent: summarize(state.at(-1)!, now()) };
         } else if (action === "send") {
           const parts = /^(\S+)(?:\s+([\s\S]+))?$/.exec(rest);
-          const id = parts?.[1] ?? await pick(ctx, "Follow up which cloud agent?", a => !isActive(a));
+          const id = parts?.[1] ?? await pick(ctx, "Follow up which cloud agent?", a => !isActive(a) && a.created);
           text = send(id, parts?.[2] ?? await ask(ctx, `Follow-up for ${shortId(find(id).id)}`), ctx);
         } else if (action === "cancel" && !/\s/.test(rest)) text = await cancel(rest || await pick(ctx, "Cancel which cloud run?", isActive), ctx);
         else if (action === "delete" && !/\s/.test(rest)) text = await remove(rest || await pick(ctx, "Delete which cloud agent?", a => !isActive(a)), ctx);
         else if (action === "open" && !/\s/.test(rest)) {
-          const url = agentUrl(find(rest || await pick(ctx, "Open which cloud agent?", () => true)).id);
+          const target = find(rest || await pick(ctx, "Open which cloud agent?", a => a.created));
+          if (!target.created) throw new Error(neverCreated(target) ? NEVER_CREATED : "Cursor has not accepted the prompt yet. Try again shortly.");
+          const url = agentUrl(target.id);
           const opener = process.platform === "darwin" ? "open" : process.platform === "win32" ? "explorer" : "xdg-open";
           const result = await pi.exec(opener, [url]);
           if (result.code !== 0 && opener !== "explorer") throw new Error(`Could not open ${url}`);

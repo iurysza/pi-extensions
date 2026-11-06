@@ -272,6 +272,7 @@ test('contributes a Cursor menu with only loaded commands', t => {
 test('/cloud open opens the Cursor page for a picked or named agent', async t => {
   const h = harness(t, { picks: [0] });
   await h.execute('cursor_cloud_spawn', { prompt: 'Look', name: 'look' });
+  await flush();
   const id = h.handles[0].id;
   await h.commands.get('cloud').handler('open', h.ctx);
   await h.commands.get('cloud').handler(`open ${id.slice(3, 11)}`, h.ctx);
@@ -284,9 +285,12 @@ test('tool results and commands carry structured details for renderers', async t
   const h = harness(t);
   const spawned = await h.execute('cursor_cloud_spawn', { prompt: 'Look', name: 'look' });
   assert.equal(spawned.details.agent.name, 'look');
-  assert.match(spawned.details.agent.url, /^https:\/\/cursor\.com\/agents\/bc-/);
+  assert.equal(spawned.details.agent.url, '');
+  assert.doesNotMatch(spawned.content[0].text, /cursor\.com\/agents/);
+  await flush();
+  assert.match((await h.execute('cursor_cloud_status', {})).details.agents[0].url, /^https:\/\/cursor\.com\/agents\/bc-/);
   const status = await h.execute('cursor_cloud_status', {});
-  assert.equal(status.details.agents[0].status, 'starting');
+  assert.equal(status.details.agents[0].status, 'running');
   JSON.parse(status.content[0].text);
   await h.commands.get('cloud').handler('list', h.ctx);
   assert.equal(h.messages.at(-1).details.kind, 'list');
@@ -349,4 +353,41 @@ test('/cloud model falls back to input on discovery failure and cancellation pre
   assert.deepEqual(JSON.parse(readFileSync(cancelled.configPath, 'utf8')), { defaultModel: 'saved' });
   assert.equal(cancelled.handles.length, 0);
   assert.deepEqual(cancelled.notices.at(-1), { text: 'Cancelled.', level: 'info' });
+});
+
+test('a failed first send marks the agent as never created and refuses follow-ups', async t => {
+  const h = harness(t, { pendingSend: true });
+  await h.commands.get('cloud').handler('spawn Task', h.ctx);
+  const card = h.renderers.get('cursor-cloud-command')(h.messages.at(-1), {}, { fg: (_c, s) => s, bold: s => s }).render(200).join('\n');
+  assert.match(card, /starting/);
+  assert.doesNotMatch(card, /Open in Cursor|cursor\.com/);
+  h.handles[0].runs[0].ready.reject(new Error('Cursor Cloud send failed: GitHub integration not connected.'));
+  await flush();
+  const completion = h.messages.at(-1);
+  assert.match(completion.content, /failed · 0:\d\d · not created on Cursor/);
+  assert.match(completion.content, /GitHub integration not connected/);
+  assert.doesNotMatch(completion.content, /Open:|cursor\.com\/agents/);
+  assert.equal(completion.details.url, '');
+  const [row] = await h.status('00000001');
+  assert.equal(row.url, 'not created on Cursor');
+  await h.commands.get('cloud').handler('list', h.ctx);
+  assert.match(h.messages.at(-1).content, /not created on Cursor/);
+  assert.doesNotMatch(h.messages.at(-1).content, /cursor\.com\/agents/);
+  await assert.rejects(h.execute('cursor_cloud_send', { id: '00000001', prompt: 'Again' }), /never created on Cursor\. Start a new agent\./);
+  assert.equal(h.handles[0].runs.length, 1);
+  await h.commands.get('cloud').handler('open 00000001', h.ctx);
+  assert.equal(h.opened.length, 0);
+});
+
+test('a successful first send shows the Cursor link in the completion', async t => {
+  const h = harness(t);
+  await h.execute('cursor_cloud_spawn', { prompt: 'Task' });
+  await flush();
+  h.handles[0].runs[0].done.resolve(outcome());
+  await flush();
+  assert.match(h.messages.at(-1).content, /Open: https:\/\/cursor\.com\/agents\/bc-00000001/);
+  assert.doesNotMatch(h.messages.at(-1).content, /not created/);
+  assert.match(h.messages.at(-1).details.url, /^https:\/\/cursor\.com\/agents\//);
+  await h.execute('cursor_cloud_send', { id: '00000001', prompt: 'More' });
+  assert.equal(h.handles[0].runs.length, 2);
 });

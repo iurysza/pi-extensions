@@ -1,4 +1,6 @@
-import { Agent, Cursor, type SDKAgent, type SendOptions, type RunResult } from "@cursor/sdk";
+import { Agent, AgentBusyError, AgentNotFoundError, AuthenticationError, ConfigurationError, Cursor, CursorSdkError,
+  IntegrationNotConnectedError, NetworkError, RateLimitError, UnknownAgentError,
+  type SDKAgent, type SendOptions, type RunResult } from "@cursor/sdk";
 import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -43,10 +45,78 @@ export function redact(text: string, key: string): string {
   return key ? text.replaceAll(key, "[redacted]") : text;
 }
 
-/** No raw SDK errors: they can include a serialized client holding credentials. */
-export function cloudError(error: unknown, operation: string): string {
-  if (error instanceof Error && error.message.includes("[agent_busy]")) return "Agent already has an active run. Wait until it is idle before sending a follow-up.";
-  return `Cursor Cloud ${operation} failed. Check authentication, repository access, and Cursor service availability.`;
+const BUSY = "Agent already has an active run. Wait until it is idle before sending a follow-up.";
+const SECRETS = [/crsr_[A-Za-z0-9_-]+/g, /Bearer\s+\S+/gi, /[\w-]*(?:key|token|secret|password)\s*[=:]\s*\S+/gi];
+
+/** Server text is untrusted: redact the key and anything token-like, keep one short line. */
+export function safeText(text: string, key: string, max = 300): string {
+  let clean = redact(text, key);
+  for (const pattern of SECRETS) clean = clean.replace(pattern, "[redacted]");
+  clean = clean.replace(/[\x00-\x1f\x7f-\x9f]/g, " ").replace(/\s+/g, " ").trim();
+  return clean.length > max ? `${clean.slice(0, max - 1)}…` : clean;
+}
+
+function safeHelpUrl(value: unknown, key: string): string | undefined {
+  if (typeof value !== "string") return undefined;
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:" || url.username || url.password) return undefined;
+    return safeText(url.href, key) === url.href ? url.href : undefined;
+  } catch { return undefined; }
+}
+
+const field = (error: Error, name: string): unknown => Reflect.get(error, name);
+const token = (value: unknown): string | undefined =>
+  typeof value === "string" && /^[\w.:-]{1,128}$/.test(value) ? value : undefined;
+const providerName = (value: string) => ({ github: "GitHub", gitlab: "GitLab", bitbucket: "Bitbucket" })[value.toLowerCase()] ?? value;
+
+type Kind = "auth" | "integration" | "rateLimit" | "configuration" | "network" | "busy" | "notFound" | "unknown";
+
+/** instanceof first; the name fallback covers errors from another copy of the SDK. */
+function kindOf(error: Error): Kind | undefined {
+  const errorName = error.name;
+  const is = (type: abstract new (...args: never[]) => Error, name: string) => error instanceof type || errorName === name;
+  if (is(AgentBusyError, "AgentBusyError") || error.message.includes("[agent_busy]")) return "busy";
+  if (is(IntegrationNotConnectedError, "IntegrationNotConnectedError") || field(error, "code") === "integration_not_connected") return "integration";
+  if (is(AuthenticationError, "AuthenticationError")) return "auth";
+  if (is(RateLimitError, "RateLimitError")) return "rateLimit";
+  if (is(ConfigurationError, "ConfigurationError")) return "configuration";
+  if (is(NetworkError, "NetworkError")) return "network";
+  if (is(AgentNotFoundError, "AgentNotFoundError")) return "notFound";
+  if (is(UnknownAgentError, "UnknownAgentError") || is(CursorSdkError, "CursorSdkError") || is(CursorSdkError, "CursorAgentError")) return "unknown";
+  return undefined;
+}
+
+/**
+ * Plain, credential-free text for an SDK failure. Never uses `cause`, stacks, or serialized
+ * errors: they can include a client holding credentials. Unknown non-SDK errors stay generic.
+ */
+export function cloudError(error: unknown, operation: string, key = ""): string {
+  const generic = `Cursor Cloud ${operation} failed. Check authentication, repository access, and Cursor service availability.`;
+  if (!(error instanceof Error)) return generic;
+  const kind = kindOf(error);
+  if (kind === "busy") return BUSY;
+  if (!kind) return generic;
+  const code = token(field(error, "code"));
+  const status = field(error, "status");
+  const requestId = token(field(error, "requestId"));
+  const provider = typeof field(error, "provider") === "string" ? safeText(providerName(String(field(error, "provider"))), key, 40) : "";
+  const helpUrl = safeHelpUrl(field(error, "helpUrl"), key);
+  const [label, hint] = {
+    auth: ["authentication rejected", "Check the API key. Team Admin API keys do not work for Cloud Agents; use a user or service-account key."],
+    integration: [`${provider || "source control"} integration not connected`,
+      helpUrl ? `Connect it: ${helpUrl}` : "Connect the integration in Cursor and grant it access to the repository."],
+    rateLimit: ["rate limited", "Retry later."],
+    configuration: ["request rejected", "Check the model, repository URL, branch, and team admin policy."],
+    network: ["network or service error", "Check your connection and Cursor service status, then retry."],
+    notFound: ["agent not found", "It may have been deleted or never created. Start a new agent."],
+    unknown: ["unexpected Cursor error", "Check authentication, repository access, and Cursor service availability."],
+  }[kind];
+  const facts = [code, typeof status === "number" && Number.isInteger(status) ? `HTTP ${status}` : undefined].filter(Boolean).join(", ");
+  const message = safeText(error.message.replace(/^\[[^\]]*\]\s*/, ""), key);
+  return [`Cursor Cloud ${operation} failed: ${label}${facts ? ` (${facts})` : ""}.`,
+    message && `Cursor said: ${message.replace(/[.!?…]?$/, m => m || ".")}`, `${hint.replace(/[.!?]?$/, m => m || ".")}`,
+    requestId && `Request: ${requestId}`].filter(Boolean).join(" ");
 }
 
 function toolActivity(tool: { type: string; args?: unknown }): string {
@@ -99,7 +169,7 @@ function wrapHandle(agent: SDKAgent, key: string): CloudHandle {
   return {
     id: agent.agentId,
     close() {
-      try { agent.close(); } catch (error) { throw new Error(cloudError(error, "close")); }
+      try { agent.close(); } catch (error) { throw new Error(cloudError(error, "close", key)); }
     },
     async send(prompt, emit) {
       const publish = (event: StreamEvent | undefined) => {
@@ -117,14 +187,14 @@ function wrapHandle(agent: SDKAgent, key: string): CloudHandle {
         return {
           id: run.id,
           async cancel() {
-            try { await run.cancel(); } catch (error) { throw new Error(cloudError(error, "cancel")); }
+            try { await run.cancel(); } catch (error) { throw new Error(cloudError(error, "cancel", key)); }
           },
           async wait() {
             try { return mapCompletion(await run.wait(), key); }
-            catch (error) { throw new Error(cloudError(error, "wait")); }
+            catch (error) { throw new Error(cloudError(error, "wait", key)); }
           },
         };
-      } catch (error) { throw new Error(cloudError(error, "send")); }
+      } catch (error) { throw new Error(cloudError(error, "send", key)); }
     },
   };
 }
@@ -134,19 +204,19 @@ export function createCloudClient(getKey: () => Promise<string> = readApiKey): C
     async models() {
       const apiKey = await getKey();
       try { return (await Cursor.models.list({ apiKey })).map(({ id, displayName }) => ({ id, displayName })); }
-      catch (error) { throw new Error(cloudError(error, "model listing")); }
+      catch (error) { throw new Error(cloudError(error, "model listing", apiKey)); }
     },
     async create(options) {
       const apiKey = await getKey();
       try {
         return wrapHandle(await Agent.create({ apiKey, model: { id: options.model },
           cloud: { repos: [{ url: options.repo, startingRef: options.ref }] } }), apiKey);
-      } catch (error) { throw new Error(cloudError(error, "create")); }
+      } catch (error) { throw new Error(cloudError(error, "create", apiKey)); }
     },
     async delete(id) {
       const apiKey = await getKey();
       try { await Agent.delete(id, { apiKey }); }
-      catch (error) { throw new Error(cloudError(error, "delete")); }
+      catch (error) { throw new Error(cloudError(error, "delete", apiKey)); }
     },
   };
 }

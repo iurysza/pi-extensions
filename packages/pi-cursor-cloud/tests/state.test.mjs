@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { reduce, visibleAgents, isActive, shortId } from '../src/state.js';
 
-export const agent = (id = 'bc-12345678-abcd') => ({ id, name: 'docs', description: 'Review docs', repo: 'https://github.com/owner/repo', ref: 'main', model: 'composer-2-5', startedAt: 1000, status: { type: 'starting' }, activity: 'starting…', text: '', tools: 0, toolCallIds: [] });
+export const agent = (id = 'bc-12345678-abcd') => ({ id, name: 'docs', description: 'Review docs', repo: 'https://github.com/owner/repo', ref: 'main', model: 'composer-2-5', startedAt: 1000, created: false, status: { type: 'starting' }, activity: 'starting…', text: '', tools: 0, toolCallIds: [] });
 const outcome = { text: 'Done', durationMs: 28000, branches: [] };
 
 test('spawn and stream transitions preserve old state and count tool IDs once', () => {

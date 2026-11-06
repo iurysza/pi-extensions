@@ -25,6 +25,8 @@ export interface CloudAgent {
   ref: string;
   model: string;
   startedAt: number;
+  /** The SDK only mints the id locally. The agent exists on Cursor once its first send succeeds. */
+  created: boolean;
   status: Status;
   activity: string;
   text: string;
@@ -51,6 +53,9 @@ export type Event =
 export const shortId = (id: string): string => id.replace(/^bc-/, "").slice(0, 8);
 export const isActive = (agent: CloudAgent): boolean =>
   agent.status.type === "starting" || agent.status.type === "running";
+/** The first send failed, so the agent never existed on Cursor and its link leads nowhere. */
+export const neverCreated = (agent: CloudAgent): boolean => !agent.created && !isActive(agent);
+export const NEVER_CREATED = "This agent was never created on Cursor. Start a new agent.";
 
 export function visibleAgents(state: State, now: number): State {
   return state.filter(a => isActive(a) || ("endedAt" in a.status && now - a.status.endedAt < 60_000))
@@ -74,7 +79,7 @@ export function reduce(state: State, event: Event): State {
     }
     if (!isActive(agent)) return agent;
     switch (event.type) {
-      case "running": return { ...agent, status: { type: "running", runId: event.runId } };
+      case "running": return { ...agent, created: true, status: { type: "running", runId: event.runId } };
       case "finished": return { ...agent, status: { type: "idle", result: event.result, endedAt: event.now }, activity: "finished" };
       case "cancelled": return { ...agent, status: { type: "cancelled", result: event.result, endedAt: event.now }, activity: "cancelled" };
       case "error": return { ...agent, status: { type: "failed", error: event.error, result: event.result, endedAt: event.now }, activity: event.error };

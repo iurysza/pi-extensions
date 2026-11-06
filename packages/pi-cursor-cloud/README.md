@@ -90,7 +90,7 @@ While it runs, help me plan the local tests.
 
 The spawn tool returns without waiting for the run. The widget shows thinking, tool names and arguments, then text snippets. On completion, Pi receives a custom follow-up message with the result, duration, and any branch or PR details Cursor supplies. This triggers a main-agent turn. Ask for a follow-up with `cursor_cloud_send` after the agent is idle.
 
-With tidy enabled, the completion appears as a collapsible cloud card. Terminals with hyperlink support show an Open in Cursor link. Ctrl+O shows metadata and the plain-text reply, subject to `/tidy lines`. Chill mode folds it with finished tools after the main agent replies or a 5-second grace period. Without tidy, the completion shows raw plain text.
+With tidy enabled, the completion appears as a collapsible cloud card. Terminals with hyperlink support show an Open in Cursor link once Cursor accepts the first prompt. The Cursor SDK only creates the agent on Cursor's servers when the first prompt succeeds, so an agent whose first prompt fails is marked "not created on Cursor", has no link, and refuses follow-ups. Failures show the Cursor error class, code, HTTP status, request ID, and a redacted one-line server message. Ctrl+O shows metadata and the plain-text reply, subject to `/tidy lines`. Chill mode folds it with finished tools after the main agent replies or a 5-second grace period. Without tidy, the completion shows raw plain text.
 
 Running agents animate every 150ms. Finished agents stay in the widget for 60 seconds. The tree shows at most 12 lines and collapses overflow into `+N more`.
 
