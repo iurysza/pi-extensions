@@ -1,14 +1,14 @@
+import { createHerdrUi } from "@iurysza/herdr-ui";
 import { execFileSync } from "node:child_process";
 
 const METADATA_SOURCE = "pi-leader-key";
 const NAVIGATION_TOKEN = "pi_leader_key_navigation";
-const HERDR_PANE_ID_PATTERN = /^[A-Za-z0-9._:-]+$/;
 
 let openOverlayCount = 0;
 
 function currentHerdrPaneId(): string | null {
-	const paneId = process.env.HERDR_PANE_ID;
-	return paneId && HERDR_PANE_ID_PATTERN.test(paneId) ? paneId : null;
+	const caller = createHerdrUi().resolveCaller();
+	return caller.ok && caller.value.backend === "legacy" ? caller.value.pane : null;
 }
 
 function reportNavigationState(paneId: string, open: boolean): void {

@@ -1,0 +1,48 @@
+{
+  "name": "@iurysza/herdr-ui",
+  "version": "0.1.0",
+  "description": "Explicit caller routing and owned terminal launches for Herdr UI clients.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./index.d.mts",
+      "default": "./index.mjs"
+    },
+    "./bundle": "./bundle.mjs"
+  },
+  "bin": {
+    "herdr-ui": "./cli.mjs"
+  },
+  "files": [
+    "index.mjs",
+    "index.d.mts",
+    "cli.mjs",
+    "bundle.mjs",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "herdr"
+  ],
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iurysza/pi-extensions.git",
+    "directory": "packages/herdr-ui"
+  },
+  "bugs": {
+    "url": "https://github.com/iurysza/pi-extensions/issues"
+  },
+  "homepage": "https://github.com/iurysza/pi-extensions/tree/main/packages/herdr-ui#readme",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs"
+  }
+}

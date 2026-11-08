@@ -20,31 +20,19 @@ import type { ExtensionAPI, ExtensionContext, SessionEntry } from "@earendil-wor
 import { convertToLlm } from "@earendil-works/pi-coding-agent";
 import { matchesKey, Key } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
-import { existsSync, readFileSync, mkdirSync, writeFileSync, unlinkSync } from "node:fs";
+import { existsSync, readFileSync, mkdirSync, writeFileSync } from "node:fs";
 import * as path from "node:path";
 import { join, dirname, resolve } from "node:path";
 import { execFileSync } from "node:child_process";
-import { tmpdir } from "node:os";
 import { OverlayFrame } from "../shared/overlay.js";
 import { THINKING_ROLES } from "../shared/thinking-colors.js";
-import {
-	detectMultiplexer,
-	createSplit,
-	createTab,
-	sendKeys,
-	getMultiplexerName,
-} from "../shared/multiplexer.js";
+import { launchMultiplexer, getMultiplexerName } from "../shared/multiplexer.js";
 
 import { normalize } from "@sting8k/pi-vcc/src/core/normalize";
 import { filterNoise } from "@sting8k/pi-vcc/src/core/filter-noise";
 import { buildSections } from "@sting8k/pi-vcc/src/core/build-sections";
 import { TaskStore } from "@tintinweb/pi-tasks/src/task-store.js";
 import { redact } from "./redact.js";
-
-function shellQuote(value: string): string {
-	if (value.length === 0) return "''";
-	return `'${value.replace(/'/g, `'"'"'`)}'`;
-}
 
 function getPiInvocationParts(): string[] {
 	const currentScript = process.argv[1];
@@ -212,47 +200,11 @@ async function pickModel(ctx: ExtensionContext): Promise<SelectedModel | null | 
 	);
 }
 
-function buildPiCommand(prompt: string, model?: SelectedModel): string {
+function buildPiArgv(prompt: string, model?: SelectedModel): string[] {
 	const parts = [...getPiInvocationParts()];
-	if (model) {
-		parts.push("--model", `${model.provider}/${model.model}`, "--thinking", model.thinking);
-	}
-	if (prompt.length > 0) {
-		parts.push(prompt);
-	}
-	return parts.map(shellQuote).join(" ");
-}
-
-/**
- * Build a pi command that reads the prompt from a file via shell command
- * substitution. The multiplexer only has to transmit the short
- * `pi "$(cat '<file>')"` command; the full prompt text travels from disk
- * straight into pi's argv without being typed/pasted through the mux.
- */
-function buildPiCommandFromFile(promptFile: string, prompt: string, model?: SelectedModel): string {
-	const parts = [...getPiInvocationParts()];
-	if (model) {
-		parts.push("--model", `${model.provider}/${model.model}`, "--thinking", model.thinking);
-	}
-	const quotedParts = parts.map(shellQuote);
-	if (prompt.length > 0) {
-		// Path is single-quoted inside the substitution so spaces/special chars are safe.
-		quotedParts.push(`"$(cat ${shellQuote(promptFile)})"`);
-	}
-	return quotedParts.join(" ");
-}
-
-function writeTempPromptFile(prompt: string): string | null {
-	try {
-		const filePath = join(
-			tmpdir(),
-			`pi-handoff-prompt-${Date.now()}-${Math.random().toString(36).slice(2)}.md`,
-		);
-		writeFileSync(filePath, prompt, "utf-8");
-		return filePath;
-	} catch {
-		return null;
-	}
+	if (model) parts.push("--model", `${model.provider}/${model.model}`, "--thinking", model.thinking);
+	if (prompt.length > 0) parts.push("--", prompt);
+	return parts;
 }
 
 const DEFAULT_HANDOFF_GOAL = "Continue from the previous session and pick up the next sensible step.";
@@ -678,24 +630,6 @@ async function performHandoff(
 ): Promise<string | undefined> {
 	if (!ctx.hasUI) return "Handoff requires interactive mode.";
 
-	const mux = detectMultiplexer();
-	if (!mux) return "No supported multiplexer detected (herder, tmux, or cmux).";
-
-	// Start split/tab immediately (runs in parallel with prompt building)
-	const targetPromise = new Promise<ReturnType<typeof createSplit> | string>((resolve) => {
-		try {
-			const target = useTab ? createTab("handoff") : createSplit("right");
-			if (!target) {
-				resolve(`Failed to create ${useTab ? "tab" : "split"} in ${mux}.`);
-				return;
-			}
-			resolve(target);
-		} catch (err) {
-			resolve(`${mux} error: ${err}`);
-		}
-	});
-
-	// Build prompt concurrently with split/tab creation
 	const summary = buildContextSummary(ctx);
 	if (!summary) return "No conversation to hand off.";
 
@@ -722,29 +656,12 @@ async function performHandoff(
 	// Rebuild with artifact path included
 	const finalPrompt = artifactPath ? buildHandoffPrompt(hctx) : prompt;
 
-	// Wait for split/tab to be ready
-	const targetOrError = await targetPromise;
-	if (typeof targetOrError === "string") {
-		return targetOrError;
-	}
-	const target = targetOrError;
-
-	// Wait for shell to initialize
-	await new Promise((r) => setTimeout(r, 500));
-
-	// Launch pi with the handoff prompt.
-	// Write the prompt to a temp file and pass it via `$(cat <file>)` so the
-	// multiplexer only transmits a short command, not the whole prompt text.
-	const promptFile = writeTempPromptFile(finalPrompt);
-	if (!promptFile) return "Failed to save handoff prompt to disk.";
-
-	const command = buildPiCommandFromFile(promptFile, finalPrompt, model);
-	sendKeys(target, command);
-
-	// Safe to delete once the shell has expanded the command substitution.
-	setTimeout(() => {
-		try { unlinkSync(promptFile); } catch {}
-	}, 30000);
+	// Build everything before creating a terminal, so empty/failed prompts cannot orphan one.
+	const launched = launchMultiplexer({
+		cwd: ctx.cwd, argv: buildPiArgv(finalPrompt, model),
+		placement: useTab ? "tab" : "split", direction: "right", name: "handoff",
+	});
+	if (launched.ok === false) return `${launched.error.code}: ${launched.error.message}`;
 
 	return undefined;
 }

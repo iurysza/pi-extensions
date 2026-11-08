@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { fixture } from "../../../herdr-ui/tests/fixtures.mjs";
 
 import { launchSkillEditor } from "../../extensions/leader-key/skill-editor.ts";
 
@@ -20,50 +21,56 @@ function fakePi(results) {
 	};
 }
 
-test("auto-links the bundled Herdr pane and retries the popup", async () => {
-	const { pi, calls } = fakePi([failed, ok, ok]);
-	const target = await launchSkillEditor(pi, skillPath, {
-		env: { HERDR_ENV: "1", VISUAL: "nvim -f" },
-		platform: "darwin",
-		pluginRoot: "/tmp/pi-ext-skill-viewer",
-	});
-
+test("auto-links only an actually missing bundled Herdr pane", async (t) => {
+	const f = fixture(t, { pluginMissing: true }, { HERDR_ENV: "1", HERDR_PANE_ID: "w1:p1", VISUAL: "nvim -f" });
+	const { pi } = fakePi([]);
+	const target = await launchSkillEditor(pi, skillPath, { env: f.env, platform: "darwin", pluginRoot: "/tmp/viewer" });
 	assert.equal(target, "Herdr popup");
-	assert.deepEqual(calls.map((call) => call.command), ["herdr", "herdr", "herdr"]);
-	assert.deepEqual(calls[1].args, ["plugin", "link", "/tmp/pi-ext-skill-viewer"]);
-	assert.ok(calls[0].args.includes("PI_EXT_SKILL_PATH=/tmp/example skill/SKILL.md"));
-	assert.ok(calls[0].args.includes("PI_EXT_SKILL_EDITOR=nvim -f"));
-	assert.equal(calls[0].options.timeout, 5000);
+	const calls = f.calls();
+	assert.deepEqual(calls[2].args, ["plugin", "link", "/tmp/viewer"]);
+	assert.ok(calls[1].args.includes("PI_EXT_SKILL_PATH=/tmp/example skill/SKILL.md"));
+	assert.ok(calls[1].args.includes("PI_EXT_SKILL_EDITOR=nvim -f"));
 });
 
-test("lets the Herdr pane choose nvim or vi when no editor is configured", async () => {
+test("lets the Herdr pane choose nvim or vi when no editor is configured", async (t) => {
+	const f = fixture(t, {}, { HERDR_ENV: "1", HERDR_PANE_ID: "w1:p1", VISUAL: undefined, EDITOR: undefined });
+	await launchSkillEditor(fakePi([]).pi, skillPath, { env: f.env, platform: "linux" });
+	assert.equal(f.calls()[1].args.some(arg => arg.startsWith("PI_EXT_SKILL_EDITOR=")), false);
+});
+
+test("stale Herdr context does not fall through to tmux or desktop terminals", async (t) => {
+	const f = fixture(t, {}, { HERDR_ENV: "1", HERDR_PANE_ID: "missing", TMUX: "outer" });
 	const { pi, calls } = fakePi([ok]);
-	await launchSkillEditor(pi, skillPath, {
-		env: { HERDR_ENV: "1" },
-		platform: "linux",
-		pluginRoot: "/tmp/pi-ext-skill-viewer",
-	});
-
-	assert.equal(calls[0].args.some((arg) => arg.startsWith("PI_EXT_SKILL_EDITOR=")), false);
+	await assert.rejects(launchSkillEditor(pi, skillPath, { env: f.env, platform: "darwin" }), /stale_context/);
+	assert.deepEqual(calls, []);
 });
 
-test("falls back from Herdr to a tmux split", async () => {
-	const { pi, calls } = fakePi([failed, failed, ok]);
-	const target = await launchSkillEditor(pi, skillPath, {
-		env: { HERDR_ENV: "1", TMUX: "/tmp/tmux" },
-		platform: "darwin",
-		pluginRoot: "/tmp/pi-ext-skill-viewer",
-	});
+test("app caller opens a caller-space tab and never execs a desktop terminal", async (t) => {
+	const f = fixture(t, {}, { HC_TERMINAL_ID: "t1", VISUAL: "nvim -f" });
+	const { pi, calls } = fakePi([ok, ok, ok]);
+	for (const platform of ["darwin", "linux"]) {
+		const target = await launchSkillEditor(pi, skillPath, { env: f.env, platform, pluginRoot: "/tmp/viewer" });
+		assert.equal(target, "Herdr tab");
+	}
+	assert.deepEqual(calls, []);
+	const created = f.calls().filter(x => x.args[0] === "do");
+	assert.deepEqual(created.map(x => x.args[1]), ["tab.new", "tab.new"]);
+	const request = JSON.parse(created[0].args[2]);
+	assert.equal(request.space, "sp1");
+	assert.equal(request.folder, "/tmp/example skill");
+	assert.equal(request.name, "Skill: example skill");
+	assert.ok(request.argv.includes("PI_EXT_SKILL_PATH=/tmp/example skill/SKILL.md"));
+	assert.equal(request.argv.at(-1), "/tmp/viewer/open-skill.sh");
+	assert.equal(f.calls().some(x => ["status", "plugin"].includes(x.args[0]) || x.args[1] === "terminal.peek" || x.args[1] === "overlay.close"), false);
+});
 
-	assert.equal(target, "tmux split");
-	assert.equal(calls.at(-1).command, "tmux");
-	assert.deepEqual(calls.at(-1).args.slice(0, 4), [
-		"split-window",
-		"-h",
-		"-c",
-		"/tmp/example skill",
-	]);
-	assert.equal(calls.at(-1).args.at(-1), skillPath);
+test("app adapter errors surface without Ghostty, osascript or tmux fallback", async (t) => {
+	for (const [config, code] of [[{ listing: { spaces: [] } }, /stale_context|Reopen/], [{ fail: "herdr-app do" }, /:/]]) {
+		const f = fixture(t, config, { HC_TERMINAL_ID: "t1", TMUX: "outer" });
+		const { pi, calls } = fakePi([ok, ok, ok]);
+		await assert.rejects(launchSkillEditor(pi, skillPath, { env: f.env, platform: "darwin" }), code);
+		assert.deepEqual(calls, []);
+	}
 });
 
 test("opens a new Ghostty window without a multiplexer", async () => {

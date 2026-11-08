@@ -90,8 +90,18 @@ test("Herdr passthrough metadata follows the overlay lifetime", async (t) => {
 	const fakeHerdr = join(tempDir, "herdr");
 	const logPath = join(tempDir, "calls.log");
 	const previousBinPath = process.env.HERDR_BIN_PATH;
+	const previousHc = process.env.HC_TERMINAL_ID;
+	const previousHerdr = process.env.HERDR_ENV;
+	delete process.env.HC_TERMINAL_ID;
+	process.env.HERDR_ENV = "1";
 
-	writeFileSync(fakeHerdr, "#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"$HERDR_TEST_LOG\"\n");
+	writeFileSync(fakeHerdr, `#!/bin/sh
+if [ "$1 $2" = "pane current" ]; then
+  printf '%s\\n' '{"result":{"pane":{"pane_id":"test:pane","workspace_id":"test"}}}'
+  exit 0
+fi
+printf '%s\\n' "$*" >> "$HERDR_TEST_LOG"
+`);
 	chmodSync(fakeHerdr, 0o755);
 	process.env.HERDR_PANE_ID = "test:pane";
 	process.env.HERDR_BIN_PATH = fakeHerdr;
@@ -100,6 +110,8 @@ test("Herdr passthrough metadata follows the overlay lifetime", async (t) => {
 	t.after(() => {
 		delete process.env.HERDR_PANE_ID;
 		delete process.env.HERDR_TEST_LOG;
+		if (previousHc === undefined) delete process.env.HC_TERMINAL_ID; else process.env.HC_TERMINAL_ID = previousHc;
+		if (previousHerdr === undefined) delete process.env.HERDR_ENV; else process.env.HERDR_ENV = previousHerdr;
 		if (previousBinPath === undefined) delete process.env.HERDR_BIN_PATH;
 		else process.env.HERDR_BIN_PATH = previousBinPath;
 		rmSync(tempDir, { recursive: true, force: true });
@@ -361,4 +373,23 @@ test("scoped-model thinking cycle includes max after xhigh", () => {
 	assert.equal(ALL_THINKING_LEVELS.indexOf("max") >= 0, true);
 	assert.equal(getThinkingDescription("xhigh"), "Extra-high reasoning effort");
 	assert.equal(getThinkingDescription("max"), "Maximum reasoning effort");
+});
+
+test("app or stale caller context never reports metadata to legacy Herdr", async (t) => {
+	const { fixture } = await import("../../../herdr-ui/tests/fixtures.mjs");
+	const saved = { ...process.env };
+	t.after(() => {
+		for (const key of Object.keys(process.env)) delete process.env[key];
+		Object.assign(process.env, saved);
+	});
+	const app = fixture(t, {}, { HC_TERMINAL_ID: "t1", HERDR_ENV: "1", HERDR_PANE_ID: "w1:p1" });
+	for (const key of Object.keys(process.env)) delete process.env[key];
+	for (const [key, value] of Object.entries(app.env)) if (value !== undefined) process.env[key] = value;
+	assert.equal(await withHerdrNavigationPassthrough(async () => "closed"), "closed");
+	assert.deepEqual(app.calls().map(call => call.command), ["herdr-app"]);
+	delete process.env.HC_TERMINAL_ID;
+	process.env.HERDR_PANE_ID = "stale";
+	assert.equal(await withHerdrNavigationPassthrough(async () => "closed"), "closed");
+	assert.deepEqual(app.calls().at(-1).args, ["pane", "current"]);
+	assert.equal(app.calls().some(call => call.args.includes("report-metadata")), false);
 });

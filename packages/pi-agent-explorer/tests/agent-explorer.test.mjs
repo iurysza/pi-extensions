@@ -4,7 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { createExplorerSnapshot } from "../extensions/agent-explorer.ts";
+import { createExplorerSnapshot, launchExplorer } from "../extensions/agent-explorer.ts";
+import { fixture } from "../../herdr-ui/tests/fixtures.mjs";
 import {
 	discoverExtensionSources,
 	findLiteralPiEventHooks,
@@ -247,4 +248,20 @@ test("discovers sibling extension entrypoints from Pi package manifests", async 
 	} finally {
 		await rm(temp, { recursive: true, force: true });
 	}
+});
+
+test("app caller opens the explorer in a caller-space tab with no Ghostty or tmux exec", async (t) => {
+	const f = fixture(t, {}, { HC_TERMINAL_ID: "t1", TMUX: "outer" });
+	const calls = [];
+	const pi = { async exec(command, args) { calls.push({ command, args }); return { code: 0, stdout: "", stderr: "" }; } };
+	assert.equal(await launchExplorer(pi, "/tmp/snapshot root", f.env), "Herdr tab");
+	assert.deepEqual(calls, []);
+	const created = f.calls().filter(x => x.args[0] === "do");
+	assert.deepEqual(created.map(x => x.args[1]), ["tab.new"]);
+	const request = JSON.parse(created[0].args[2]);
+	assert.deepEqual([request.name, request.space, request.folder], ["Agent Explorer", "sp1", "/tmp/snapshot root"]);
+
+	const stale = fixture(t, { listing: { spaces: [] } }, { HC_TERMINAL_ID: "t1", TMUX: "outer" });
+	await assert.rejects(launchExplorer(pi, "/tmp/snapshot root", stale.env));
+	assert.deepEqual(calls, []);
 });

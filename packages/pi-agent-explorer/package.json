@@ -38,11 +38,19 @@
   },
   "scripts": {
     "test": "node --test tests/*.test.mjs",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "prepack": "node --input-type=module -e \"import { bundle } from '@iurysza/herdr-ui/bundle'; bundle(process.cwd())\"",
+    "postpack": "node --input-type=module -e \"import { unbundle } from '@iurysza/herdr-ui/bundle'; unbundle(process.cwd())\""
   },
   "pi": {
     "extensions": [
       "./extensions/agent-explorer.ts"
     ]
-  }
+  },
+  "dependencies": {
+    "@iurysza/herdr-ui": "0.1.0"
+  },
+  "bundleDependencies": [
+    "@iurysza/herdr-ui"
+  ]
 }

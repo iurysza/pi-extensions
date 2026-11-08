@@ -1,9 +1,8 @@
+import { createHerdrUi } from "@iurysza/herdr-ui";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { dirname, resolve } from "node:path";
+import { basename, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const HERDR_PLUGIN_ID = "pi-ext-skill-viewer";
-const HERDR_ENTRYPOINT_ID = "skill";
 const EXEC_TIMEOUT_MS = 5000;
 
 const EDITOR_SHELL_SCRIPT = [
@@ -62,44 +61,6 @@ async function run(
 			stderr: error instanceof Error ? error.message : String(error),
 		};
 	}
-}
-
-async function openHerdrPopup(
-	pi: ExecAPI,
-	skillPath: string,
-	pluginRoot: string,
-	env: NodeJS.ProcessEnv,
-): Promise<boolean> {
-	const openPopup = () => {
-		const args = [
-			"plugin",
-			"pane",
-			"open",
-			"--plugin",
-			HERDR_PLUGIN_ID,
-			"--entrypoint",
-			HERDR_ENTRYPOINT_ID,
-			"--placement",
-			"popup",
-			"--cwd",
-			dirname(skillPath),
-			"--env",
-			`PI_EXT_SKILL_PATH=${skillPath}`,
-		];
-		const editor = editorSpec(env);
-		if (editor) args.push("--env", `PI_EXT_SKILL_EDITOR=${editor}`);
-		args.push("--focus");
-		return run(pi, "herdr", args);
-	};
-
-	let launched = await openPopup();
-	if (launched.code === 0) return true;
-
-	const linked = await run(pi, "herdr", ["plugin", "link", pluginRoot]);
-	if (linked.code !== 0) return false;
-
-	launched = await openPopup();
-	return launched.code === 0;
 }
 
 async function openTmuxSplit(pi: ExecAPI, skillPath: string): Promise<boolean> {
@@ -176,8 +137,21 @@ export async function launchSkillEditor(
 	const platform = options.platform ?? process.platform;
 	const pluginRoot = options.pluginRoot ?? pluginRootFromSource();
 
-	if (env.HERDR_ENV === "1" && await openHerdrPopup(pi, skillPath, pluginRoot, env)) {
-		return "Herdr popup";
+	// Inside any Herdr (app or legacy) the shared adapter is the only path:
+	// never fall back to tmux or desktop terminal emulators.
+	if (env.HC_TERMINAL_ID !== undefined || env.HERDR_ENV === "1") {
+		const editor = editorSpec(env);
+		const viewer = createHerdrUi({ env }).openViewer({
+			cwd: dirname(skillPath),
+			name: `Skill: ${basename(dirname(skillPath))}`,
+			argv: ["env", `PI_EXT_SKILL_PATH=${skillPath}`, ...(editor ? [`PI_EXT_SKILL_EDITOR=${editor}`] : []), "bash", resolve(pluginRoot, "open-skill.sh")],
+			legacy: {
+				plugin: "pi-ext-skill-viewer", entrypoint: "skill", root: pluginRoot,
+				env: { PI_EXT_SKILL_PATH: skillPath, ...(editor ? { PI_EXT_SKILL_EDITOR: editor } : {}) },
+			},
+		});
+		if (viewer.ok === false) throw new Error(`${viewer.error.code}: ${viewer.error.message}`);
+		return viewer.value.placement === "popup" ? "Herdr popup" : viewer.value.placement === "tab" ? "Herdr tab" : "Herdr split";
 	}
 
 	if (env.TMUX && await openTmuxSplit(pi, skillPath)) {

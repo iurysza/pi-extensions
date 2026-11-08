@@ -26,7 +26,7 @@ const allowedFiles = new Set([
 	"LICENSE",
 	"THIRD_PARTY_NOTICES.md",
 ]);
-const allowedDirectories = ["extensions/", "skills/", "themes/", "prompts/", ".pi/taskflows/"];
+const allowedDirectories = ["extensions/", "skills/", "themes/", "prompts/", ".pi/taskflows/", "node_modules/@iurysza/herdr-ui/"];
 const personalPathPatterns = [
 	/\/Users\/[^/\s"'`]+/g,
 	/\/home\/[^/\s"'`]+/g,

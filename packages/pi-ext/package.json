@@ -29,7 +29,8 @@
     "@tintinweb/pi-tasks": "0.9.1",
     "better-sqlite3": "^13.0.3",
     "diff": "^9.0.0",
-    "semver": "^7.8.5"
+    "semver": "^7.8.5",
+    "@iurysza/herdr-ui": "0.1.0"
   },
   "peerDependencies": {
     "@earendil-works/pi-agent-core": "*",
@@ -61,12 +62,14 @@
   },
   "homepage": "https://github.com/iurysza/pi-extensions/tree/main/packages/pi-ext#readme",
   "scripts": {
-    "test": "npm run test:tool-presentation && node --import tsx --test tests/cmux/tools.test.mjs tests/compaction-model/config.test.ts tests/compaction-model/report.test.ts tests/compaction-model/policy.test.ts tests/custom-footer/footer-slots.test.ts tests/session-store/session-store.test.mjs && node --import tsx --test tests/leader-key/navigation.test.mjs tests/leader-key/contributions.test.mjs tests/leader-key/stash-draft.test.mjs tests/leader-key/skill-tag.test.mjs tests/leader-key/sections.test.mjs && node --test tests/leader-key/favourite-models.test.mjs tests/leader-key/skill-editor.test.mjs tests/leader-key/skill-categories.test.mjs tests/chat-to-md/chat-to-md.test.mjs tests/handoff/dependency-contract.test.mjs tests/startup-screen/startup-screen.test.mjs",
+    "test": "npm run test:tool-presentation && node --import tsx --test tests/cmux/tools.test.mjs tests/compaction-model/config.test.ts tests/compaction-model/report.test.ts tests/compaction-model/policy.test.ts tests/custom-footer/footer-slots.test.ts tests/session-store/session-store.test.mjs && node --import tsx --test tests/leader-key/navigation.test.mjs tests/leader-key/contributions.test.mjs tests/leader-key/stash-draft.test.mjs tests/leader-key/skill-tag.test.mjs tests/leader-key/sections.test.mjs && node --test tests/leader-key/favourite-models.test.mjs tests/leader-key/skill-editor.test.mjs tests/leader-key/skill-categories.test.mjs tests/chat-to-md/chat-to-md.test.mjs tests/handoff/dependency-contract.test.mjs tests/handoff/launch-lifecycle.test.mjs tests/startup-screen/startup-screen.test.mjs",
     "test:tool-presentation": "node scripts/test-tool-presentation.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "pack:check": "node scripts/check-pack.mjs",
     "check": "npm test && npm run typecheck && npm run pack:check",
-    "flows:install": "mkdir -p ~/.pi/agent/taskflows && cp .pi/taskflows/*.json ~/.pi/agent/taskflows/ && ls ~/.pi/agent/taskflows/"
+    "flows:install": "mkdir -p ~/.pi/agent/taskflows && cp .pi/taskflows/*.json ~/.pi/agent/taskflows/ && ls ~/.pi/agent/taskflows/",
+    "prepack": "node --input-type=module -e \"import { bundle } from '@iurysza/herdr-ui/bundle'; bundle(process.cwd())\"",
+    "postpack": "node --input-type=module -e \"import { unbundle } from '@iurysza/herdr-ui/bundle'; unbundle(process.cwd())\""
   },
   "pi": {
     "extensions": [
@@ -85,7 +88,7 @@
       "./extensions/handoff/index.ts",
       "./extensions/session-snap/index.ts",
       "./extensions/pi-telescope/index.ts",
-    "./extensions/compaction-model/index.ts"
+      "./extensions/compaction-model/index.ts"
     ],
     "skills": [
       "./skills/commit",
@@ -97,5 +100,8 @@
     "themes": [
       "./themes"
     ]
-  }
+  },
+  "bundleDependencies": [
+    "@iurysza/herdr-ui"
+  ]
 }

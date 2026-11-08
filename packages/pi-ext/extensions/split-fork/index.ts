@@ -14,18 +14,7 @@ import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-c
 import { existsSync, promises as fs } from "node:fs";
 import * as path from "node:path";
 import { randomUUID } from "node:crypto";
-import {
-	detectMultiplexer,
-	createSplit,
-	createTab,
-	sendKeys,
-	getMultiplexerName,
-} from "../shared/multiplexer.js";
-
-function shellQuote(value: string): string {
-	if (value.length === 0) return "''";
-	return `'${value.replace(/'/g, `'"'"'`)}'`;
-}
+import { launchMultiplexer } from "../shared/multiplexer.js";
 
 function getPiInvocationParts(): string[] {
 	const currentScript = process.argv[1];
@@ -42,7 +31,7 @@ function getPiInvocationParts(): string[] {
 	return ["pi"];
 }
 
-function buildPiCommand(sessionFile: string | undefined, prompt: string): string {
+function buildPiArgv(sessionFile: string | undefined, prompt: string): string[] {
 	const parts = [...getPiInvocationParts()];
 
 	if (sessionFile) {
@@ -53,7 +42,7 @@ function buildPiCommand(sessionFile: string | undefined, prompt: string): string
 		parts.push("--", prompt);
 	}
 
-	return parts.map(shellQuote).join(" ");
+	return parts;
 }
 
 async function createForkedSession(ctx: ExtensionCommandContext): Promise<string | undefined> {
@@ -109,37 +98,22 @@ export default function (pi: ExtensionAPI) {
 			// 1. Fork the session
 			const forkedSessionFile = await createForkedSession(ctx);
 
-			// 2. Detect multiplexer and create split or tab
-			const mux = detectMultiplexer();
-			if (!mux) {
-				ctx.ui.notify("No supported multiplexer detected (herder, tmux, or cmux).", "warning");
-				if (forkedSessionFile) {
-					ctx.ui.notify(`Forked session was created: ${forkedSessionFile}`, "info");
-				}
+			const launched = launchMultiplexer({
+				placement: useTab ? "tab" : "split", name: "fork", direction: "right",
+				cwd: ctx.cwd, argv: buildPiArgv(forkedSessionFile, prompt),
+			});
+			if (launched.ok === false) {
+				ctx.ui.notify(`${launched.error.code}: ${launched.error.message}`, "error");
+				if (forkedSessionFile) ctx.ui.notify(`Forked session was created: ${forkedSessionFile}`, "info");
 				return;
 			}
-
-			const target = useTab ? createTab("fork") : createSplit("right");
-			if (!target) {
-				ctx.ui.notify(`Failed to create ${useTab ? "tab" : "split"} in ${mux}.`, "error");
-				if (forkedSessionFile) {
-					ctx.ui.notify(`Forked session was created: ${forkedSessionFile}`, "info");
-				}
-				return;
-			}
-
-			// 3. Small delay to let the new shell initialize
-			await new Promise((r) => setTimeout(r, 500));
-
-			// 4. Send the pi command to the new pane/surface
-			const command = buildPiCommand(forkedSessionFile, prompt);
-			sendKeys(target, command);
+			const target = launched.value;
 
 			// 5. Notify the user
 			if (forkedSessionFile) {
 				const fileName = path.basename(forkedSessionFile);
 				const suffix = prompt ? " and sent prompt" : "";
-				ctx.ui.notify(`Forked to ${fileName} in a new ${getMultiplexerName()} ${target.type}${suffix}.`, "info");
+				ctx.ui.notify(`Forked to ${fileName} in a new ${target.backend} ${target.placement}${suffix}.`, "info");
 				if (wasBusy) {
 					ctx.ui.notify(
 						"Forked from current committed state (in-flight turn continues in original session).",
@@ -148,7 +122,7 @@ export default function (pi: ExtensionAPI) {
 				}
 			} else {
 				ctx.ui.notify(
-					`Opened a new ${getMultiplexerName()} ${target.type} (no persisted session to fork).`,
+					`Opened a new ${target.backend} ${target.placement} (no persisted session to fork).`,
 					"warning",
 				);
 			}

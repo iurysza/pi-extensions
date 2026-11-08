@@ -1,3 +1,4 @@
+import { createHerdrUi } from "@iurysza/herdr-ui";
 import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
 
@@ -383,41 +384,21 @@ function explorerPluginRoot(): string {
 	return resolve(dirname(fileURLToPath(import.meta.url)), "..", "herdr", "pi-agent-explorer");
 }
 
-async function launchExplorer(pi: ExtensionAPI, root: string): Promise<string> {
-	if (process.env.HERDR_ENV === "1") {
+export async function launchExplorer(pi: Pick<ExtensionAPI, "exec">, root: string, env: NodeJS.ProcessEnv = process.env): Promise<string> {
+	// Inside any Herdr the shared adapter is the only path: no tmux or Ghostty fallback.
+	if (env.HC_TERMINAL_ID !== undefined || env.HERDR_ENV === "1") {
 		const pluginRoot = explorerPluginRoot();
-		const openPopup = () =>
-			pi.exec(
-				"herdr",
-				[
-					"plugin",
-					"pane",
-					"open",
-					"--plugin",
-					"pi-agent-explorer",
-					"--entrypoint",
-					"explorer",
-					"--placement",
-					"popup",
-					"--cwd",
-					root,
-					"--env",
-					`HERDR_EXPLORER_ROOT=${root}`,
-					"--focus",
-				],
-				{ timeout: 5000 },
-			);
-
-		let launched = await openPopup();
-		if (launched.code !== 0) {
-			const linked = await pi.exec("herdr", ["plugin", "link", pluginRoot], { timeout: 5000 });
-			if (linked.code === 0) launched = await openPopup();
-		}
-		if (launched.code === 0) return "Herdr popup";
-		throw new Error(launched.stderr || launched.stdout || "Unable to open Herdr popup");
+		const viewer = createHerdrUi({ env }).openViewer({
+			cwd: root,
+			name: "Agent Explorer",
+			argv: ["env", `HERDR_EXPLORER_ROOT=${root}`, "bash", resolve(pluginRoot, "open-agent-explorer.sh")],
+			legacy: { plugin: "pi-agent-explorer", entrypoint: "explorer", root: pluginRoot, env: { HERDR_EXPLORER_ROOT: root } },
+		});
+		if (!viewer.ok) throw new Error(`${viewer.error.code}: ${viewer.error.message}`);
+		return viewer.value.placement === "popup" ? "Herdr popup" : viewer.value.placement === "tab" ? "Herdr tab" : "Herdr split";
 	}
 
-	if (process.env.TMUX) {
+	if (env.TMUX) {
 		const launched = await pi.exec("tmux", ["split-window", "-h", "-c", root, "nvim", "-R", root], { timeout: 5000 });
 		if (launched.code === 0) return "tmux split";
 	}
@@ -436,8 +417,13 @@ export default function agentExplorer(pi: ExtensionAPI) {
 				return;
 			}
 			const root = await createExplorerSnapshot(pi, ctx);
-			const target = await launchExplorer(pi, root);
-			ctx.ui.notify(`Agent explorer opened in ${target}: ${root}`, "info");
+			try {
+				const target = await launchExplorer(pi, root);
+				ctx.ui.notify(`Agent explorer opened in ${target}: ${root}`, "info");
+			} catch (error) {
+				const message = error instanceof Error ? error.message : String(error);
+				ctx.ui.notify(`Unable to open agent explorer: ${message}`, "error");
+			}
 		},
 	});
 }

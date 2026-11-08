@@ -1,3 +1,4 @@
+import { bundle, unbundle } from "../packages/herdr-ui/bundle.mjs";
 import { spawnSync } from "node:child_process";
 import { readdir, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
@@ -42,11 +43,13 @@ for (const entry of entries) {
   if (manifest.private) continue;
 
   console.log(`Checking ${manifest.name}`);
+  if (manifest.bundleDependencies?.includes("@iurysza/herdr-ui")) bundle(packageDir);
   const result = spawnSync(
     "npm",
     ["pack", "--dry-run", "--json", "--ignore-scripts", "--workspace", manifest.name],
     { cwd: root, encoding: "utf8", maxBuffer: 20 * 1024 * 1024 },
   );
+  if (manifest.bundleDependencies?.includes("@iurysza/herdr-ui")) unbundle(packageDir);
   if (result.status !== 0) {
     failures.push(`${manifest.name} npm pack failed: ${(result.stderr || result.stdout).trim()}`);
     continue;
@@ -68,7 +71,7 @@ for (const entry of entries) {
   const allowlist = manifest.files ?? [];
 
   for (const path of packedFiles) {
-    if (!coveredByAllowlist(path, allowlist)) {
+    if (!coveredByAllowlist(path, allowlist) && !manifest.bundleDependencies?.some((name) => path.startsWith(`node_modules/${name}/`))) {
       failures.push(`${manifest.name} packs file outside its allowlist: ${path}`);
     }
     if (forbidden.some((pattern) => pattern.test(path))) {
