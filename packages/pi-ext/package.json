@@ -29,7 +29,7 @@
     "@tintinweb/pi-tasks": "0.9.1",
     "better-sqlite3": "^13.0.3",
     "diff": "^9.0.0",
-    "semver": "^7.8.5",
+    "semver": "^7.8.6",
     "@iurysza/herdr-ui": "0.1.0"
   },
   "peerDependencies": {
@@ -46,7 +46,7 @@
     "@earendil-works/pi-tui": "1.5.0",
     "@types/semver": "^7.8.0",
     "tsx": "^4.23.15",
-    "typebox": "^1.4.3",
+    "typebox": "^1.4.4",
     "typescript": "^7.0.2"
   },
   "publishConfig": {
