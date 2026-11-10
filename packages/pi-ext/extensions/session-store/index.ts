@@ -28,6 +28,12 @@ import { SearchOverlay } from "./search-overlay.js";
 
 let initialCatchUpDone = false;
 
+/**
+ * Pi awaits every session_start handler before the editor is ready, so the scan runs later.
+ * A timer, not setImmediate: the rest of startup yields to the event loop, and the scan is synchronous.
+ */
+export const CATCH_UP_DELAY_MS = 2000;
+
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes}B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`;
@@ -122,6 +128,7 @@ async function catchUpScan(): Promise<string | undefined> {
 
 export default function (pi: ExtensionAPI) {
   let clearStatusTimer: ReturnType<typeof setTimeout> | undefined;
+  let catchUpTimer: ReturnType<typeof setTimeout> | undefined;
   // ── /search — Interactive FTS search ──
   pi.registerCommand("search", {
     description: "Search across all indexed sessions via FTS5 + BM25",
@@ -278,18 +285,24 @@ export default function (pi: ExtensionAPI) {
     // Headless runs (--print, scheduled jobs) skip the catch-up scan; the next interactive start indexes their sessions.
     if (!ctx.hasUI) return;
 
-    try {
-      const status = await catchUpScan();
-      if (!status || !ctx.hasUI) return;
+    if (catchUpTimer !== undefined) clearTimeout(catchUpTimer);
+    catchUpTimer = setTimeout(async () => {
+      catchUpTimer = undefined;
+      try {
+        const status = await catchUpScan();
+        if (!status || !ctx.hasUI) return;
 
-      ctx.ui.setStatus("session-store", status);
-      clearStatusTimer = setTimeout(() => {
-        clearStatusTimer = undefined;
-        ctx.ui.setStatus("session-store", undefined);
-      }, 5000);
-    } catch (err) {
-      console.error("[session-store] Catch-up scan failed:", err);
-    }
+        ctx.ui.setStatus("session-store", status);
+        clearStatusTimer = setTimeout(() => {
+          clearStatusTimer = undefined;
+          ctx.ui.setStatus("session-store", undefined);
+        }, 5000);
+      } catch (err) {
+        console.error("[session-store] Catch-up scan failed:", err);
+      }
+    }, CATCH_UP_DELAY_MS);
+    // Never keep a finished process alive just to scan.
+    catchUpTimer.unref?.();
   });
 
   // ── agent_end — incremental index of current session ──
@@ -303,6 +316,11 @@ export default function (pi: ExtensionAPI) {
 
   // ── session_shutdown — close DB ──
   pi.on("session_shutdown", async (_event, ctx) => {
+    // A pending scan must never run against the closed DB or a stale context.
+    if (catchUpTimer !== undefined) {
+      clearTimeout(catchUpTimer);
+      catchUpTimer = undefined;
+    }
     if (clearStatusTimer !== undefined) {
       clearTimeout(clearStatusTimer);
       clearStatusTimer = undefined;

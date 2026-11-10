@@ -242,13 +242,26 @@ class TelescopeEditor extends CustomEditor {
 // Extension
 // ---------------------------------------------------------------------------
 
+/**
+ * Listing files runs `fd` synchronously. Pi awaits session_start before the editor is ready,
+ * so the cache is warmed shortly after instead. An earlier `@` lists the files itself.
+ */
+export const FILE_CACHE_WARM_DELAY_MS = 500;
+
 export default function (pi: ExtensionAPI) {
+	let warmTimer: ReturnType<typeof setTimeout> | undefined;
+
 	// Register custom editor with telescope @ mentions
 	pi.on("session_start", async (_event, ctx) => {
 		try {
 			const cwd = ctx.cwd;
 			invalidateFileCache();
-			ensureFileCache(cwd);
+			if (warmTimer !== undefined) clearTimeout(warmTimer);
+			warmTimer = setTimeout(() => {
+				warmTimer = undefined;
+				ensureFileCache(cwd);
+			}, FILE_CACHE_WARM_DELAY_MS);
+			warmTimer.unref?.();
 			ctx.ui.setEditorComponent((tui, theme, keybindings) =>
 				new TelescopeEditor(tui, theme, keybindings, cwd),
 			);
@@ -259,6 +272,10 @@ export default function (pi: ExtensionAPI) {
 	});
 
 	pi.on("session_shutdown", async (_event, ctx) => {
+		if (warmTimer !== undefined) {
+			clearTimeout(warmTimer);
+			warmTimer = undefined;
+		}
 		ctx.ui.setEditorComponent(undefined);
 		invalidateFileCache();
 	});
