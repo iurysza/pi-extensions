@@ -145,6 +145,7 @@ test("passes configured helper settings and only recent conversational context",
     ["assistant", "Prior answer"],
     ["user", "Latest request"],
     ["assistant", "Current answer"],
+    ["user", "Suggest my next messages with the follow_up_suggestions tool."],
   ]);
 });
 

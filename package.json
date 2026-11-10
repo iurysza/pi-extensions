@@ -34,6 +34,7 @@
     "extensions": [
       "./packages/pi-ext/extensions/custom-footer/custom-footer.ts",
       "./packages/pi-ext/extensions/startup-screen/index.ts",
+      "./packages/pi-ext/extensions/skill-conflicts/index.ts",
       "./packages/pi-ext/extensions/review/review.ts",
       "./packages/pi-ext/extensions/leader-key/index.ts",
       "./packages/pi-ext/extensions/chat-to-md/index.ts",

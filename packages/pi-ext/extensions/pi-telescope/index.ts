@@ -147,6 +147,15 @@ class TelescopeAtMentionProvider implements AutocompleteProvider {
 		private cwd: string,
 	) {}
 
+	/** Keep other providers' triggers (`$` skills, `#` agents); the editor reads them from here. */
+	get triggerCharacters(): string[] | undefined {
+		return this.base.triggerCharacters;
+	}
+
+	shouldTriggerFileCompletion(lines: string[], cursorLine: number, cursorCol: number): boolean {
+		return this.base.shouldTriggerFileCompletion?.(lines, cursorLine, cursorCol) ?? true;
+	}
+
 	async getSuggestions(
 		lines: string[],
 		cursorLine: number,

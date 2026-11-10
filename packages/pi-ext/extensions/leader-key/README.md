@@ -6,7 +6,7 @@ In the main Pi editor, Ctrl+Shift+S copies the current draft to the system clipb
 
 ## Select a skill
 
-Skills and Writing style insert `󱚊 name` before the current draft. Selecting another skill replaces only that tag. The glyph is Material Design Nerd Font `md-book_cog` (U+F168A). For example, selecting `pr-review` while editing `Review this diff` yields `󱚊 pr-review Review this diff`.
+`/` is for commands and `$` is for skills. Typing `$` at the start of a message lists skills; picking one inserts `$name `. On send, `$name request` becomes `/skill:name request`. Text that does not name a skill, such as `$HOME`, is sent as typed. Skills and Writing style in this menu insert the same `$name` tag before the current draft, and selecting another skill replaces only that tag. For example, selecting `pr-review` while editing `Review this diff` yields `$pr-review Review this diff`.
 
 On interactive submission, Leader Key checks that the skill still exists and translates the tag into Pi's native `/skill:pr-review` command. An unknown tag stays in the editor with a warning. A valid tag can be sent without a request; Pi then loads the skill and starts a model turn. Typed `/skill:name` commands still work. The tag is editable text, not a styled editor component.
 

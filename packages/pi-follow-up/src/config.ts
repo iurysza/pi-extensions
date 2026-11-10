@@ -151,8 +151,8 @@ export async function loadOrCreateFollowUpConfig(path = followUpConfigPath()): P
   }
 }
 
-/** Profile-managed override in Pi's settings.json: `followUpModel: { model: "provider/model", thinking? }`. */
-export type FollowUpModelSetting = { readonly provider: string; readonly model: string; readonly thinking?: ThinkingLevel };
+/** Profile-managed override in Pi's settings.json: `followUpModel: { model: "provider/model", thinking?, prompt? }`. */
+export type FollowUpModelSetting = { readonly provider: string; readonly model: string; readonly thinking?: ThinkingLevel; readonly prompt?: string };
 
 export function parseFollowUpModelSetting(settings: unknown): FollowUpModelSetting | undefined {
   if (!isRecord(settings) || settings.followUpModel === undefined) return undefined;
@@ -167,7 +167,16 @@ export function parseFollowUpModelSetting(settings: unknown): FollowUpModelSetti
   if (thinking !== undefined && (typeof thinking !== "string" || !THINKING_LEVELS.has(thinking as ThinkingLevel))) {
     throw new Error("followUpModel.thinking must be one of minimal, low, medium, high, xhigh, or max");
   }
-  return { provider: id.slice(0, slash), model: id.slice(slash + 1), ...(thinking ? { thinking: thinking as ThinkingLevel } : {}) };
+  const prompt = section.prompt;
+  if (prompt !== undefined && (typeof prompt !== "string" || prompt.trim() === "")) {
+    throw new Error("followUpModel.prompt must be a non-empty string");
+  }
+  return {
+    provider: id.slice(0, slash),
+    model: id.slice(slash + 1),
+    ...(thinking ? { thinking: thinking as ThinkingLevel } : {}),
+    ...(prompt ? { prompt } : {}),
+  };
 }
 
 export function applyFollowUpModelSetting(config: FollowUpConfig, setting: FollowUpModelSetting | undefined): FollowUpConfig {
