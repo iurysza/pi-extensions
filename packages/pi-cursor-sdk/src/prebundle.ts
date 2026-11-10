@@ -30,7 +30,10 @@ export function hashInputs(bundleDir: URL, inputs: string[]): string {
 	return hash.digest("hex");
 }
 
-/** Path of the bundle entry when the bundle matches the sources on disk, else undefined. */
+/**
+ * File URL of the bundle entry when the bundle matches the sources on disk, else undefined.
+ * A URL, not a path: import() rejects a Windows path such as C:\\dir\\index.ts.
+ */
 export function freshBundle(bundleDir: URL): string | undefined {
 	if (process.env.PI_PREBUNDLE === "0") {
 		note(bundleDir, "source (PI_PREBUNDLE=0)");
@@ -46,7 +49,7 @@ export function freshBundle(bundleDir: URL): string | undefined {
 			note(bundleDir, "source (bundle is stale)");
 			return undefined;
 		}
-		return fileURLToPath(new URL("index.ts", bundleDir));
+		return new URL("index.ts", bundleDir).href;
 	} catch {
 		note(bundleDir, "source (no bundle)");
 		return undefined;

@@ -5,6 +5,8 @@ import { cpSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, write
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import { pathToFileURL } from "node:url";
+import { freshBundle } from "../../packages/pi-ext/extensions/shared/prebundle.ts";
 import { buildBundles, bundleStatus } from "../../scripts/build-bundles.mjs";
 import { root, runProbeWithNotes } from "./helpers.mjs";
 
@@ -47,6 +49,16 @@ test("a fresh bundle is loaded, and import.meta.url still points at the source",
   assert.equal(result.stdout, "v1:data-1");
   assert.match(result.notes, /: bundle\n/);
   assert.equal(bundleStatus({ root: dir, entries })[0].state, "fresh");
+});
+
+test("freshBundle returns a file URL, which import() accepts on every platform", async () => {
+  const dir = await fixture();
+  const bundleDir = pathToFileURL(`${join(dir, "packages/fixture/.prebundle/fixture")}/`);
+  const entry = freshBundle(bundleDir);
+  assert.equal(entry, new URL("index.ts", bundleDir).href);
+  assert.match(entry, /^file:\/\/\//);
+  // The Windows form of the same rule: a drive path must come back as file:///C:/..., never C:\....
+  assert.equal(new URL("index.ts", new URL("file:///C:/pkg/.prebundle/x/")).href, "file:///C:/pkg/.prebundle/x/index.ts");
 });
 
 test("an edited source file loads the source, not the old bundle", async () => {
