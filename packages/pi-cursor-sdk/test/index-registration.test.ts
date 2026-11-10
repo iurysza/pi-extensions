@@ -26,7 +26,7 @@ vi.mock("../src/cursor-provider.js", () => ({
 	streamCursor: vi.fn(),
 }));
 
-import extensionFactory from "../src/index.js";
+import extensionFactory from "../src/main.js";
 import { discoverModels } from "../src/model-discovery.js";
 import { acquireSessionCursorAgent, __testUtils as sessionAgentTestUtils } from "../src/cursor-session-agent.js";
 import { __testUtils as cursorSessionScopeTestUtils } from "../src/cursor-session-scope.js";

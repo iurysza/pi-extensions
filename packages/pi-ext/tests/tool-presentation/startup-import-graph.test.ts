@@ -6,7 +6,8 @@ import test from "node:test";
 const ROOT = join(process.cwd(), "extensions", "tool-presentation");
 
 // Modules that must stay behind dynamic import() so they cost nothing at Pi startup.
-// If one shows up in the static graph from index.ts, startup got slower: load it lazily instead.
+// If one shows up in the static graph from main.ts, startup got slower: load it lazily instead.
+// index.ts is only the prebundle loader; main.ts is the extension.
 const LAZY_FILES = ["rich-diff"];
 const LAZY_PACKAGES = ["@shikijs/cli", "diff"];
 
@@ -48,7 +49,7 @@ function startupGraph(entry: string) {
   return { files, packages };
 }
 
-const graph = startupGraph(join(ROOT, "index.ts"));
+const graph = startupGraph(join(ROOT, "main.ts"));
 
 test("tool-presentation startup graph reaches tidy", () => {
   assert.ok(graph.files.has(join(ROOT, "tidy", "index.ts")));

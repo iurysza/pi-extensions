@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import leaderKeyExtension from "../../extensions/leader-key/index.ts";
+import leaderKeyExtension from "../../extensions/leader-key/main.ts";
 import { stashDraft } from "../../extensions/leader-key/stash-draft.ts";
 
 function editor(initial) {

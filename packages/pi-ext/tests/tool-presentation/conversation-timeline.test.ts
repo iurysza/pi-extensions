@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { SessionManager, createEventBus } from "@earendil-works/pi-coding-agent";
 import { visibleWidth } from "@earendil-works/pi-tui";
-import { createToolPresentation } from "../../extensions/tool-presentation/index.js";
+import { createToolPresentation } from "../../extensions/tool-presentation/main.js";
 import { CONVERSATION_TIMELINE_ENTRY, readTimelineEntry, renderTimelineEntry } from "../../extensions/tool-presentation/conversation-timeline.js";
 
 const start = new Date(2026, 8, 24, 14, 32).getTime();
