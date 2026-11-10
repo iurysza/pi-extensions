@@ -1,10 +1,15 @@
-import { Agent, AgentBusyError, AgentNotFoundError, AuthenticationError, ConfigurationError, Cursor, CursorSdkError,
-  IntegrationNotConnectedError, NetworkError, RateLimitError, UnknownAgentError,
-  type SDKAgent, type SendOptions, type RunResult } from "@cursor/sdk";
+import type { SDKAgent, SendOptions, RunResult } from "@cursor/sdk";
 import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import type { Activity, Outcome } from "./state.js";
+
+// @cursor/sdk is heavy: load it on first Cloud call, never at Pi startup (tests/startup-import-graph.test.mjs).
+type CursorSdk = typeof import("@cursor/sdk");
+let loadedSdk: CursorSdk | undefined;
+async function cursorSdk(): Promise<CursorSdk> {
+  return loadedSdk ??= await import("@cursor/sdk");
+}
 
 type Delta = Parameters<NonNullable<SendOptions["onDelta"]>>[0]["update"];
 type Step = Parameters<NonNullable<SendOptions["onStep"]>>[0]["step"];
@@ -75,16 +80,22 @@ type Kind = "billing" | "auth" | "integration" | "rateLimit" | "configuration" |
 /** instanceof first; the name fallback covers errors from another copy of the SDK. */
 function kindOf(error: Error): Kind | undefined {
   const errorName = error.name;
-  const is = (type: abstract new (...args: never[]) => Error, name: string) => error instanceof type || errorName === name;
-  if (is(AgentBusyError, "AgentBusyError") || error.message.includes("[agent_busy]")) return "busy";
-  if (is(IntegrationNotConnectedError, "IntegrationNotConnectedError") || field(error, "code") === "integration_not_connected") return "integration";
+  // SDK errors come from SDK calls, so the SDK is loaded by then. Before that only the name check can match.
+  type ErrorClass = "AgentBusyError" | "IntegrationNotConnectedError" | "AuthenticationError" | "RateLimitError" | "ConfigurationError"
+    | "NetworkError" | "AgentNotFoundError" | "UnknownAgentError" | "CursorSdkError";
+  const is = (type: ErrorClass, name: string = type) => {
+    const value = loadedSdk?.[type];
+    return (value !== undefined && error instanceof value) || errorName === name;
+  };
+  if (is("AgentBusyError") || error.message.includes("[agent_busy]")) return "busy";
+  if (is("IntegrationNotConnectedError") || field(error, "code") === "integration_not_connected") return "integration";
   if (field(error, "code") === "usage_limit_exceeded") return "billing";
-  if (is(AuthenticationError, "AuthenticationError")) return "auth";
-  if (is(RateLimitError, "RateLimitError")) return "rateLimit";
-  if (is(ConfigurationError, "ConfigurationError")) return "configuration";
-  if (is(NetworkError, "NetworkError")) return "network";
-  if (is(AgentNotFoundError, "AgentNotFoundError")) return "notFound";
-  if (is(UnknownAgentError, "UnknownAgentError") || is(CursorSdkError, "CursorSdkError") || is(CursorSdkError, "CursorAgentError")) return "unknown";
+  if (is("AuthenticationError")) return "auth";
+  if (is("RateLimitError")) return "rateLimit";
+  if (is("ConfigurationError")) return "configuration";
+  if (is("NetworkError")) return "network";
+  if (is("AgentNotFoundError")) return "notFound";
+  if (is("UnknownAgentError") || is("CursorSdkError") || is("CursorSdkError", "CursorAgentError")) return "unknown";
   return undefined;
 }
 
@@ -205,19 +216,19 @@ export function createCloudClient(getKey: () => Promise<string> = readApiKey): C
   return {
     async models() {
       const apiKey = await getKey();
-      try { return (await Cursor.models.list({ apiKey })).map(({ id, displayName }) => ({ id, displayName })); }
+      try { return (await (await cursorSdk()).Cursor.models.list({ apiKey })).map(({ id, displayName }) => ({ id, displayName })); }
       catch (error) { throw new Error(cloudError(error, "model listing", apiKey)); }
     },
     async create(options) {
       const apiKey = await getKey();
       try {
-        return wrapHandle(await Agent.create({ apiKey, model: { id: options.model },
+        return wrapHandle(await (await cursorSdk()).Agent.create({ apiKey, model: { id: options.model },
           cloud: { repos: [{ url: options.repo, startingRef: options.ref }] } }), apiKey);
       } catch (error) { throw new Error(cloudError(error, "create", apiKey)); }
     },
     async delete(id) {
       const apiKey = await getKey();
-      try { await Agent.delete(id, { apiKey }); }
+      try { await (await cursorSdk()).Agent.delete(id, { apiKey }); }
       catch (error) { throw new Error(cloudError(error, "delete", apiKey)); }
     },
   };

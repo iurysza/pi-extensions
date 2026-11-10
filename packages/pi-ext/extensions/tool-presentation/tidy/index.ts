@@ -84,7 +84,7 @@ import {
 	type PiFffIntegrationController,
 } from "./pi-fff/controller.js";
 import type { PiFffLifecyclePreview } from "./pi-fff/integration.js";
-import { renderRichDiff } from "../rich-diff.js";
+import type { RichDiffRenderInput } from "../rich-diff.js";
 import { readToolTiming, ToolTimeline } from "./timeline.js";
 
 import { buildToolBlock, cardParts, ExpandedCard, WidthAwareLines, TimelineTool, colorizeDiff } from "./cards/card.js";
@@ -95,6 +95,13 @@ import { registerMessageCards } from "./message-cards.js";
 export { buildToolBlock, fitToolLine, formatElapsed } from "./cards/card.js";
 
 export { withReasoning } from "./tool-composition.js";
+
+// rich-diff pulls in Shiki and diff: load it on the first diff render, not at Pi startup.
+let richDiffModule: Promise<typeof import("../rich-diff.js")> | undefined;
+async function renderRichDiff(input: RichDiffRenderInput): Promise<string[] | undefined> {
+	richDiffModule ??= import("../rich-diff.js");
+	return (await richDiffModule).renderRichDiff(input);
+}
 
 class RichToolResult {
 	private richKey = "";
