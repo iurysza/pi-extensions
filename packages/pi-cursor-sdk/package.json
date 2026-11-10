@@ -157,7 +157,7 @@
   },
   "dependencies": {
     "@cursor/sdk": "1.3.1",
-    "@hono/node-server": "^2.1.5",
+    "@hono/node-server": "2.1.6",
     "@modelcontextprotocol/sdk": "1.32.2"
   },
   "bundledDependencies": [
@@ -200,9 +200,5 @@
     "typebox": {
       "optional": true
     }
-  },
-  "bundleDependencies": [
-    "@hono/node-server",
-    "@modelcontextprotocol/sdk"
-  ]
+  }
 }

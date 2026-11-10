@@ -86,9 +86,9 @@ describe("package metadata cutover baselines", () => {
 	});
 
 	it("pins Cursor SDK exactly", () => {
-		expect(packageJson.dependencies["@cursor/sdk"]).toBe("1.2.0");
-		expect(lockPackageVersion("@cursor/sdk")).toBe("1.2.0");
-		expect(readInstalledPackageVersion("@cursor/sdk")).toBe("1.2.0");
+		expect(packageJson.dependencies["@cursor/sdk"]).toBe("1.3.1");
+		expect(lockPackageVersion("@cursor/sdk")).toBe("1.3.1");
+		expect(readInstalledPackageVersion("@cursor/sdk")).toBe("1.3.1");
 	});
 
 	it("ships an exact MCP/Hono bundledDependencies closure for published installs", () => {
@@ -232,8 +232,8 @@ describe("package metadata cutover baselines", () => {
 	});
 
 	it("pins the TypeBox devDependency to the installed baseline", () => {
-		expect(packageJson.devDependencies.typebox).toBe("^1.4.3");
-		expect(lockPackageVersion("typebox")).toBe("1.4.3");
+		expect(packageJson.devDependencies.typebox).toBe("^1.4.4");
+		expect(lockPackageVersion("typebox")).toBe("1.4.4");
 	});
 
 	it("tracks installed GPT-5.6 Codex metadata", () => {

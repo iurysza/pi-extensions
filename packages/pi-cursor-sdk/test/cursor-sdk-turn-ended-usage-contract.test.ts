@@ -78,8 +78,8 @@ const fixture = JSON.parse(
 ) as TurnEndedUsageContractFixture;
 
 describe("installed Cursor SDK turn-ended usage contract", () => {
-	it("locks the installed 1.2.0 transform to input plus output, excluding cache and reasoning", () => {
-		expect(installedSdkVersion).toBe("1.2.0");
+	it("locks the installed 1.3.1 transform to input plus output, excluding cache and reasoning", () => {
+		expect(installedSdkVersion).toBe("1.3.1");
 		const usageTypes = readFileSync(join(sdkRoot, "dist/esm/usage-types.d.ts"), "utf8");
 		expect(usageTypes).toContain("`totalTokens` excludes `reasoningTokens`");
 		expect(usageTypes).toContain("Build a `TokenUsage` from a turn-ended payload");
@@ -141,7 +141,7 @@ describe("installed Cursor SDK turn-ended usage contract", () => {
 			expect(
 				partial.usage.input + partial.usage.cacheRead + partial.usage.cacheWrite + partial.usage.output,
 			).toBe(partial.usage.totalTokens);
-			// Reject the historical 1.0.37 additive total. The installed 1.2.0 total now agrees with Pi.
+			// Reject the historical 1.0.37 additive total. The installed 1.3.1 total agrees with Pi.
 			const publishedAdditiveTotal =
 				sample.usage.inputTokens +
 				sample.usage.outputTokens +

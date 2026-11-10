@@ -707,7 +707,7 @@ setTimeout(() => {
 		expect(hookEnd).toBeGreaterThan(hookStart);
 		const hookWrite = shellExecBundle.slice(hookStart, hookEnd);
 		expect(hookWrite).toContain('e.end(Buffer.from(t,"utf8"))');
-		expect(hookWrite).toContain('await(0,Qd.finished)(e)');
+		expect(hookWrite).toContain('await(0,oh.finished)(e)');
 		expect(hookWrite.match(/if\("EPIPE"===t\|\|"ERR_STREAM_DESTROYED"===t\|\|"ERR_STREAM_PREMATURE_CLOSE"===t\)return;throw e/g)).toHaveLength(2);
 		const mcpStdioBundle = readCursorSdkEsmBundleContaining('this._process.stdin?.on("error"');
 		expect(mcpStdioBundle).toContain('this._process.stdin?.on("error",(e=>{this.onerror?.(e)}))');
