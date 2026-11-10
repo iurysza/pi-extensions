@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { collectCommandMenus, COMMAND_MENU_COLLECT } from "../../extensions/leader-key/contributions.ts";
-import { LeaderKeyOverlay } from "../../extensions/leader-key/index.ts";
+import { LeaderKeyOverlay } from "../../extensions/leader-key/main.ts";
 
 const group = (id = "sample", key = "z") => ({
 	id, key, label: "Sample",

@@ -8,7 +8,7 @@ import {
   CURSOR_REPLAY_TOOL_NAMES,
   createCursorReplayBroker,
 } from "../../extensions/tool-presentation/cursor-replay-broker.js";
-import { wrapSourceForCursorReplay } from "../../extensions/tool-presentation/index.js";
+import { wrapSourceForCursorReplay } from "../../extensions/tool-presentation/main.js";
 import type { SourceToolDefinition } from "../../extensions/tool-presentation/tidy/tool-composition.js";
 
 function fakeEvents() {

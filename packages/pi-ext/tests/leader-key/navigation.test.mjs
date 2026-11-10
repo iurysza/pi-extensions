@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { LeaderKeyOverlay } from "../../extensions/leader-key/index.ts";
+import { LeaderKeyOverlay } from "../../extensions/leader-key/main.ts";
 import { groupEntries } from "../../extensions/leader-key/layout.ts";
 import { withHerdrNavigationPassthrough } from "../../extensions/leader-key/herdr-navigation.ts";
 import {

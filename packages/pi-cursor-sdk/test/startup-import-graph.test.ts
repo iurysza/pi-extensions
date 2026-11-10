@@ -6,7 +6,8 @@ import { describe, expect, it } from "vitest";
 const SRC = join(process.cwd(), "src");
 
 // Modules that must stay behind dynamic import() so they cost nothing at Pi startup.
-// If one of these shows up in the static graph from index.ts, startup got slower: load it lazily instead.
+// If one of these shows up in the static graph from main.ts, startup got slower: load it lazily instead.
+// index.ts is only the prebundle loader; main.ts is the extension.
 const LAZY_MODULES = [
 	"cursor-cloud-lifecycle",
 	"cursor-session-agent",
@@ -63,11 +64,11 @@ function collectStartupGraph(entry: string): Set<string> {
 }
 
 describe("extension startup import graph", () => {
-	const graph = collectStartupGraph(join(SRC, "index.ts"));
+	const graph = collectStartupGraph(join(SRC, "main.ts"));
 	const names = new Set([...graph].map((file) => file.slice(SRC.length + 1).replace(/\.ts$/, "")));
 
-	it("walks a non-trivial graph from index.ts", () => {
-		expect(names.has("index")).toBe(true);
+	it("walks a non-trivial graph from main.ts", () => {
+		expect(names.has("main")).toBe(true);
 		expect(names.has("cursor-state")).toBe(true);
 		expect(names.has("cursor-provider-lazy")).toBe(true);
 	});

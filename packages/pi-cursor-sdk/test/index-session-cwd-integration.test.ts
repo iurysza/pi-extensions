@@ -59,7 +59,7 @@ vi.mock("@cursor/sdk", () => ({
 }));
 
 import { Agent, Cursor, type SDKAgent } from "@cursor/sdk";
-import extensionFactory from "../src/index.js";
+import extensionFactory from "../src/main.js";
 import { discoverModels } from "../src/model-discovery.js";
 import { __testUtils as cursorProviderTestUtils } from "../src/cursor-provider.js";
 import { streamCursorLazy } from "../src/cursor-provider-lazy.js";

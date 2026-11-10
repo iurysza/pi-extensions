@@ -9,7 +9,7 @@ import {
   type AgentSession,
 } from "@earendil-works/pi-coding-agent";
 import { createAssistantMessageEventStream, InMemoryCredentialStore, type AssistantMessage, type Model } from "@earendil-works/pi-ai";
-import { createToolPresentation } from "../../extensions/tool-presentation/index.js";
+import { createToolPresentation } from "../../extensions/tool-presentation/main.js";
 import { CONVERSATION_TIMELINE_ENTRY } from "../../extensions/tool-presentation/conversation-timeline.js";
 
 const model: Model<"openai-completions"> = {
