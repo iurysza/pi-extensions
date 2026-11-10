@@ -31,6 +31,13 @@ export const ENTRIES = [
   { pkg: "pi-cursor-sdk", slug: "pi-cursor-sdk", loader: "src/index.ts", main: "src/main.ts" },
   { pkg: "pi-ext", slug: "tool-presentation", loader: "extensions/tool-presentation/index.ts", main: "extensions/tool-presentation/main.ts" },
   { pkg: "pi-ext", slug: "leader-key", loader: "extensions/leader-key/index.ts", main: "extensions/leader-key/main.ts" },
+  { pkg: "pi-ext", slug: "pi-telescope", loader: "extensions/pi-telescope/index.ts", main: "extensions/pi-telescope/main.ts" },
+  { pkg: "pi-ext", slug: "compaction-model", loader: "extensions/compaction-model/index.ts", main: "extensions/compaction-model/main.ts" },
+  { pkg: "pi-ext", slug: "session-snap", loader: "extensions/session-snap/index.ts", main: "extensions/session-snap/main.ts" },
+  { pkg: "pi-ext", slug: "permissions", loader: "extensions/permissions/permissions.ts", main: "extensions/permissions/main.ts" },
+  { pkg: "pi-ext", slug: "handoff", loader: "extensions/handoff/index.ts", main: "extensions/handoff/main.ts" },
+  { pkg: "pi-cursor-cloud", slug: "pi-cursor-cloud", loader: "src/index.ts", main: "src/main.ts" },
+  { pkg: "pi-token-tank", slug: "pi-token-tank", loader: "src/index.ts", main: "src/main.ts" },
 ];
 
 /** Must never be reachable through static imports from a bundled entry. */

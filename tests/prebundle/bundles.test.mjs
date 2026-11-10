@@ -42,7 +42,7 @@ test("each bundled entry is a loader that Pi already loads", () => {
   for (const entry of ENTRIES) {
     const packageDir = join(root, "packages", entry.pkg);
     const manifest = JSON.parse(readFileSync(join(packageDir, "package.json"), "utf8"));
-    assert.ok(manifest.pi.extensions.includes(`./${entry.loader}`), `${entry.loader} is not a pi.extensions entry of ${entry.pkg}`);
+    assert.ok(manifest.pi.extensions.some((path) => path.replace(/^\.\//, "") === entry.loader), `${entry.loader} is not a pi.extensions entry of ${entry.pkg}`);
     const loader = readFileSync(join(packageDir, entry.loader), "utf8");
     assert.match(loader, /loadPrebundled/);
     const [, target] = loader.match(/new URL\("([^"]+)", import\.meta\.url\)/);
@@ -51,7 +51,7 @@ test("each bundled entry is a loader that Pi already loads", () => {
 });
 
 test("every copy of the loader helper is the same", () => {
-  const copies = ["packages/pi-ext/extensions/shared/prebundle.ts", "packages/pi-cursor-sdk/src/prebundle.ts"].map((path) => readFileSync(join(root, path), "utf8"));
+  const copies = ["packages/pi-ext/extensions/shared/prebundle.ts", "packages/pi-cursor-sdk/src/prebundle.ts", "packages/pi-cursor-cloud/src/prebundle.ts", "packages/pi-token-tank/src/prebundle.ts"].map((path) => readFileSync(join(root, path), "utf8"));
   assert.ok(copies.every((copy) => copy === copies[0]));
 });
 

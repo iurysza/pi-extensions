@@ -4,14 +4,21 @@ Some extension entries load from a prebuilt bundle, so Pi starts faster. The bun
 
 ## What is bundled
 
-Three entries today: `pi-cursor-sdk`, and `tool-presentation` and `leader-key` in `pi-ext`. The list is `ENTRIES` in `scripts/build-bundles.mjs`.
+Ten entries today. The list is `ENTRIES` in `scripts/build-bundles.mjs`.
+
+| Package | Entries |
+| --- | --- |
+| `pi-cursor-sdk` | `pi-cursor-sdk` |
+| `pi-cursor-cloud` | `pi-cursor-cloud` |
+| `pi-token-tank` | `pi-token-tank` |
+| `pi-ext` | `tool-presentation`, `leader-key`, `pi-telescope`, `compaction-model`, `session-snap`, `permissions`, `handoff` |
 
 ## How an entry loads
 
 Each bundled entry is split in two files:
 
 - `main.ts` holds the extension.
-- `index.ts` is a small loader. Pi loads this path, so no manifest changes.
+- `index.ts` is a small loader. Pi loads this path, so no manifest changes. For `permissions` the loader is `permissions.ts`, the path its manifest already names.
 
 The loader calls `loadPrebundled` from `prebundle.ts`:
 
@@ -22,7 +29,7 @@ The loader calls `loadPrebundled` from `prebundle.ts`:
 
 "Every other case" means: no bundle, no manifest, an edited or deleted source file, a bundle that fails to import, or `PI_PREBUNDLE=0`.
 
-`prebundle.ts` has one copy per package (`packages/pi-ext/extensions/shared/` and `packages/pi-cursor-sdk/src/`), because the packages publish separately. A test keeps the copies identical.
+`prebundle.ts` has one copy per package (`packages/pi-ext/extensions/shared/`, and `src/` in `pi-cursor-sdk`, `pi-cursor-cloud` and `pi-token-tank`), because the packages publish separately. A test keeps the copies identical.
 
 ## Building
 
@@ -43,6 +50,7 @@ The build uses esbuild: split ESM written as `.ts` files. Modules Pi provides an
 - The loader rule, on a fixture package: fresh, stale, missing, broken, switched off, moved.
 - The lazy-import guard: `@cursor/sdk`, shiki and `rich-diff.ts` must not be reachable through static imports from a bundle entry.
 - Each bundle registers the same tools, commands, shortcuts, renderers and events as its source.
+- Shared modules: a bundle carries its own copy of each shared source file, as Pi already gives each extension its own copy. `tests/prebundle/identity.test.mjs` checks that `session-store/db.ts` keeps its shared state in the database file, not in module variables.
 
 ## Debugging
 

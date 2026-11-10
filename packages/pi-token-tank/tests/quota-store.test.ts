@@ -3,7 +3,7 @@ import { mkdtemp, readFile, rm, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, it } from "node:test";
-import { COOLDOWN_BASE_MS, COOLDOWN_MAX_MS, createCoordinator } from "../src/index.js";
+import { COOLDOWN_BASE_MS, COOLDOWN_MAX_MS, createCoordinator } from "../src/main.js";
 import { createFileQuotaStore, type QuotaStore } from "../src/quota-store.js";
 import type { CredentialSourceLike } from "../src/auth.js";
 import type { ProviderQuota, QuotaProvider } from "../src/types.js";

@@ -3,7 +3,7 @@ import test from "node:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import compactionModel from "../../extensions/compaction-model/index.js";
+import compactionModel from "../../extensions/compaction-model/main.js";
 import { ENTRY_TYPE, reportRows, runningParts, type CompactionReport } from "../../extensions/compaction-model/report.js";
 
 const plain = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, "");

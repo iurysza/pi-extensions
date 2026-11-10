@@ -4,7 +4,7 @@ import { mkdtempSync, rmSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Text } from '@earendil-works/pi-tui';
-import { registerCloudExtension } from '../src/index.js';
+import { registerCloudExtension } from '../src/main.js';
 
 const deferred = () => { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no; }); return { promise, resolve, reject }; };
 const flush = () => new Promise(resolve => setImmediate(resolve));
