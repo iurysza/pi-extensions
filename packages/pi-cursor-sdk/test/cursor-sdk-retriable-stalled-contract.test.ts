@@ -45,14 +45,14 @@ const fixture = JSON.parse(
 ) as RetriableStalledContractFixture;
 
 describe("installed Cursor SDK RetriableError connection-stalled contract", () => {
-	it("retains the stalled-error shape in installed @cursor/sdk 1.2.0", () => {
-		expect(readInstalledPackageVersion("@cursor/sdk")).toBe("1.2.0");
+	it("retains the stalled-error shape in installed @cursor/sdk 1.3.1", () => {
+		expect(readInstalledPackageVersion("@cursor/sdk")).toBe("1.3.1");
 		const source = readCursorSdkEsmBundleContaining('get kind(){return"RetriableError"}', "Connection stalled repeatedly");
-		expect(source).toContain('class Fn extends On{get kind(){return"RetriableError"}}');
+		expect(source).toContain('class Wn extends Bn{get kind(){return"RetriableError"}}');
 		expect(source).toContain('get name(){return this.kind}');
-		expect(source).toContain('new Fn("Connection stalled repeatedly",{cause:t,requestId:r,displayInfo:{title:"Connection stalled",detail:`The connection stalled ${wo(n)} times. Please check your network connection and try again.`,isRetryable:!0,connectCode:o}})');
-		expect(source).toContain('new Fn("Connection stalled",{cause:t,requestId:r,displayInfo:{title:"Connection stalled",detail:"The connection stalled. Please try again.",isRetryable:!0,connectCode:o}})');
-		// 1.2.0 adds a stable code without changing the name/kind our classifier uses.
+		expect(source).toContain('new Wn("Connection stalled repeatedly",{cause:t,requestId:r,displayInfo:{title:"Connection stalled",detail:`The connection stalled ${_o(n)} times. Please check your network connection and try again.`,isRetryable:!0,connectCode:o}})');
+		expect(source).toContain('new Wn("Connection stalled",{cause:t,requestId:r,displayInfo:{title:"Connection stalled",detail:"The connection stalled. Please try again.",isRetryable:!0,connectCode:o}})');
+		// 1.3.1 still assigns code connection_stalled. The classifier uses name and kind, not this code.
 		expect(source).toContain('Object.defineProperty(e,"code",{value:"connection_stalled",enumerable:!0,configurable:!0})');
 	});
 
