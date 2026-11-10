@@ -1,5 +1,4 @@
-import type { AssistantMessage, Message, ThinkingLevel, UserMessage } from "@earendil-works/pi-ai";
-import { complete } from "@earendil-works/pi-ai/compat";
+import type { AssistantMessage, Context, Message, ThinkingLevel, UserMessage } from "@earendil-works/pi-ai";
 import type { ExtensionAPI, ExtensionContext, SessionEntry } from "@earendil-works/pi-coding-agent";
 import { isKeyRelease, matchesKey, truncateToWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
@@ -47,6 +46,8 @@ function asConversationMessage(message: { role?: unknown; content?: unknown }): 
   const text = textFromContent(message.content);
   return text.length > 0 ? { role: message.role, text } : undefined;
 }
+
+const SUGGEST_REQUEST = "Suggest my next messages with the follow_up_suggestions tool.";
 
 function contextMessages(messages: readonly ConversationMessage[]): Message[] {
   return messages.map((message) => {
@@ -132,23 +133,62 @@ function renderWidget(
   }), { placement: "aboveEditor" });
 }
 
+type RegistryStream = {
+  streamSimple(
+    model: unknown,
+    context: Context,
+    options: Record<string, unknown>,
+  ): { result(): Promise<AssistantMessage> };
+};
+
+type CompleteRequest = (
+  model: NonNullable<ReturnType<ExtensionContext["modelRegistry"]["find"]>>,
+  context: Context,
+  options: {
+    apiKey?: string;
+    headers?: Record<string, string | null>;
+    signal: AbortSignal;
+    reasoningEffort: ThinkingLevel;
+    toolChoice: "required";
+  },
+) => Promise<AssistantMessage>;
+
 export async function generateSuggestions(
   ctx: ExtensionContext,
   config: FollowUpConfig,
   conversation: readonly ConversationMessage[],
   signal: AbortSignal,
-  completeRequest: typeof complete = complete,
+  completeRequest?: CompleteRequest,
 ): Promise<readonly string[] | undefined> {
   const model = ctx.modelRegistry.find(config.provider, config.model);
   if (!model) return undefined;
 
   const auth = await ctx.modelRegistry.getApiKeyAndHeaders(model);
   if (!auth.ok) return undefined;
-  const response = await completeRequest(
+  // Through the registry, not pi-ai's global complete(): only the registry
+  // knows extension providers such as claude-code.
+  const request: CompleteRequest = completeRequest ??
+    ((requestModel, context, options) =>
+      // Pi >=1.0 registry method; the 0.80 dev types predate it.
+      (ctx.modelRegistry as unknown as RegistryStream)
+        .streamSimple(requestModel, context, {
+          apiKey: options.apiKey,
+          headers: options.headers,
+          signal: options.signal,
+          reasoning: options.reasoningEffort,
+          toolChoice: options.toolChoice,
+        })
+        .result());
+  const response = await request(
     model,
     {
       systemPrompt: config.prompt,
-      messages: contextMessages(conversation),
+      // End on a user turn: some providers (claude-code) refuse to answer a
+      // transcript whose last message is the assistant's.
+      messages: [
+        ...contextMessages(conversation),
+        { role: "user", content: [{ type: "text", text: SUGGEST_REQUEST }], timestamp: Date.now() } satisfies UserMessage,
+      ],
       tools: [suggestionTool(config.count)],
     },
     {

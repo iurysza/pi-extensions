@@ -114,4 +114,6 @@ test("settings.json followUpModel overrides provider, model and thinking", async
   assert.deepEqual(parseFollowUpModelSetting({ followUpModel: { model: "a/b" } }), { provider: "a", model: "b" });
   assert.throws(() => parseFollowUpModelSetting({ followUpModel: { model: "no-slash" } }), /provider\/model/);
   assert.throws(() => parseFollowUpModelSetting({ followUpModel: { model: "a/b", thinking: "huge" } }), /thinking/);
+  assert.deepEqual(parseFollowUpModelSetting({ followUpModel: { model: "a/b", prompt: "Be brief." } }), { provider: "a", model: "b", prompt: "Be brief." });
+  assert.throws(() => parseFollowUpModelSetting({ followUpModel: { model: "a/b", prompt: " " } }), /prompt/);
 });
