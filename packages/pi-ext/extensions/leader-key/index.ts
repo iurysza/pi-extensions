@@ -28,7 +28,7 @@ import { searchableSelect } from "./model-switcher.js";
 import { runFavouriteModels } from "./favourite-models.js";
 import { launchSkillEditor } from "./skill-editor.js";
 import { categorizeSkillCommands, skillCommandLabel } from "./skill-categories.js";
-import { handleSkillTagInput, selectSkill, SKILL_TAG } from "./skill-tag.js";
+import { handleSkillTagInput, registerSkillPicker, selectSkill, SKILL_TAG } from "./skill-tag.js";
 import { OverlayFrame } from "../shared/overlay.js";
 import { copyToClipboard } from "../pi-telescope/clipboard.js";
 import { stashDraft } from "./stash-draft.js";
@@ -179,7 +179,7 @@ function buildEntries(
 				description: cmd.description || "skill",
 				action: (ctx: ExtensionContext) => {
 					ctx.ui.setEditorText(selectSkill(ctx.ui.getEditorText(), label));
-					ctx.ui.notify(`Type your prompt after ${SKILL_TAG} ${label}`, "info");
+					ctx.ui.notify(`Type your prompt after ${SKILL_TAG}${label}`, "info");
 				},
 			};
 		});
@@ -221,7 +221,7 @@ function buildEntries(
 				if (selected) {
 					const label = skillCommandLabel(selected);
 					ctx.ui.setEditorText(selectSkill(ctx.ui.getEditorText(), label));
-					ctx.ui.notify(`Type your prompt after ${SKILL_TAG} ${label}`, "info");
+					ctx.ui.notify(`Type your prompt after ${SKILL_TAG}${label}`, "info");
 				}
 			},
 			expandableItems: skItems,
@@ -242,7 +242,7 @@ function buildEntries(
 				description: cmd.description || "writing style",
 				action: (ctx: ExtensionContext) => {
 					ctx.ui.setEditorText(selectSkill(ctx.ui.getEditorText(), label));
-					ctx.ui.notify(`Type your prompt after ${SKILL_TAG} ${label}`, "info");
+					ctx.ui.notify(`Type your prompt after ${SKILL_TAG}${label}`, "info");
 				},
 			};
 		});
@@ -284,7 +284,7 @@ function buildEntries(
 				if (selected) {
 					const label = skillCommandLabel(selected);
 					ctx.ui.setEditorText(selectSkill(ctx.ui.getEditorText(), label));
-					ctx.ui.notify(`Type your prompt after ${SKILL_TAG} ${label}`, "info");
+					ctx.ui.notify(`Type your prompt after ${SKILL_TAG}${label}`, "info");
 				}
 			},
 			expandableItems: writingStyleItems,
@@ -786,9 +786,10 @@ export default function leaderKeyExtension(pi: ExtensionAPI) {
 	registerBridgeCommands(pi);
 
 	pi.on("input", (event, ctx) => event.source === "interactive"
-		? handleSkillTagInput(event.text, pi, ctx)
+		? handleSkillTagInput(event.text, pi)
 		: { action: "continue" });
 
+	let skillPickerRegistered = false;
 	let stopFavouriteModelsShortcut: (() => void) | undefined;
 	let favouriteModelsOpen = false;
 
@@ -844,6 +845,10 @@ export default function leaderKeyExtension(pi: ExtensionAPI) {
 	pi.on("session_start", async (_event, ctx) => {
 		if (!ctx.hasUI) return;
 
+		if (!skillPickerRegistered) {
+			skillPickerRegistered = true;
+			registerSkillPicker(pi, ctx);
+		}
 		clearHerdrNavigationPassthrough();
 		stopFavouriteModelsShortcut?.();
 		stopFavouriteModelsShortcut = ctx.ui.onTerminalInput((data) => {
