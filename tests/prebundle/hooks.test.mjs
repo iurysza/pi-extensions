@@ -2,11 +2,11 @@
 // Every case runs in a throwaway repository. Nothing is installed in this checkout.
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { HOOK, HOOKS, installHooks, removeHooks } from "../../scripts/install-bundle-hooks.mjs";
+import { HOOK, HOOKS, PACKAGE_NAME, installHooks, removeHooks } from "../../scripts/install-bundle-hooks.mjs";
 
 // The installer asks git for the hooks folder. Ignore the user's git config so a global
 // core.hooksPath can never send a test's hooks outside its throwaway repository.
@@ -15,14 +15,19 @@ process.env.GIT_CONFIG_SYSTEM = "/dev/null";
 
 const git = (cwd, ...args) => execFileSync("git", args, { cwd, encoding: "utf8", env: { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_SYSTEM: "/dev/null" } });
 
-/** A repository with one commit, esbuild "installed", and a fake npm that records its call and then fails. */
-function repo(t) {
+/**
+ * A repository that looks like this one (build script, root package name) with one commit,
+ * esbuild "installed", and a fake npm that records its call and then fails.
+ */
+function repo(t, name = PACKAGE_NAME) {
   const base = realpathSync(mkdtempSync(join(tmpdir(), "bundle-hooks-")));
   const root = join(base, "repo");
   const bin = join(base, "bin");
 
   t.after(() => rmSync(base, { recursive: true, force: true }));
-  for (const dir of [join(root, "node_modules/esbuild"), bin]) mkdirSync(dir, { recursive: true });
+  for (const dir of [join(root, "node_modules/esbuild"), join(root, "scripts"), bin]) mkdirSync(dir, { recursive: true });
+  writeFileSync(join(root, "scripts/build-bundles.mjs"), "");
+  writeFileSync(join(root, "package.json"), `${JSON.stringify({ name, private: true }, null, 2)}\n`);
   writeFileSync(join(bin, "npm"), `#!/bin/sh\necho "$PWD|$*" >> "${base}/npm-calls"\necho build noise\nexit 7\n`);
   chmodSync(join(bin, "npm"), 0o755);
   git(root, "init", "-q", "-b", "main");
@@ -101,4 +106,39 @@ test("the hook does nothing for a file checkout, without dependencies, or in a l
 
   await new Promise(done => setTimeout(done, 500));
   assert.equal(existsSync(calls), false);
+});
+
+test("install refuses when core.hooksPath is set, and writes nothing", t => {
+  const { base, root } = repo(t);
+  const shared = join(base, "shared-hooks");
+
+  mkdirSync(shared);
+  git(root, "config", "core.hooksPath", shared);
+  assert.throws(() => installHooks(root), /core\.hooksPath is set to .*shared-hooks.*nothing was installed/);
+  assert.deepEqual(readdirSync(shared), []);
+  assert.equal(HOOKS.some(name => existsSync(join(root, ".git/hooks", name))), false);
+});
+
+test("the hook does nothing in a repository that is not this one", async t => {
+  // Same hook file, as if a shared hooks folder had carried it into other repositories.
+  const other = repo(t, "some-other-package");
+  const noScript = repo(t);
+
+  rmSync(join(noScript.root, "scripts/build-bundles.mjs"));
+
+  for (const { root, env } of [other, noScript]) {
+    for (const name of HOOKS) {
+      mkdirSync(join(root, ".git/hooks"), { recursive: true });
+      writeFileSync(join(root, ".git/hooks", name), HOOK, { mode: 0o755 });
+    }
+
+    const run = spawnSync("git", ["checkout", "-q", "-b", "other"], { cwd: root, env, encoding: "utf8" });
+
+    assert.equal(run.status, 0);
+    assert.equal(run.stdout + run.stderr, "");
+  }
+
+  await new Promise(done => setTimeout(done, 500));
+  assert.equal(existsSync(other.calls), false);
+  assert.equal(existsSync(noScript.calls), false);
 });
