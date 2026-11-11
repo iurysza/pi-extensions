@@ -15,12 +15,22 @@
 // - Split ESM, written as .ts: the fastest shape Pi's extension loader accepts.
 // - Modules Pi provides, and everything that resolves into node_modules, stay external.
 // - Our own TypeScript and workspace packages are bundled.
+// - The manifest hash covers the exact bytes that went into the bundle. If a source changes
+//   while the build runs (a rebase, a second checkout, an edit), that entry's bundle is dropped
+//   and the entry loads from source. A bundle never holds older code than its manifest says.
+// - The hash also covers what shapes the output: this script, the root package.json (it pins
+//   the esbuild version) and the package's tsconfig.json.
+// - Each entry is built in a temporary sibling folder. Its files are then moved into the bundle
+//   folder under a lock, manifest last, so two builds at the same time (two git hooks) cannot
+//   mix their files.
+// - A rebuild keeps the files of the build before it for a week. A Pi that is already running
+//   loaded the old index.ts and may import one of its lazy chunks hours later.
 // - `import.meta.url` is rewritten to a relative URL back to the original source file, so code
 //   that reads files beside its source keeps working, and the tree can be moved after the build.
 import { build } from "esbuild";
-import { createHash } from "node:crypto";
-import { mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, join, relative, resolve, sep } from "node:path";
+import { createHash, randomBytes } from "node:crypto";
+import { existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, renameSync, rmSync, statSync, utimesSync, writeFileSync } from "node:fs";
+import { dirname, extname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 export const MANIFEST_VERSION = 1;
@@ -50,20 +60,41 @@ const PI_PROVIDED = ["@earendil-works/", ["@mario", "zechner/pi-"].join(""), "ty
 const isPiProvided = (id) => PI_PROVIDED.some((p) => (p.endsWith("/") || p.endsWith("-") ? id.startsWith(p) : id === p || id.startsWith(`${p}/`)));
 const posix = (path) => path.split(sep).join("/");
 
-/** Same value as hashInputs() in the prebundle.ts loader helper. */
-export function hashInputs(bundleDir, inputs) {
+function hashWith(inputs, bytesOf) {
   const hash = createHash("sha256");
   for (const input of inputs) {
     hash.update(`${input}\0`);
-    hash.update(readFileSync(resolve(bundleDir, input)));
+    hash.update(bytesOf(input));
     hash.update("\0");
   }
   return hash.digest("hex");
 }
 
+/** Same value as hashInputs() in the prebundle.ts loader helper. */
+export const hashInputs = (bundleDir, inputs) => hashWith(inputs, (input) => readFileSync(resolve(bundleDir, input)));
+
+const TEMP_MARK = ".tmp-";
+const STALE_TEMP_MS = 10 * 60 * 1000;
+const STALE_LOCK_MS = 60 * 1000;
+const LOCK_WAIT_MS = 15 * 1000;
+/** How long the files of a replaced build stay, for sessions that started on it. */
+export const RETIRED_KEEP_MS = 7 * 24 * 60 * 60 * 1000;
+const SELF = realpathSync(fileURLToPath(import.meta.url));
+
+/** True when every bundle file has the size the manifest recorded. Old manifests record none. */
+export function outputsMatch(bundleDir, outputs) {
+  return !outputs || Object.entries(outputs).every(([name, bytes]) => statSync(resolve(bundleDir, name)).size === bytes);
+}
+// esbuild loader for each source type we hand over ourselves. Any other type is read by esbuild.
+const LOADERS = { ".ts": "ts", ".mts": "ts", ".cts": "ts", ".tsx": "tsx", ".js": "js", ".mjs": "js", ".cjs": "js", ".jsx": "jsx", ".json": "json" };
+
 export const bundleDirOf = (root, entry) => join(root, "packages", entry.pkg, BUNDLE_DIR, entry.slug);
 
-function plugin(outDir) {
+/**
+ * `read` records the bytes of every source that goes into the bundle, keyed by absolute path.
+ * Where the loader is known the same bytes are handed to esbuild, so the record is what was built.
+ */
+function plugin(outDir, read) {
   return {
     name: "pi-prebundle",
     setup(b) {
@@ -74,12 +105,15 @@ function plugin(outDir) {
         const outside = found.errors.length > 0 || found.external || found.path.includes(`${sep}node_modules${sep}`) || found.path.endsWith(".node");
         return outside ? { path: args.path, external: true } : { path: found.path };
       });
-      b.onLoad({ filter: /\.(ts|mts|js|mjs)$/ }, (args) => {
+      b.onLoad({ filter: /.*/, namespace: "file" }, (args) => {
         if (args.path.includes(`${sep}node_modules${sep}`)) return undefined;
-        const text = readFileSync(args.path, "utf8");
-        if (!text.includes("import.meta.url")) return undefined;
+        const bytes = read(args.path);
+        const loader = LOADERS[extname(args.path)];
+        if (!loader) return undefined;
+        const text = bytes.toString("utf8");
+        if (loader === "json" || !text.includes("import.meta.url")) return { contents: bytes, loader };
         const target = JSON.stringify(posix(relative(outDir, args.path)));
-        return { contents: text.replaceAll("import.meta.url", `(new URL(${target}, import.meta.url).href)`), loader: args.path.endsWith("ts") ? "ts" : "js" };
+        return { contents: text.replaceAll("import.meta.url", `(new URL(${target}, import.meta.url).href)`), loader };
       });
     },
   };
@@ -123,41 +157,139 @@ export function lazyGuardProblems(closure, packages = LAZY_ONLY_PACKAGES, source
   return problems;
 }
 
-async function buildEntry(root, entry) {
-  const outDir = bundleDirOf(root, entry);
-  rmSync(outDir, { recursive: true, force: true });
-  mkdirSync(outDir, { recursive: true });
-  const result = await build({
-    absWorkingDir: root,
-    entryPoints: [join(root, "packages", entry.pkg, entry.main)],
-    bundle: true,
-    platform: "node",
-    format: "esm",
-    target: "node22",
-    splitting: true,
-    outdir: outDir,
-    entryNames: "index",
-    chunkNames: "chunk-[hash]",
-    outExtension: { ".js": ".ts" },
-    plugins: [plugin(outDir)],
-    metafile: true,
-    logLevel: "silent",
-    legalComments: "none",
-    banner: { js: "// Generated by scripts/build-bundles.mjs. Do not edit." },
-  });
-  const inputs = Object.keys(result.metafile.inputs)
-    .filter((input) => !input.includes("node_modules/"))
-    .map((input) => posix(relative(outDir, join(root, input))))
-    .sort();
-  // Written last: a build that dies half way leaves no manifest, so the source loads.
-  writeFileSync(join(outDir, "manifest.json"), `${JSON.stringify({ v: MANIFEST_VERSION, inputs, sha256: hashInputs(outDir, inputs) }, null, 1)}\n`);
-  const entryOutput = posix(relative(root, join(outDir, "index.ts")));
-  const bytes = Object.values(result.metafile.outputs).reduce((sum, output) => sum + output.bytes, 0);
-  return { entry, outDir, metafile: result.metafile, entryOutput, inputs, bytes, files: Object.keys(result.metafile.outputs).length };
+const sleep = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+
+/** Runs `run` while holding the entry's lock folder. A lock left by a killed build is taken over. */
+function withLock(outDir, run) {
+  const lock = `${outDir}${TEMP_MARK}lock`;
+  for (let waited = 0; ; waited += 50) {
+    try {
+      mkdirSync(lock);
+      break;
+    } catch (error) {
+      if (error.code !== "EEXIST") throw error;
+      let age = 0;
+      try {
+        age = Date.now() - statSync(lock).mtimeMs;
+      } catch {
+        continue;
+      }
+      if (age > STALE_LOCK_MS) rmSync(lock, { recursive: true, force: true });
+      else if (waited >= LOCK_WAIT_MS) throw new Error("another build holds the bundle folder");
+      else sleep(50);
+    }
+  }
+  try {
+    return run();
+  } finally {
+    rmSync(lock, { recursive: true, force: true });
+  }
 }
 
-/** Builds every entry. Returns `{ built, failed }`; throws only when `strict` and an entry failed. */
-export async function buildBundles({ root: givenRoot, entries = ENTRIES, strict = false, log = () => {} } = {}) {
+/**
+ * Moves a finished build into the bundle folder. The old manifest goes first and the new one
+ * comes last, so a Pi that starts in between loads the source. Files of the build being
+ * replaced stay (a running Pi may still import them) and are removed RETIRED_KEEP_MS later.
+ */
+function publish(tempDir, outDir) {
+  const names = readdirSync(tempDir).filter((name) => name !== "manifest.json");
+  let previous;
+  try {
+    const { outputs } = JSON.parse(readFileSync(join(outDir, "manifest.json"), "utf8"));
+    previous = outputs ? Object.keys(outputs) : undefined;
+  } catch {
+    // No manifest: every file already there counts as just replaced.
+  }
+  mkdirSync(outDir, { recursive: true });
+  rmSync(join(outDir, "manifest.json"), { force: true });
+  const now = new Date();
+  for (const name of readdirSync(outDir)) {
+    if (names.includes(name)) continue;
+    const file = join(outDir, name);
+    if (!previous || previous.includes(name)) utimesSync(file, now, now);
+    else if (now.getTime() - statSync(file).mtimeMs > RETIRED_KEEP_MS) rmSync(file, { recursive: true, force: true });
+  }
+  for (const name of [...names, "manifest.json"]) renameSync(join(tempDir, name), join(outDir, name));
+}
+
+/** Removes temporary folders that a killed build left behind. A running build's folder is younger. */
+function removeStaleTemps(dir) {
+  for (const name of readdirSync(dir)) {
+    if (!name.includes(TEMP_MARK)) continue;
+    try {
+      if (Date.now() - statSync(join(dir, name)).mtimeMs > STALE_TEMP_MS) rmSync(join(dir, name), { recursive: true, force: true });
+    } catch {
+      // Another build removed it first.
+    }
+  }
+}
+
+async function buildEntry(root, entry, onRead) {
+  const outDir = bundleDirOf(root, entry);
+  // A sibling of the final folder: relative paths out of it are the same in both.
+  const tempDir = `${outDir}${TEMP_MARK}${process.pid}-${randomBytes(4).toString("hex")}`;
+  const consumed = new Map();
+  const read = (path) => {
+    const bytes = readFileSync(path);
+    consumed.set(path, bytes);
+    onRead?.(path);
+    return bytes;
+  };
+  try {
+    mkdirSync(tempDir, { recursive: true });
+    const toolchain = [SELF, join(root, "package.json"), join(root, "packages", entry.pkg, "tsconfig.json")].filter((path) => existsSync(path));
+    for (const path of toolchain) read(path);
+    const result = await build({
+      absWorkingDir: root,
+      entryPoints: [join(root, "packages", entry.pkg, entry.main)],
+      bundle: true,
+      platform: "node",
+      format: "esm",
+      target: "node22",
+      splitting: true,
+      outdir: tempDir,
+      entryNames: "index",
+      chunkNames: "chunk-[hash]",
+      outExtension: { ".js": ".ts" },
+      plugins: [plugin(outDir, read)],
+      metafile: true,
+      logLevel: "silent",
+      legalComments: "none",
+      banner: { js: "// Generated by scripts/build-bundles.mjs. Do not edit." },
+    });
+    const sources = Object.keys(result.metafile.inputs)
+      .filter((input) => !input.includes("node_modules/"))
+      .map((input) => join(root, input));
+    const inputs = [...new Set([...sources, ...toolchain].map((path) => posix(relative(outDir, path))))].sort();
+    // The hash of what was built, not of what is on disk now.
+    const sha256 = hashWith(inputs, (input) => {
+      const bytes = consumed.get(resolve(outDir, input));
+      if (!bytes) throw new Error(`no record of the bytes built for ${input}`);
+      return bytes;
+    });
+    const outputs = Object.fromEntries(readdirSync(tempDir).sort().map((name) => [name, statSync(join(tempDir, name)).size]));
+    writeFileSync(join(tempDir, "manifest.json"), `${JSON.stringify({ v: MANIFEST_VERSION, inputs, sha256, outputs }, null, 1)}\n`);
+    withLock(outDir, () => {
+      // Checked as late as possible, and under the lock: builds publish one at a time, so the
+      // manifest in the folder always belongs to the index.ts beside it.
+      if (hashInputs(outDir, inputs) !== sha256) throw new Error("sources changed during the build");
+      publish(tempDir, outDir);
+    });
+    // The metafile names the temporary folder; report the final one.
+    const metafile = JSON.parse(JSON.stringify(result.metafile).replaceAll(posix(relative(root, tempDir)), posix(relative(root, outDir))));
+    const entryOutput = posix(relative(root, join(outDir, "index.ts")));
+    const bytes = Object.values(metafile.outputs).reduce((sum, output) => sum + output.bytes, 0);
+    return { entry, outDir, metafile, entryOutput, inputs, bytes, files: Object.keys(metafile.outputs).length };
+  } finally {
+    rmSync(tempDir, { recursive: true, force: true });
+  }
+}
+
+/**
+ * Builds every entry. Returns `{ built, failed }`; throws only when `strict` and an entry failed.
+ * `onRead(path)` is called after each source is read for a bundle (tests use it).
+ */
+export async function buildBundles({ root: givenRoot, entries = ENTRIES, strict = false, log = () => {}, onRead } = {}) {
   // esbuild reports real paths. Use the real root too, or a symlinked root would turn the
   // relative import.meta.url targets into paths that climb to / and break when the tree moves.
   const root = realpathSync(givenRoot);
@@ -165,15 +297,19 @@ export async function buildBundles({ root: givenRoot, entries = ENTRIES, strict 
   const failed = [];
   // Every package folder exists even when its entries fail, so an installer that copies the
   // folders finds them.
-  for (const pkg of new Set(entries.map((entry) => entry.pkg))) mkdirSync(join(root, "packages", pkg, BUNDLE_DIR), { recursive: true });
+  for (const pkg of new Set(entries.map((entry) => entry.pkg))) {
+    mkdirSync(join(root, "packages", pkg, BUNDLE_DIR), { recursive: true });
+    removeStaleTemps(join(root, "packages", pkg, BUNDLE_DIR));
+  }
   for (const entry of entries) {
     const started = performance.now();
     try {
-      const result = await buildEntry(root, entry);
+      const result = await buildEntry(root, entry, onRead);
       built.push(result);
       log(`built ${entry.pkg}/${entry.slug}: ${result.inputs.length} sources, ${result.files} files, ${Math.round(result.bytes / 1024)} KB, ${Math.round(performance.now() - started)} ms`);
     } catch (error) {
-      rmSync(bundleDirOf(root, entry), { recursive: true, force: true });
+      // Without a manifest the source loads. The files stay for sessions that already use them.
+      rmSync(join(bundleDirOf(root, entry), "manifest.json"), { force: true });
       failed.push({ entry, error });
       log(`warning: ${entry.pkg}/${entry.slug} failed to build and will load from source: ${error instanceof Error ? error.message : String(error)}`);
     }
@@ -188,7 +324,7 @@ export function bundleStatus({ root, entries = ENTRIES }) {
     const outDir = bundleDirOf(root, entry);
     try {
       const manifest = JSON.parse(readFileSync(join(outDir, "manifest.json"), "utf8"));
-      const fresh = manifest.v === MANIFEST_VERSION && hashInputs(outDir, manifest.inputs) === manifest.sha256;
+      const fresh = manifest.v === MANIFEST_VERSION && hashInputs(outDir, manifest.inputs) === manifest.sha256 && outputsMatch(outDir, manifest.outputs);
       return { entry, state: fresh ? "fresh" : "stale" };
     } catch {
       return { entry, state: "missing" };

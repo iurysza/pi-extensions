@@ -4,7 +4,7 @@
 // Keep this file identical in every package that has one; scripts/tests checks that.
 // How it works: ai-artifacts/specs/2026-11-10-startup-prebundle.md
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 const MANIFEST_VERSION = 1;
@@ -13,6 +13,8 @@ interface Manifest {
 	v: number;
 	inputs: string[];
 	sha256: string;
+	/** Size in bytes of each bundle file. Manifests from older builds have none. */
+	outputs?: Record<string, number>;
 }
 
 function note(bundleDir: URL, message: string): void {
@@ -47,6 +49,11 @@ export function freshBundle(bundleDir: URL): string | undefined {
 		}
 		if (hashInputs(bundleDir, manifest.inputs) !== manifest.sha256) {
 			note(bundleDir, "source (bundle is stale)");
+			return undefined;
+		}
+		// A missing file throws and lands in the catch below: a lazy chunk that is gone is found now.
+		if (manifest.outputs && !Object.entries(manifest.outputs).every(([name, bytes]) => statSync(new URL(name, bundleDir)).size === bytes)) {
+			note(bundleDir, "source (bundle files do not match the manifest)");
 			return undefined;
 		}
 		return new URL("index.ts", bundleDir).href;
