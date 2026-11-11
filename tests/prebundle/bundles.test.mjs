@@ -42,7 +42,7 @@ test("each bundled entry is a loader that Pi already loads", () => {
   for (const entry of ENTRIES) {
     const packageDir = join(root, "packages", entry.pkg);
     const manifest = JSON.parse(readFileSync(join(packageDir, "package.json"), "utf8"));
-    assert.ok(manifest.pi.extensions.includes(`./${entry.loader}`), `${entry.loader} is not a pi.extensions entry of ${entry.pkg}`);
+    assert.ok(manifest.pi.extensions.some((path) => path.replace(/^\.\//, "") === entry.loader), `${entry.loader} is not a pi.extensions entry of ${entry.pkg}`);
     const loader = readFileSync(join(packageDir, entry.loader), "utf8");
     assert.match(loader, /loadPrebundled/);
     const [, target] = loader.match(/new URL\("([^"]+)", import\.meta\.url\)/);
@@ -51,7 +51,7 @@ test("each bundled entry is a loader that Pi already loads", () => {
 });
 
 test("every copy of the loader helper is the same", () => {
-  const copies = ["packages/pi-ext/extensions/shared/prebundle.ts", "packages/pi-cursor-sdk/src/prebundle.ts"].map((path) => readFileSync(join(root, path), "utf8"));
+  const copies = ["packages/pi-ext/extensions/shared/prebundle.ts", "packages/pi-cursor-sdk/src/prebundle.ts", "packages/pi-cursor-cloud/src/prebundle.ts", "packages/pi-token-tank/src/prebundle.ts"].map((path) => readFileSync(join(root, path), "utf8"));
   assert.ok(copies.every((copy) => copy === copies[0]));
 });
 
@@ -77,4 +77,12 @@ test("a bundle registers the same tools, commands, shortcuts, renderers and even
     assert.deepEqual(bundle, source, `${entry.pkg}/${entry.slug}`);
     assert.ok(Object.values(source).flat().length > 0, `${entry.pkg}/${entry.slug} registered nothing; the probe is broken`);
   }
+});
+
+// Lives here, after the build above, because node --test runs test files in parallel.
+test("the pi-telescope bundle carries its own copy of session-store/db.ts", () => {
+  const entry = ENTRIES.find((item) => item.slug === "pi-telescope");
+  const manifest = JSON.parse(readFileSync(join(bundleDirOf(root, entry), "manifest.json"), "utf8"));
+  assert.ok(manifest.inputs.some((input) => input.endsWith("session-store/db.ts")), "db.ts is not an input: an edit to it would not mark the bundle stale");
+  assert.ok(!ENTRIES.some((item) => item.slug === "session-store"), "session-store is bundled now: check what the two bundles share");
 });

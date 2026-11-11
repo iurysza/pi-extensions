@@ -7,7 +7,8 @@ import ts from 'typescript';
 const SRC = join(process.cwd(), 'src');
 
 // Packages that must stay behind dynamic import() so they cost nothing at Pi startup.
-// If one shows up in the static graph from index.ts, startup got slower: load it lazily instead.
+// index.ts is only the bundle loader; the extension starts at main.ts.
+// If one shows up in the static graph from main.ts, startup got slower: load it lazily instead.
 const LAZY_PACKAGES = ['@cursor/sdk'];
 
 /** Specifiers that load at runtime: skips `import type` and imports whose names are all `type`. */
@@ -44,14 +45,14 @@ function startupGraph(entry) {
   return { files, packages };
 }
 
-test('startup graph from index.ts is walked', () => {
-  const { files } = startupGraph(join(SRC, 'index.ts'));
+test('startup graph from main.ts is walked', () => {
+  const { files } = startupGraph(join(SRC, 'main.ts'));
   assert.ok(files.has(join(SRC, 'cloud-client.ts')));
 });
 
 for (const name of LAZY_PACKAGES) {
   test(`does not statically load ${name} at startup`, () => {
-    const { packages } = startupGraph(join(SRC, 'index.ts'));
+    const { packages } = startupGraph(join(SRC, 'main.ts'));
     assert.equal(packages.has(name), false);
   });
 }

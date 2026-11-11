@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { createCoordinator } from "../src/index.js";
+import { createCoordinator } from "../src/main.js";
 import type { CredentialSourceLike } from "../src/auth.js";
 import type { ProviderId, ProviderQuota, QuotaProvider } from "../src/types.js";
 

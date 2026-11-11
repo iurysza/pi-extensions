@@ -28,7 +28,7 @@
   },
   "homepage": "https://github.com/iurysza/pi-extensions/tree/main/packages/pi-token-tank#readme",
   "type": "module",
-  "main": "src/index.ts",
+  "main": "src/main.ts",
   "pi": {
     "extensions": [
       "src/index.ts"
