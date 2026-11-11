@@ -37,6 +37,8 @@ npm run check
 The repository is an npm workspace. The root package is private; each package
 under [`packages/`](packages) is independently publishable.
 
+If Pi loads extensions from this checkout, run `npm run hooks:install` once: git hooks then rebuild the startup bundles after each pull or branch switch (`node scripts/install-bundle-hooks.mjs --remove` removes them).
+
 ### Isolated Pi test
 
 Validate or drive the complete monorepo without loading or changing live Pi
