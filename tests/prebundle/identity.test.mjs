@@ -1,13 +1,13 @@
 // Module identity across extensions. pi-telescope imports ../session-store/db.ts, which the
 // session-store extension also imports. This proves the two never shared one instance of that
 // module, so giving the pi-telescope bundle its own copy changes nothing.
+// This file must not read the built bundles: bundles.test.mjs rebuilds them in a parallel process.
 import assert from "node:assert/strict";
 import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { after, test } from "node:test";
 import { discoverAndLoadExtensions } from "@earendil-works/pi-coding-agent";
-import { ENTRIES, bundleDirOf } from "../../scripts/build-bundles.mjs";
 
 const root = resolve(import.meta.dirname, "../..");
 const scratch = realpathSync(mkdtempSync(join(tmpdir(), "prebundle-identity-")));
@@ -34,11 +34,4 @@ test("session-store/db.ts keeps its state in the database file, not in exported 
   assert.deepEqual(state, ["_db", "_ftsAvailable"]);
   assert.doesNotMatch(text, /^export (let|var) /m);
   assert.doesNotMatch(text, /globalThis|Symbol\.for/);
-});
-
-test("the pi-telescope bundle carries its own copy of session-store/db.ts", () => {
-  const entry = ENTRIES.find((item) => item.slug === "pi-telescope");
-  const manifest = JSON.parse(readFileSync(join(bundleDirOf(root, entry), "manifest.json"), "utf8"));
-  assert.ok(manifest.inputs.some((input) => input.endsWith("session-store/db.ts")), "db.ts is not an input: an edit to it would not mark the bundle stale");
-  assert.ok(!ENTRIES.some((item) => item.slug === "session-store"), "session-store is bundled now: check what the two bundles share");
 });

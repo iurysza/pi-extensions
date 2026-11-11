@@ -78,3 +78,11 @@ test("a bundle registers the same tools, commands, shortcuts, renderers and even
     assert.ok(Object.values(source).flat().length > 0, `${entry.pkg}/${entry.slug} registered nothing; the probe is broken`);
   }
 });
+
+// Lives here, after the build above, because node --test runs test files in parallel.
+test("the pi-telescope bundle carries its own copy of session-store/db.ts", () => {
+  const entry = ENTRIES.find((item) => item.slug === "pi-telescope");
+  const manifest = JSON.parse(readFileSync(join(bundleDirOf(root, entry), "manifest.json"), "utf8"));
+  assert.ok(manifest.inputs.some((input) => input.endsWith("session-store/db.ts")), "db.ts is not an input: an edit to it would not mark the bundle stale");
+  assert.ok(!ENTRIES.some((item) => item.slug === "session-store"), "session-store is bundled now: check what the two bundles share");
+});
