@@ -44,7 +44,7 @@ async function waitFor(file) {
   return existsSync(file);
 }
 
-test("install writes both hooks, is repeatable, and remove takes only its own files", t => {
+test("install writes the hooks, is repeatable, and remove takes only its own files", t => {
   const { root } = repo(t);
   const files = installHooks(root);
 
@@ -141,4 +141,24 @@ test("the hook does nothing in a repository that is not this one", async t => {
   await new Promise(done => setTimeout(done, 500));
   assert.equal(existsSync(other.calls), false);
   assert.equal(existsSync(noScript.calls), false);
+});
+
+test("post-rewrite builds after a rebase and not after an amend", async t => {
+  const { root, calls, env } = repo(t);
+
+  installHooks(root);
+
+  const hook = join(root, ".git/hooks/post-rewrite");
+  const amend = spawnSync(hook, ["amend"], { cwd: root, env, encoding: "utf8", input: "" });
+
+  assert.equal(amend.status, 0);
+  await new Promise(done => setTimeout(done, 300));
+  assert.equal(existsSync(calls), false);
+
+  const rebase = spawnSync(hook, ["rebase"], { cwd: root, env, encoding: "utf8", input: "" });
+
+  assert.equal(rebase.status, 0);
+  assert.equal(rebase.stdout + rebase.stderr, "");
+  assert.equal(await waitFor(calls), true);
+  assert.equal(readFileSync(calls, "utf8"), `${root}|run --silent build:bundles\n`);
 });

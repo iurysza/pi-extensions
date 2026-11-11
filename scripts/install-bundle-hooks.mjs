@@ -3,8 +3,9 @@
 //
 // Usage: node scripts/install-bundle-hooks.mjs [--remove]
 //
-// Writes post-merge and post-checkout into this repository's hooks folder. Each one runs
-// `npm run build:bundles` after a pull or a branch switch, so Pi keeps loading from bundles.
+// Writes post-merge, post-checkout and post-rewrite into this repository's hooks folder. Each
+// one runs `npm run build:bundles` after a pull, a branch switch or a rebase (so after
+// `git pull --rebase` too), so Pi keeps loading from bundles.
 // The hook is quiet, runs the build in the background and never fails git. It does nothing in
 // a linked worktree or when dependencies are not installed: Pi then loads from source.
 // The hook also does nothing outside this repository (it checks for scripts/build-bundles.mjs
@@ -16,22 +17,27 @@ import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync }
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-export const HOOKS = ["post-merge", "post-checkout"];
+export const HOOKS = ["post-merge", "post-checkout", "post-rewrite"];
 export const MARKER = "# pi-extensions startup bundles";
 
 export const PACKAGE_NAME = "@iurysza/pi-extensions";
 
 export const HOOK = `#!/bin/sh
 ${MARKER} (written by scripts/install-bundle-hooks.mjs; remove with --remove)
-# Rebuilds the bundles after a pull or a branch switch. Quiet, in the background, never fails git.
+# Rebuilds the bundles after a pull, a branch switch or a rebase. Quiet, in the background, never fails git.
 [ "$(basename "$0")" = post-checkout ] && [ "$3" != 1 ] && exit 0
+[ "$(basename "$0")" = post-rewrite ] && [ "$1" != rebase ] && exit 0
 root=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
 common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || exit 0
 [ "$(git rev-parse --path-format=absolute --git-dir 2>/dev/null)" = "$common" ] || exit 0
 [ -f "$root/scripts/build-bundles.mjs" ] || exit 0
 grep -Eq '"name":[[:space:]]*"${PACKAGE_NAME}"' "$root/package.json" 2>/dev/null || exit 0
 [ -d "$root/node_modules/esbuild" ] || exit 0
-( cd "$root" && npm run --silent build:bundles >"$common/prebundle-hook.log" 2>&1 & ) >/dev/null 2>&1
+log="$common/prebundle-hook.log"
+command -v npm >/dev/null 2>&1 || { echo "$(basename "$0"): npm is not on PATH ($PATH), bundles not rebuilt" >"$log" 2>/dev/null; exit 0; }
+# nohup: closing the terminal right after a pull must not stop the build.
+keep=; command -v nohup >/dev/null 2>&1 && keep=nohup
+( cd "$root" && $keep npm run --silent build:bundles </dev/null >"$log" 2>&1 & ) >/dev/null 2>&1
 exit 0
 `;
 

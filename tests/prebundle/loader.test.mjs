@@ -1,7 +1,7 @@
 // The loader rule, on a small fixture package in a temp folder: a bundle is used only when it
 // matches the sources on disk. Everything else loads the source.
 import assert from "node:assert/strict";
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { statSync, cpSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -96,7 +96,9 @@ test("a bundle without a manifest (interrupted build) loads the source", async (
 
 test("a bundle that fails to import loads the source", async () => {
   const dir = await fixture();
-  writeFileSync(bundleFile(dir, "index.ts"), "export default (=> broken\n");
+  // Same size as the built file, so the manifest's size check passes and the import itself fails.
+  const broken = "export default (=> broken\n//";
+  writeFileSync(bundleFile(dir, "index.ts"), broken.padEnd(statSync(bundleFile(dir, "index.ts")).size, " "));
   const result = load(dir);
   assert.equal(result.stdout, "v1:data-1");
   assert.match(result.notes, /bundle failed to load/);
