@@ -6,6 +6,7 @@ import { cardSpecs, specForTool, renderCard, WidthAwareLines, cardRenderers, car
 import { cardParts, ExpandedCard, layoutBody } from "../../extensions/tool-presentation/tidy/cards/card.js";
 import { mcpSummary } from "../../extensions/tool-presentation/tidy/cards/specs/mcp.js";
 import { visibleWidth } from "@earendil-works/pi-tui";
+import { shortPath } from "../../extensions/tool-presentation/tidy/render.js";
 
 const fixtures = [
   ...JSON.parse(readFileSync(resolve(process.cwd(), "tests/tool-presentation/card-fixtures.json"), "utf8")),
@@ -208,4 +209,23 @@ test("cursor cloud cards read structured details, not the JSON text", () => {
   const spawn = { content: [{ type: "text", text: "Cloud agent 34f7b2b2 runs" }], details: { agent: a } };
   assert.equal(cardSpecs.cursor_cloud_spawn.summary(spawn, {}), "background · 34f7b2b2 · nice-mermaid.nvim @ main");
   assert.ok(cardSpecs.cursor_cloud_status.expanded!(status, {}).includes("url   https://cursor.com/agents/bc-34f7b2b2"));
+});
+test("plannotator and inbox cards summarise opens and sends", () => {
+  const p = cardSpecs.plannotator;
+  assert.equal(p.headline({ action: "review" }), "review code");
+  assert.equal(p.target({ action: "annotate", target: ["/a/b/plan.md", "/a/c.md"] }), `${shortPath("/a/b/plan.md")} +1`);
+  assert.equal(p.summary({ details: { action: "annotate", session: "pn-1", url: "http://localhost:20000/x" } }, { action: "annotate", gate: true }), "pn-1 · gated · localhost:20000/x");
+  assert.deepEqual(p.link!({ details: { url: "http://u" } }, {}), { label: "Open ↗", url: "http://u" });
+  assert.equal(p.summary({ content: [{ type: "text", text: "pn-1 plan\npn-2 diff" }] }, { action: "list" }), "2 open");
+  const i = cardSpecs.plannotator_inbox;
+  const body = ":::question\nWhich?\n- [ ] a\n:::\n\n:::question-multi\nAlso?\n- [ ] b\n:::";
+  assert.equal(i.summary({}, { action: "send_message", body, attachments: ["x.html"] }), "sent · 2 questions · 1 file");
+  assert.equal(i.headline({ action: "send_message", subject: "Report" }), "Report");
+  assert.equal(i.target({ action: "send_message", reply_to: "m1" }), "reply");
+});
+test("plannotator cards differ from plan mode and subagent cards share one icon", () => {
+  assert.notEqual(cardSpecs.plannotator.icon, cardSpecs.plannotator_submit_plan.icon);
+  assert.equal(cardSpecs.answer_subagent.summary({ content: [{ type: "text", text: "Delivered." }] }, { answer: "yes" }), 'answered "yes"');
+  const icons = ["Agent", "SubagentWorkflow", "get_subagent_result", "steer_subagent", "answer_subagent"].map((n) => cardSpecs[n].icon);
+  assert.equal(new Set(icons).size, 1);
 });

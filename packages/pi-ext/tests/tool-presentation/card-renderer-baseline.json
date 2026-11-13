@@ -1137,7 +1137,7 @@
       "expanded": false,
       "width": 20,
       "lines": [
-        "\u001b[36m󰄠 \u001b[1msubagents\u001b[0m Example \u001b[0m",
+        "\u001b[36m󰚩 \u001b[1msubagents\u001b[0m Example \u001b[0m",
         "→\u001b[0m \u001b[32mdone\u001b[0m…\u001b[0m \u001b[2m· 231.7k tok\u001b[0m\u001b[0m"
       ]
     },
@@ -1145,7 +1145,7 @@
       "expanded": false,
       "width": 80,
       "lines": [
-        "\u001b[36m󰄠 \u001b[1msubagents\u001b[0m Example                                                             \u001b[0m",
+        "\u001b[36m󰚩 \u001b[1msubagents\u001b[0m Example                                                             \u001b[0m",
         "\u001b[2m@Example\u001b[0m \u001b[2m→\u001b[0m \u001b[32mdone · 26 tools · 231.7k tok\u001b[0m                                         \u001b[0m"
       ]
     },
@@ -1153,7 +1153,7 @@
       "expanded": false,
       "width": 120,
       "lines": [
-        "\u001b[36m󰄠 \u001b[1msubagents\u001b[0m Example                                                                                                     \u001b[0m",
+        "\u001b[36m󰚩 \u001b[1msubagents\u001b[0m Example                                                                                                     \u001b[0m",
         "\u001b[2m@Example\u001b[0m \u001b[2m→\u001b[0m \u001b[32mdone · 26 tools · 231.7k tok\u001b[0m                                                                                 \u001b[0m"
       ]
     },
@@ -1161,7 +1161,7 @@
       "expanded": true,
       "width": 20,
       "lines": [
-        "\u001b[36m󰄠 \u001b[1msubagents\u001b[0m Example \u001b[0m",
+        "\u001b[36m󰚩 \u001b[1msubagents\u001b[0m Example \u001b[0m",
         "→\u001b[0m \u001b[32mdone\u001b[0m…\u001b[0m \u001b[2m· 231.7k tok\u001b[0m\u001b[0m",
         "  \u001b[2m[redacted]\u001b[0m        \u001b[0m",
         "  \u001b[2mType: Agent |     \u001b[0m",
@@ -1204,7 +1204,7 @@
       "expanded": true,
       "width": 80,
       "lines": [
-        "\u001b[36m󰄠 \u001b[1msubagents\u001b[0m Example                                                             \u001b[0m",
+        "\u001b[36m󰚩 \u001b[1msubagents\u001b[0m Example                                                             \u001b[0m",
         "\u001b[2m@Example\u001b[0m \u001b[2m→\u001b[0m \u001b[32mdone · 26 tools · 231.7k tok\u001b[0m                                         \u001b[0m",
         "  \u001b[2m[redacted]\u001b[0m                                                                    \u001b[0m",
         "  \u001b[2mType: Agent | Status: completed | Tool uses: 26 | 231.7k token | Context: 54% \u001b[0m",
@@ -1243,7 +1243,7 @@
       "expanded": true,
       "width": 120,
       "lines": [
-        "\u001b[36m󰄠 \u001b[1msubagents\u001b[0m Example                                                                                                     \u001b[0m",
+        "\u001b[36m󰚩 \u001b[1msubagents\u001b[0m Example                                                                                                     \u001b[0m",
         "\u001b[2m@Example\u001b[0m \u001b[2m→\u001b[0m \u001b[32mdone · 26 tools · 231.7k tok\u001b[0m                                                                                 \u001b[0m",
         "  \u001b[2m[redacted]\u001b[0m                                                                                                            \u001b[0m",
         "  \u001b[2mType: Agent | Status: completed | Tool uses: 26 | 231.7k token | Context: 54% | Duration: 530.4s\u001b[0m                      \u001b[0m",
@@ -1283,7 +1283,7 @@
       "expanded": false,
       "width": 20,
       "lines": [
-        "\u001b[35m󰓔 \u001b[1msubagents\u001b[0m Example \u001b[0m",
+        "\u001b[35m󰚩 \u001b[1msubagents\u001b[0m Example \u001b[0m",
         "\u001b[2m@E\u001b[0m…\u001b[0m →\u001b[0m \u001b[32msent \"Example\"\u001b[0m\u001b[0m"
       ]
     },
@@ -1291,7 +1291,7 @@
       "expanded": false,
       "width": 80,
       "lines": [
-        "\u001b[35m󰓔 \u001b[1msubagents\u001b[0m Example                                                             \u001b[0m",
+        "\u001b[35m󰚩 \u001b[1msubagents\u001b[0m Example                                                             \u001b[0m",
         "\u001b[2m@Example\u001b[0m \u001b[2m→\u001b[0m \u001b[32msent \"Example\"\u001b[0m                                                       \u001b[0m"
       ]
     },
@@ -1299,7 +1299,7 @@
       "expanded": false,
       "width": 120,
       "lines": [
-        "\u001b[35m󰓔 \u001b[1msubagents\u001b[0m Example                                                                                                     \u001b[0m",
+        "\u001b[35m󰚩 \u001b[1msubagents\u001b[0m Example                                                                                                     \u001b[0m",
         "\u001b[2m@Example\u001b[0m \u001b[2m→\u001b[0m \u001b[32msent \"Example\"\u001b[0m                                                                                               \u001b[0m"
       ]
     },
@@ -1307,7 +1307,7 @@
       "expanded": true,
       "width": 20,
       "lines": [
-        "\u001b[35m󰓔 \u001b[1msubagents\u001b[0m Example \u001b[0m",
+        "\u001b[35m󰚩 \u001b[1msubagents\u001b[0m Example \u001b[0m",
         "\u001b[2m@E\u001b[0m…\u001b[0m →\u001b[0m \u001b[32msent \"Example\"\u001b[0m\u001b[0m",
         "  \u001b[2mMessage sent.\u001b[0m     \u001b[0m"
       ]
@@ -1316,7 +1316,7 @@
       "expanded": true,
       "width": 80,
       "lines": [
-        "\u001b[35m󰓔 \u001b[1msubagents\u001b[0m Example                                                             \u001b[0m",
+        "\u001b[35m󰚩 \u001b[1msubagents\u001b[0m Example                                                             \u001b[0m",
         "\u001b[2m@Example\u001b[0m \u001b[2m→\u001b[0m \u001b[32msent \"Example\"\u001b[0m                                                       \u001b[0m",
         "  \u001b[2mMessage sent.\u001b[0m                                                                 \u001b[0m"
       ]
@@ -1325,7 +1325,7 @@
       "expanded": true,
       "width": 120,
       "lines": [
-        "\u001b[35m󰓔 \u001b[1msubagents\u001b[0m Example                                                                                                     \u001b[0m",
+        "\u001b[35m󰚩 \u001b[1msubagents\u001b[0m Example                                                                                                     \u001b[0m",
         "\u001b[2m@Example\u001b[0m \u001b[2m→\u001b[0m \u001b[32msent \"Example\"\u001b[0m                                                                                               \u001b[0m",
         "  \u001b[2mMessage sent.\u001b[0m                                                                                                         \u001b[0m"
       ]
@@ -1859,7 +1859,7 @@
       "expanded": false,
       "width": 20,
       "lines": [
-        "\u001b[35m󰒪 \u001b[1msubagents\u001b[0m workflow\u001b[0m",
+        "\u001b[35m󰚩 \u001b[1msubagents\u001b[0m workflow\u001b[0m",
         "\u001b[2mexampl\u001b[0m…\u001b[0m →\u001b[0m \u001b[32mbackground\u001b[0m\u001b[0m"
       ]
     },
@@ -1867,7 +1867,7 @@
       "expanded": false,
       "width": 80,
       "lines": [
-        "\u001b[35m󰒪 \u001b[1msubagents\u001b[0m workflow                                                            \u001b[0m",
+        "\u001b[35m󰚩 \u001b[1msubagents\u001b[0m workflow                                                            \u001b[0m",
         "\u001b[2mexample-id\u001b[0m \u001b[2m→\u001b[0m \u001b[32mbackground\u001b[0m                                                         \u001b[0m"
       ]
     },
@@ -1875,7 +1875,7 @@
       "expanded": false,
       "width": 120,
       "lines": [
-        "\u001b[35m󰒪 \u001b[1msubagents\u001b[0m workflow                                                                                                    \u001b[0m",
+        "\u001b[35m󰚩 \u001b[1msubagents\u001b[0m workflow                                                                                                    \u001b[0m",
         "\u001b[2mexample-id\u001b[0m \u001b[2m→\u001b[0m \u001b[32mbackground\u001b[0m                                                                                                 \u001b[0m"
       ]
     },
@@ -1883,7 +1883,7 @@
       "expanded": true,
       "width": 20,
       "lines": [
-        "\u001b[35m󰒪 \u001b[1msubagents\u001b[0m workflow\u001b[0m",
+        "\u001b[35m󰚩 \u001b[1msubagents\u001b[0m workflow\u001b[0m",
         "\u001b[2mexampl\u001b[0m…\u001b[0m →\u001b[0m \u001b[32mbackground\u001b[0m\u001b[0m",
         "  \u001b[2mExample output\u001b[0m    \u001b[0m"
       ]
@@ -1892,7 +1892,7 @@
       "expanded": true,
       "width": 80,
       "lines": [
-        "\u001b[35m󰒪 \u001b[1msubagents\u001b[0m workflow                                                            \u001b[0m",
+        "\u001b[35m󰚩 \u001b[1msubagents\u001b[0m workflow                                                            \u001b[0m",
         "\u001b[2mexample-id\u001b[0m \u001b[2m→\u001b[0m \u001b[32mbackground\u001b[0m                                                         \u001b[0m",
         "  \u001b[2mExample output\u001b[0m                                                                \u001b[0m"
       ]
@@ -1901,7 +1901,7 @@
       "expanded": true,
       "width": 120,
       "lines": [
-        "\u001b[35m󰒪 \u001b[1msubagents\u001b[0m workflow                                                                                                    \u001b[0m",
+        "\u001b[35m󰚩 \u001b[1msubagents\u001b[0m workflow                                                                                                    \u001b[0m",
         "\u001b[2mexample-id\u001b[0m \u001b[2m→\u001b[0m \u001b[32mbackground\u001b[0m                                                                                                 \u001b[0m",
         "  \u001b[2mExample output\u001b[0m                                                                                                        \u001b[0m"
       ]
