@@ -57,6 +57,7 @@ function makeBridgeRun(id: string, pendingPiToolCallIds: string[] = []): CursorP
 		resolveToolResults: vi.fn().mockResolvedValue(undefined),
 		resolveToolResultsFromContext: vi.fn().mockResolvedValue(undefined),
 		hasPendingPiToolCallId: vi.fn((piToolCallId: string) => pending.has(piToolCallId)),
+		cancelPendingPiToolCallId: vi.fn((piToolCallId: string) => pending.delete(piToolCallId)),
 		isBridgeMcpToolCall: vi.fn(() => false),
 		setOnToolRequest: vi.fn(),
 		setDebugRecorder: vi.fn(),

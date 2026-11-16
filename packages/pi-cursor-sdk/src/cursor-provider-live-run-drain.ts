@@ -28,6 +28,7 @@ import { trimCurrentTurnAlreadyEmittedCursorText } from "./cursor-run-final-text
 import { formatCursorSdkAbortMessage, resolveCursorSdkAbortCause } from "./cursor-provider-errors.js";
 import { formatInactiveCursorReplayTrace } from "./cursor-native-replay-trace.js";
 import { partitionNativeToolsByActiveContext } from "./cursor-native-replay-routing.js";
+import { contextForbidsTools } from "./cursor-context-tools.js";
 import type { CursorSdkEventDebugRecorder } from "./cursor-sdk-event-debug.js";
 
 export const DEFAULT_CURSOR_NATIVE_REPLAY_IDLE_DISPOSE_MS = 5 * 60 * 1000;
@@ -254,6 +255,23 @@ function emitCursorBridgeToolUseTurn(
 	cursorLiveRuns.requestIdleDispose(run);
 }
 
+export const CURSOR_TOOLS_NOT_ALLOWED_REASON = "This request allows no tool calls. Answer with text only.";
+
+/** Answers a pi bridge request with an error so Cursor carries on and writes text instead. */
+function refuseCursorBridgeToolRequest(
+	run: CursorLiveRun,
+	request: CursorPiBridgeToolRequest,
+	debugRecorder?: CursorSdkEventDebugRecorder,
+): void {
+	const bridgeRun = [run.bridgeRun, run.sessionBridgeRun].find((candidate) => candidate?.id === request.runId);
+	const refused = bridgeRun?.cancelPendingPiToolCallId(request.piToolCallId, CURSOR_TOOLS_NOT_ALLOWED_REASON) === true;
+	debugRecorder?.recordDrainEvent("bridge_tool_refused", {
+		toolId: request.piToolCallId,
+		toolName: request.piToolName,
+		refused,
+	});
+}
+
 async function emitCursorLiveRunPendingToolUseTurn(
 	turn: CursorLiveTurnState,
 	stream: AssistantMessageEventStream,
@@ -270,8 +288,13 @@ async function emitCursorLiveRunPendingToolUseTurn(
 	await settleCursorLiveToolBatch(run);
 	const sdkTurnEnded = await waitForCursorLiveSdkTurnEnded(run, options.signal);
 	if (options.signal?.aborted) throw new CursorLiveRunAbortError();
+	const toolsAllowed = !contextForbidsTools(context);
 	if (eventType === "tool") {
-		const { active, inactive } = partitionNativeToolsByActiveContext(context, cursorLiveRuns.collectNativeToolBatch(run));
+		const batch = cursorLiveRuns.collectNativeToolBatch(run);
+		// A request without tools (a compaction summary) gets a trace, never a tool call.
+		const { active, inactive } = toolsAllowed
+			? partitionNativeToolsByActiveContext(context, batch)
+			: { active: [], inactive: batch };
 		if (options.mode === "emit") emitInactiveCursorReplayTrace(turn, inactive, debugRecorder);
 		if (active.length === 0) {
 			// Inactive-only batch: trace was emitted above; do not emit toolUse.
@@ -283,6 +306,10 @@ async function emitCursorLiveRunPendingToolUseTurn(
 	} else {
 		const requests = cursorLiveRuns.collectBridgeToolBatch(run);
 		if (requests.length === 0) return "handled";
+		if (!toolsAllowed) {
+			for (const request of requests) refuseCursorBridgeToolRequest(run, request, debugRecorder);
+			return "handled";
+		}
 		if (!sdkTurnEnded) cursorLiveRuns.ignoreFutureSdkTurnUsage(run);
 		if (options.mode === "emit") turn.emitter.closeAll();
 		emitCursorBridgeToolUseTurn(stream, partial, model, context, run, toolResultInputTokens, requests);
