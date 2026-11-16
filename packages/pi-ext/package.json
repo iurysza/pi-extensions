@@ -24,13 +24,13 @@
     "THIRD_PARTY_NOTICES.md"
   ],
   "dependencies": {
+    "@iurysza/herdr-ui": "0.1.0",
     "@shikijs/cli": "^4.6.0",
     "@sting8k/pi-vcc": "0.11.2",
     "@tintinweb/pi-tasks": "0.9.1",
     "better-sqlite3": "^13.0.3",
     "diff": "^9.0.0",
-    "semver": "^7.8.6",
-    "@iurysza/herdr-ui": "0.1.0"
+    "semver": "^7.8.6"
   },
   "peerDependencies": {
     "@earendil-works/pi-agent-core": "*",
