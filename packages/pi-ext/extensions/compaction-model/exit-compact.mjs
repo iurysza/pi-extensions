@@ -3,11 +3,12 @@
 // compaction-model extension on quit, so it outlives the Pi that started it.
 // Usage: node exit-compact.mjs <pi-cli> <session-file> <cwd> <log-file>
 import { spawn } from "node:child_process";
-import { appendFileSync, mkdirSync, openSync, closeSync, unlinkSync, existsSync, statSync } from "node:fs";
+import { appendFileSync, mkdirSync, unlinkSync } from "node:fs";
 import { dirname } from "node:path";
+import { EXIT_TIMEOUT_MS, earlyExitMessage, piCommand, takeLock } from "./exit-lock.mjs";
 
 const [piCli, sessionFile, cwd, logFile] = process.argv.slice(2);
-const TIMEOUT_MS = 10 * 60 * 1000;
+const TIMEOUT_MS = EXIT_TIMEOUT_MS;
 const lockFile = `${sessionFile}.compacting`;
 
 const log = (message) => {
@@ -17,28 +18,25 @@ const log = (message) => {
   } catch {}
 };
 
-function takeLock() {
-  try {
-    // A lock older than the timeout belongs to a dead runner.
-    if (existsSync(lockFile) && Date.now() - statSync(lockFile).mtimeMs > TIMEOUT_MS) unlinkSync(lockFile);
-    closeSync(openSync(lockFile, "wx"));
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-if (!takeLock()) {
+if (!takeLock(lockFile)) {
   log("skipped: another exit compaction is running");
   process.exit(0);
 }
 
 const release = () => { try { unlinkSync(lockFile); } catch {} };
-const child = spawn(process.execPath, [piCli, "--mode", "rpc", "--session", sessionFile], {
+const { command, args } = piCommand(piCli);
+const child = spawn(command, [...args, "--mode", "rpc", "--session", sessionFile], {
   cwd,
   env: { ...process.env, PI_COMPACT_ON_EXIT_CHILD: "1" },
-  stdio: ["pipe", "pipe", "ignore"],
+  stdio: ["pipe", "pipe", "pipe"],
 });
+
+// Kept so an early exit can say why; only the tail is logged.
+let stderr = "";
+child.stderr.on("data", (chunk) => { stderr = (stderr + chunk).slice(-8000); });
+child.on("error", (error) => { if (!done) log(`could not start pi (${command}): ${error.message}`); release(); process.exit(0); });
+// The child may be gone before the command is written.
+child.stdin.on("error", () => {});
 
 let buffer = "";
 let done = false;
@@ -63,7 +61,7 @@ child.stdout.on("data", (chunk) => {
     }
   }
 });
-child.on("exit", (code) => { if (!done) log(`pi exited early with code ${code}`); release(); process.exit(0); });
+child.on("close", (code, signal) => { if (!done) log(earlyExitMessage(code, signal, stderr)); release(); process.exit(0); });
 setTimeout(() => finish("timed out"), TIMEOUT_MS).unref();
 
 child.stdin.write(`${JSON.stringify({ type: "compact" })}\n`);

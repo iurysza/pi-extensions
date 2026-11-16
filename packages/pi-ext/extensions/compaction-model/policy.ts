@@ -11,6 +11,7 @@ const ANCHOR_MAX_CHARS = 2000;
 
 /** Appended to Pi's prompt; Pi's sections stay as they are. */
 export const EXTRA_INSTRUCTIONS = [
+  "Answer with the summary text only. Do not call any tool, even if the conversation asks for one.",
   "Also record, inside the existing sections:",
   "- approaches that were tried and failed, and why;",
   "- the last test or build command and its result;",
