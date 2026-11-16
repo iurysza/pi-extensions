@@ -467,6 +467,77 @@ describe("streamCursor bridge MCP", () => {
 		}
 	});
 
+	it("refuses bridge and native tool calls when the request allows no tools", async () => {
+		process.env.PI_CURSOR_NATIVE_TOOL_DISPLAY = "1";
+		process.env.PI_CURSOR_EXPOSE_BUILTIN_TOOLS = "1";
+		const registeredTools: RegisteredTool[] = [];
+		await registerNativeToolDisplayForTest(registeredTools);
+		registerBridgeForProviderTest({
+			active: ["read"],
+			tools: [createBuiltinToolInfo("read", Type.Object({ path: Type.String() }), "Read files")],
+		});
+
+		let onDelta: CursorDeltaHandler | undefined;
+		let resolveRun: (result: { id: string; status: "finished"; result: string }) => void = () => {};
+		const runWait = vi.fn(
+			() =>
+				new Promise<{ id: string; status: "finished"; result: string }>((resolve) => {
+					resolveRun = resolve;
+				}),
+		);
+		const mockSend = vi.fn().mockImplementation(async (_msg: unknown, opts: { onDelta: CursorDeltaHandler }) => {
+			onDelta = opts.onDelta;
+			return asMockCursorRun({
+				id: "run-1",
+				agentId: "agent-1",
+				status: "running",
+				wait: runWait,
+				cancel: vi.fn(),
+				supports: () => true,
+				unsupportedReason: () => undefined,
+			});
+		});
+		mockCreatedAgent({
+			agentId: "agent-1",
+			send: mockSend,
+			[Symbol.asyncDispose]: vi.fn().mockResolvedValue(undefined),
+		});
+
+		// Pi compaction summaries arrive with an empty tool list.
+		const summaryContext = makeContext();
+		summaryContext.tools = [];
+		const eventsPromise = collectEvents(streamCursor(makeModel("composer-2"), summaryContext, { apiKey: "test-key" }));
+		await vi.waitFor(() => expect(mockSend).toHaveBeenCalled());
+		const { client, transport } = await connectMcpClient(getPiToolsMcpUrlFromAgentCreateOptions(getCreatedAgentOptions()));
+		try {
+			const readCall = client.callTool({ name: "pi__read", arguments: { path: "README.md" } }).then(
+				(result) => JSON.stringify(result),
+				(error: unknown) => String(error),
+			);
+			onDelta?.({ update: { type: "tool-call-started", callId: "grep-1", toolCall: { name: "grep", args: { pattern: "x" } } } });
+			onDelta?.({
+				update: {
+					type: "tool-call-completed",
+					callId: "grep-1",
+					toolCall: { name: "grep", result: { status: "success", value: { matches: [] } } },
+				},
+			});
+
+			expect(await readCall).toContain("allows no tool calls");
+			resolveRun({ id: "run-1", status: "finished", result: "## Goal\nSummary text." });
+			const events = await eventsPromise;
+			const done = getDoneEvent(events);
+
+			expect(hasEventType(events, "toolcall_start")).toBe(false);
+			expect(done.message.content.filter(isToolCallBlock)).toEqual([]);
+			expect(done.reason).toBe("stop");
+			expect(collectTextDeltas(events)).toBe("## Goal\nSummary text.");
+		} finally {
+			await client.close().catch(() => undefined);
+			await transport.close().catch(() => undefined);
+		}
+	});
+
 	it("keeps non-bridge Cursor MCP replay visible while suppressing only bridge MCP calls", async () => {
 		registerBridgeForProviderTest({
 			active: ["read"],

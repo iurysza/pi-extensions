@@ -18,6 +18,7 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import { loadConfig, parseModelReference } from "./config.js";
 import { decorateSummary, EXTRA_INSTRUCTIONS, firstUserText, mergeInstructions, overThreshold, stripAdditions } from "./policy.js";
+import { clearDeadLock } from "./exit-lock.mjs";
 import { ENTRY_TYPE, reportParts, runningParts, type CardStyle, type CompactionReport } from "./report.js";
 import { ExpandedCard, WidthAwareLines } from "../tool-presentation/tidy/cards/card.js";
 import { loadTidyExpandedMaxLines, loadTidyIcons, loadTidyMode } from "../tool-presentation/tidy/config.js";
@@ -214,7 +215,8 @@ export default function compactionModel(pi: ExtensionAPI): void {
 
   pi.on("session_start", async (_event, ctx) => {
     const sessionFile = ctx.sessionManager.getSessionFile();
-    if (ctx.hasUI && sessionFile && existsSync(`${sessionFile}.compacting`)) {
+    // A runner that died leaves its lock behind; only a live one is worth a warning.
+    if (ctx.hasUI && sessionFile && clearDeadLock(`${sessionFile}.compacting`) === "held") {
       ctx.ui.notify("This session is still being compacted in the background. Wait for it to finish before you continue, or the two writers may clash.", "warning");
     }
   });

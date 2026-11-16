@@ -17,6 +17,7 @@ export function toCursorContext(context: Context | TranscriptContext): Context {
 	return {
 		...(systemPrompt ? { systemPrompt } : {}),
 		messages: context.messages.filter((message) => message.role !== "system"),
-		...(tools.length > 0 ? { tools } : {}),
+		// Keep an empty list: it tells the provider this request allows no tool calls.
+		tools,
 	};
 }

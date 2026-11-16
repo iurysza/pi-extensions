@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import type { Context } from "@earendil-works/pi-ai";
 import { __testUtils as nativeToolDisplayTestUtils } from "../src/cursor-native-tool-display-state.js";
+import { toCursorContext } from "../src/cursor-context-adapter.js";
+import { contextForbidsTools } from "../src/cursor-context-tools.js";
 import {
 	isNativeToolActiveInContext,
 	partitionNativeToolsByActiveContext,
@@ -94,5 +96,25 @@ describe("cursor-native-replay-routing", () => {
 		]);
 		expect(active.map((t) => t.toolName)).toEqual(["read"]);
 		expect(inactive.map((t) => t.toolName)).toEqual(["grep"]);
+	});
+
+	it("forbids tools only when the request states an empty tool list", () => {
+		const base = { systemPrompt: "", messages: [] };
+		expect(contextForbidsTools({ ...base, tools: [] } as unknown as Context)).toBe(true);
+		expect(contextForbidsTools(base as unknown as Context)).toBe(false);
+		expect(
+			contextForbidsTools({ ...base, tools: [{ name: "read", description: "read", parameters: {} }] } as unknown as Context),
+		).toBe(false);
+	});
+
+	it("keeps the empty tool list of a pi summary transcript", () => {
+		const context = toCursorContext({
+			messages: [
+				{ role: "system", content: "Summarize.", timestamp: 1 },
+				{ role: "user", content: [{ type: "text", text: "<conversation/>" }], timestamp: 2 },
+			],
+		} as unknown as Parameters<typeof toCursorContext>[0]);
+		expect(context.tools).toEqual([]);
+		expect(contextForbidsTools(context)).toBe(true);
 	});
 });

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { resolveConfig } from "../../extensions/compaction-model/config.js";
 import {
+  EXTRA_INSTRUCTIONS,
   decorateSummary,
   firstUserText,
   mergeInstructions,
@@ -77,4 +78,9 @@ test("summaryMaxTokens defaults to 24000 and rejects bad values", () => {
   const warnings: string[] = [];
   assert.equal(resolveConfig({ compactionModel: { model: "a/b", summaryMaxTokens: 10 } }, undefined, (m) => warnings.push(m))?.summaryMaxTokens, 24000);
   assert.equal(warnings.length, 1);
+});
+
+test("summary instructions forbid tool calls", () => {
+  assert.match(EXTRA_INSTRUCTIONS, /Do not call any tool/);
+  assert.match(mergeInstructions(EXTRA_INSTRUCTIONS, "focus on tests"), /Do not call any tool[\s\S]*focus on tests/);
 });
