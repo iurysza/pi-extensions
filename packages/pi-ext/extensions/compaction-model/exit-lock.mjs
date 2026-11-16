@@ -2,6 +2,9 @@
 import { closeSync, openSync, readFileSync, statSync, unlinkSync, writeSync } from "node:fs";
 
 export const EXIT_TIMEOUT_MS = 10 * 60 * 1000;
+// After the timeout the runner still needs a moment to stop pi. A lock only counts as
+// abandoned by age once that is long over; until then the recorded pid decides.
+export const LOCK_STALE_MS = EXIT_TIMEOUT_MS + 60 * 1000;
 const STDERR_TAIL_CHARS = 2000;
 
 /** True when a process with this pid exists. EPERM means it exists but belongs to someone else. */
@@ -19,12 +22,13 @@ export function isAlive(pid) {
 export function lockState(lockFile, now = Date.now()) {
   let stat;
   try { stat = statSync(lockFile); } catch { return "free"; }
-  if (now - stat.mtimeMs > EXIT_TIMEOUT_MS) return "dead";
   let text = "";
   try { text = readFileSync(lockFile, "utf8").trim(); } catch { return "free"; }
-  // Locks written before pids were recorded are empty; only their age can tell.
-  if (!text) return "held";
-  return isAlive(Number(text)) ? "held" : "dead";
+  // A recorded pid that is gone means the runner died, whatever the lock's age.
+  if (text && !isAlive(Number(text))) return "dead";
+  // Otherwise only age can tell: a lock without a pid (written by an older runner), or a pid
+  // that was reused by another process long after the runner ended.
+  return now - stat.mtimeMs > LOCK_STALE_MS ? "dead" : "held";
 }
 
 /** Removes a lock whose runner is gone. Returns the state found before removal. */

@@ -7,6 +7,7 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 import {
   EXIT_TIMEOUT_MS,
+  LOCK_STALE_MS,
   clearDeadLock,
   earlyExitMessage,
   lockState,
@@ -43,10 +44,21 @@ test("an old lock without a pid is dead only after the timeout", () => {
   const lock = join(dir(), "s.jsonl.compacting");
   writeFileSync(lock, "");
   assert.equal(lockState(lock), "held");
-  const old = new Date(Date.now() - EXIT_TIMEOUT_MS - 1000);
+  const old = new Date(Date.now() - LOCK_STALE_MS - 1000);
   utimesSync(lock, old, old);
   assert.equal(clearDeadLock(lock), "dead");
   assert.equal(existsSync(lock), false);
+});
+
+test("a live runner keeps its lock while it shuts down after the timeout", () => {
+  const lock = join(dir(), "s.jsonl.compacting");
+  assert.equal(takeLock(lock), true);
+  // Just past the runner's own timeout: it is still stopping pi.
+  const timedOut = new Date(Date.now() - EXIT_TIMEOUT_MS - 5000);
+  utimesSync(lock, timedOut, timedOut);
+  assert.equal(clearDeadLock(lock), "held");
+  assert.equal(takeLock(lock), false);
+  assert.ok(existsSync(lock));
 });
 
 test("pi runs under node only when its CLI is a script", () => {
