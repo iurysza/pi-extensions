@@ -8,7 +8,7 @@
     "packages/*"
   ],
   "devDependencies": {
-    "@earendil-works/pi-ai": "1.5.0",
+    "@earendil-works/pi-ai": "1.5.2",
     "esbuild": "0.28.2",
     "tsx": "4.23.15"
   },
