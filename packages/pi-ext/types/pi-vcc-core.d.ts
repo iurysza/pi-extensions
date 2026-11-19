@@ -1,8 +1,10 @@
+/** Mirrors SectionData in @sting8k/pi-vcc 0.11.2 (src/sections.ts). */
 export interface VccSections {
-	sessionGoal: string[];
+	earlyRequests: string[];
 	filesAndChanges: string[];
-	outstandingContext: string[];
-	userPreferences: string[];
+	commits: string[];
+	userMessages: string[];
+	trackedCommands: string[];
 	briefTranscript: string;
 }
 

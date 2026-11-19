@@ -31,6 +31,7 @@ import { launchMultiplexer, getMultiplexerName } from "../shared/multiplexer.js"
 import { normalize } from "@sting8k/pi-vcc/src/core/normalize";
 import { filterNoise } from "@sting8k/pi-vcc/src/core/filter-noise";
 import { buildSections } from "@sting8k/pi-vcc/src/core/build-sections";
+import { renderVccSections } from "../shared/vcc-sections.js";
 import { TaskStore } from "@tintinweb/pi-tasks/src/task-store.js";
 import { redact } from "./redact.js";
 
@@ -245,31 +246,12 @@ function buildContextSummary(ctx: ExtensionContext): string | null {
 
 	const llmMessages = convertToLlm(messages);
 	const blocks = filterNoise(normalize(llmMessages));
-	const data = buildSections({ blocks });
+	const body = renderVccSections(buildSections({ blocks })); // NO capBrief!
+	if (!body) return null;
 
-	const section = (title: string, items: string[]): string => {
-		if (items.length === 0) return "";
-		return `[${title}]\n${items.map((i) => `- ${i}`).join("\n")}`;
-	};
-
-	const headerParts = [
-		section("Session Goal", data.sessionGoal),
-		section("Files And Changes", data.filesAndChanges),
-		section("Outstanding Context", data.outstandingContext),
-		section("User Preferences", data.userPreferences),
-	].filter(Boolean);
-
-	const parts: string[] = [];
-	if (headerParts.length > 0) parts.push(headerParts.join("\n\n"));
-	if (data.briefTranscript) parts.push(data.briefTranscript); // NO capBrief!
-
-	if (parts.length === 0) return null;
-
-	parts.push(
-		"Do not redo work already completed. Use `session_query` on the parent session if you need more details.",
+	return redact(
+		`${body}\n\n---\n\nDo not redo work already completed. Use \`session_query\` on the parent session if you need more details.`,
 	);
-
-	return redact(parts.join("\n\n---\n\n"));
 }
 
 // ── Language detection word lists ──

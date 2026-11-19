@@ -66,3 +66,20 @@ test('handoff history failure creates no pane before prompt construction complet
   await assert.rejects(withEnvironment(f.env, () => tool.execute('test', { goal: 'Continue testing' }, undefined, undefined, ctx)), /unreadable history/);
   assert.deepEqual(f.calls(), []);
 });
+
+test('handoff with real conversation builds a summary and launches (regression: pi-vcc 0.11 section rename crashed)', async t => {
+  const f = await extension(t, 'handoff', {}, { HC_TERMINAL_ID: 't1', PI_TASKS: 'off' });
+  const branch = [
+    { type: 'message', message: { role: 'user', content: [{ type: 'text', text: 'Fix the handoff crash' }], timestamp: 1 } },
+    { type: 'message', message: { role: 'assistant', content: [{ type: 'text', text: 'On it.' }], api: 'anthropic-messages', provider: 'anthropic', model: 'm', usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } }, stopReason: 'stop', timestamp: 2 } },
+  ];
+  const ctx = context(f.root, branch);
+  const tool = f.ext.tools.get('handoff').definition;
+  const result = await withEnvironment(f.env, () => tool.execute('test', { goal: 'Continue testing' }, undefined, undefined, ctx));
+  assert.doesNotMatch(result.content[0].text, /No conversation|error/i);
+  const launch = f.calls().find(x => x.args[0] === 'do');
+  assert.ok(launch, 'expected a multiplexer launch');
+  const prompt = JSON.parse(launch.args[2]).argv.at(-1);
+  assert.match(prompt, /Fix the handoff crash/);
+  assert.match(prompt, /Continue testing/);
+});
