@@ -33,6 +33,7 @@ import { normalize } from "@sting8k/pi-vcc/src/core/normalize";
 import { filterNoise } from "@sting8k/pi-vcc/src/core/filter-noise";
 import { buildSections } from "@sting8k/pi-vcc/src/core/build-sections";
 import { sanitize } from "@sting8k/pi-vcc/src/core/sanitize";
+import { renderVccSections } from "../shared/vcc-sections.js";
 
 const QUERY_SYSTEM_PROMPT = `You are a session context assistant. Given a session transcript and a question, provide a concise answer based on the session contents.
 
@@ -56,26 +57,8 @@ const summaryCache = new Map<string, string>();
  */
 function buildUncappedSummary(llmMessages: Message[]): string {
 	const blocks = filterNoise(normalize(llmMessages));
-	const data = buildSections({ blocks });
-
-	const section = (title: string, items: string[]): string => {
-		if (items.length === 0) return "";
-		return `[${title}]\n${items.map((i) => `- ${i}`).join("\n")}`;
-	};
-
-	const headerParts = [
-		section("Session Goal", data.sessionGoal),
-		section("Files And Changes", data.filesAndChanges),
-		section("Outstanding Context", data.outstandingContext),
-		section("User Preferences", data.userPreferences),
-	].filter(Boolean);
-
-	const parts: string[] = [];
-	if (headerParts.length > 0) parts.push(headerParts.join("\n\n"));
-	if (data.briefTranscript) parts.push(data.briefTranscript);
-
-	if (parts.length === 0) return "";
-	return sanitize(parts.join("\n\n---\n\n"));
+	const body = renderVccSections(buildSections({ blocks }));
+	return body ? sanitize(body) : "";
 }
 
 function getOrBuildSummary(sessionPath: string, llmMessages: Message[]): string {
