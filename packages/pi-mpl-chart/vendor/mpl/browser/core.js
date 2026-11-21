@@ -1,0 +1,31 @@
+export { Axes, Axis, Figure, subplots } from './api.js';
+                                                                                                                                                                                                                                               
+                                                              
+                                                                               
+export { availableStyles, composeStyles, parseStyle } from './core/style.js';
+export { parseTheme } from './core/theme.js';
+export { layoutFigure } from './core/layout.js';
+export { svgChunks, svgIO, svgStream, toSVG } from './render/svg.js';
+export { registerSidecar } from './render/sidecar-registry.js';
+                                                                  
+export { renderRGBA, toPNG, toPNGStream, toPNGSync } from './render/agg.js';
+                                              
+export { encodePNG, encodePNGSync, pngStream, pngStreamSync, TOK_BLOCK, PNG_SYNC_FIXED_SCRATCH_BYTES, PNG_IDAT_PAYLOAD_MAX, PNG_IDAT_CHUNK_MAX, PNG_ARRAYBUFFERS_BASELINE_BYTES, PNG_PEAK_V8_RECLAIM_SLACK_BYTES, PNG_PEAK_BUDGET_BYTES, PNG_PEAK_MAX_1X_SQUARE_BYTES, pngPeakBytes, pngPeakFitsBudget, maxPngScaleForFigure, MAX_FRAME_PIXELS } from './render/png.js';
+                                                                  
+export { iolistToStream, iolistToString } from './render/iolist.js';
+export { renderTree, Tracer, tracer } from './trace.js';
+export { FACE_LOADS, FontNotLoadedError, registerFonts, registeredFonts } from './core/fonts.js';
+export { FACE_CATALOG } from './core/fontcodec.js';
+export { ARROW_STYLES, UnsupportedArrowStyleError } from './core/arrow.js';
+                                                             
+                                                
+                                                                      
+                                     
+export { none, some } from './core/types.js';
+export { modern, modernDark, paperClassic, paperModern } from './presets.js';
+
+export { availableColormaps, ColormapNotLoadedError, getColormap, logNorm, MissingColormapRgbaError, normalize, registerColormapRgba, registerColormaps, registeredColormaps, requireColormap, requireColormapRgba, twoSlopeNorm } from './core/colormap.js';
+                                                       
+                                                                   
+export { AutoDateLocator, ConciseDateFormatter, DateFormatter, DayLocator, HourLocator, MinuteLocator, MonthLocator, SecondLocator, YearLocator } from './core/date-formatters.js';
+                                                                                                                             
