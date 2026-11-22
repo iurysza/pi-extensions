@@ -161,6 +161,8 @@ export default function piMplChart(pi: ExtensionAPI): void {
     promptGuidelines: [
       "Use mpl_render to draw charts; prefer calling it from codemode so you can compute data in JavaScript first.",
       "mpl_render ops mirror matplotlib Axes methods (plot, fill_between, barh, set_title, legend, ...); styles: pro-slate (default), pro-dark, pro-mono, pro-ember.",
+      "After mpl_render, call image(r.image) and look at the chart: fix clipped labels, overlaps or wrong scales and re-render before replying.",
+      "Give the user the chart's pngPath in your reply; when the work reports through the Plannotator Inbox, embed the PNG there too.",
     ],
     parameters: {
       type: "object",
