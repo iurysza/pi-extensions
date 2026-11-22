@@ -1,0 +1,28 @@
+import { viridis, viridis_r } from './viridis.js';
+import { plasma, plasma_r } from './plasma.js';
+import { inferno, inferno_r } from './inferno.js';
+import { magma, magma_r } from './magma.js';
+import { cividis, cividis_r } from './cividis.js';
+import { twilight, twilight_r } from './twilight.js';
+import { turbo, turbo_r } from './turbo.js';
+import { coolwarm, coolwarm_r } from './coolwarm.js';
+import { rdBu, rdBu_r } from './rdBu.js';
+import { greys, greys_r } from './greys.js';
+import { blues, blues_r } from './blues.js';
+import { tab10, tab10_r } from './tab10.js';
+import { tab20, tab20_r } from './tab20.js';
+                                                    
+export const allColormaps                      = [viridis, viridis_r, plasma, plasma_r, inferno, inferno_r, magma, magma_r, cividis, cividis_r, twilight, twilight_r, turbo, turbo_r, coolwarm, coolwarm_r, rdBu, rdBu_r, greys, greys_r, blues, blues_r, tab10, tab10_r, tab20, tab20_r];
+export { viridis, viridis_r };
+export { plasma, plasma_r };
+export { inferno, inferno_r };
+export { magma, magma_r };
+export { cividis, cividis_r };
+export { twilight, twilight_r };
+export { turbo, turbo_r };
+export { coolwarm, coolwarm_r };
+export { rdBu, rdBu_r };
+export { greys, greys_r };
+export { blues, blues_r };
+export { tab10, tab10_r };
+export { tab20, tab20_r };

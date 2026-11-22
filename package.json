@@ -63,6 +63,7 @@
       "./packages/pi-token-tank/src/index.ts",
       "./packages/pi-context-audit/src/index.ts",
       "./packages/pi-wtf/src/index.ts",
+      "./packages/pi-mpl-chart/src/index.ts",
       "./packages/pi-herdr-attention/src/index.ts",
       "./packages/pi-secret-env/src/index.ts",
       "./packages/pi-ghost-in-the-machine/src/index.ts",

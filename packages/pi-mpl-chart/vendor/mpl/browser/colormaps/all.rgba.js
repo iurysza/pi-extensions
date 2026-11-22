@@ -1,0 +1,28 @@
+import { viridis_rgba, viridis_r_rgba } from './viridis.rgba.js';
+import { plasma_rgba, plasma_r_rgba } from './plasma.rgba.js';
+import { inferno_rgba, inferno_r_rgba } from './inferno.rgba.js';
+import { magma_rgba, magma_r_rgba } from './magma.rgba.js';
+import { cividis_rgba, cividis_r_rgba } from './cividis.rgba.js';
+import { twilight_rgba, twilight_r_rgba } from './twilight.rgba.js';
+import { turbo_rgba, turbo_r_rgba } from './turbo.rgba.js';
+import { coolwarm_rgba, coolwarm_r_rgba } from './coolwarm.rgba.js';
+import { rdBu_rgba, rdBu_r_rgba } from './rdBu.rgba.js';
+import { greys_rgba, greys_r_rgba } from './greys.rgba.js';
+import { blues_rgba, blues_r_rgba } from './blues.rgba.js';
+import { tab10_rgba, tab10_r_rgba } from './tab10.rgba.js';
+import { tab20_rgba, tab20_r_rgba } from './tab20.rgba.js';
+                                                        
+export const allColormapRgba                          = [viridis_rgba, viridis_r_rgba, plasma_rgba, plasma_r_rgba, inferno_rgba, inferno_r_rgba, magma_rgba, magma_r_rgba, cividis_rgba, cividis_r_rgba, twilight_rgba, twilight_r_rgba, turbo_rgba, turbo_r_rgba, coolwarm_rgba, coolwarm_r_rgba, rdBu_rgba, rdBu_r_rgba, greys_rgba, greys_r_rgba, blues_rgba, blues_r_rgba, tab10_rgba, tab10_r_rgba, tab20_rgba, tab20_r_rgba];
+export { viridis_rgba, viridis_r_rgba };
+export { plasma_rgba, plasma_r_rgba };
+export { inferno_rgba, inferno_r_rgba };
+export { magma_rgba, magma_r_rgba };
+export { cividis_rgba, cividis_r_rgba };
+export { twilight_rgba, twilight_r_rgba };
+export { turbo_rgba, turbo_r_rgba };
+export { coolwarm_rgba, coolwarm_r_rgba };
+export { rdBu_rgba, rdBu_r_rgba };
+export { greys_rgba, greys_r_rgba };
+export { blues_rgba, blues_r_rgba };
+export { tab10_rgba, tab10_r_rgba };
+export { tab20_rgba, tab20_r_rgba };

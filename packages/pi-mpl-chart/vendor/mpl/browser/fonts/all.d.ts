@@ -1,0 +1,11 @@
+import type { BakedFace } from '../core/fontcodec.js';
+import { dejavuSans } from './dejavu-sans.js';
+import { dejavuSansBold } from './dejavu-sans-bold.js';
+import { dejavuSerif } from './dejavu-serif.js';
+import { dejavuSerifBold } from './dejavu-serif-bold.js';
+import { interRegular } from './inter-regular.js';
+import { interMedium } from './inter-medium.js';
+import { interSemibold } from './inter-semibold.js';
+import { interBold } from './inter-bold.js';
+export { dejavuSans, dejavuSansBold, dejavuSerif, dejavuSerifBold, interRegular, interMedium, interSemibold, interBold };
+export declare const allFonts: readonly BakedFace[];
