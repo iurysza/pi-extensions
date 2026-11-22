@@ -137,9 +137,9 @@ export async function launchSkillEditor(
 	const platform = options.platform ?? process.platform;
 	const pluginRoot = options.pluginRoot ?? pluginRootFromSource();
 
-	// Inside any Herdr (app or legacy) the shared adapter is the only path:
+	// Inside any Herdr (app or legacy) or rex the shared adapter is the only path:
 	// never fall back to tmux or desktop terminal emulators.
-	if (env.HC_TERMINAL_ID !== undefined || env.HERDR_ENV === "1") {
+	if (env.HC_TERMINAL_ID !== undefined || env.HERDR_ENV === "1" || (env.REX_SESSION && env.REX_BLOCK)) {
 		const editor = editorSpec(env);
 		const viewer = createHerdrUi({ env }).openViewer({
 			cwd: dirname(skillPath),
@@ -151,7 +151,9 @@ export async function launchSkillEditor(
 			},
 		});
 		if (viewer.ok === false) throw new Error(`${viewer.error.code}: ${viewer.error.message}`);
-		return viewer.value.placement === "popup" ? "Herdr popup" : viewer.value.placement === "tab" ? "Herdr tab" : "Herdr split";
+		const where = viewer.value.backend === "rex" ? "rex" : "Herdr";
+		const label = `${where} ${viewer.value.placement}`;
+		return viewer.warning ? `${label} (float failed: ${viewer.warning.code}: ${viewer.warning.message})` : label;
 	}
 
 	if (env.TMUX && await openTmuxSplit(pi, skillPath)) {

@@ -385,8 +385,8 @@ function explorerPluginRoot(): string {
 }
 
 export async function launchExplorer(pi: Pick<ExtensionAPI, "exec">, root: string, env: NodeJS.ProcessEnv = process.env): Promise<string> {
-	// Inside any Herdr the shared adapter is the only path: no tmux or Ghostty fallback.
-	if (env.HC_TERMINAL_ID !== undefined || env.HERDR_ENV === "1") {
+	// Inside any Herdr or rex the shared adapter is the only path: no tmux or Ghostty fallback.
+	if (env.HC_TERMINAL_ID !== undefined || env.HERDR_ENV === "1" || (env.REX_SESSION && env.REX_BLOCK)) {
 		const pluginRoot = explorerPluginRoot();
 		const viewer = createHerdrUi({ env }).openViewer({
 			cwd: root,
@@ -395,7 +395,9 @@ export async function launchExplorer(pi: Pick<ExtensionAPI, "exec">, root: strin
 			legacy: { plugin: "pi-agent-explorer", entrypoint: "explorer", root: pluginRoot, env: { HERDR_EXPLORER_ROOT: root } },
 		});
 		if (!viewer.ok) throw new Error(`${viewer.error.code}: ${viewer.error.message}`);
-		return viewer.value.placement === "popup" ? "Herdr popup" : viewer.value.placement === "tab" ? "Herdr tab" : "Herdr split";
+		const where = viewer.value.backend === "rex" ? "rex" : "Herdr";
+		const label = `${where} ${viewer.value.placement}`;
+		return viewer.warning ? `${label} (float failed: ${viewer.warning.code}: ${viewer.warning.message})` : label;
 	}
 
 	if (env.TMUX) {

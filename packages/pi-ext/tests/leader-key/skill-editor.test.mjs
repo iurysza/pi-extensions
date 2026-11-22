@@ -45,15 +45,35 @@ test("stale Herdr context does not fall through to tmux or desktop terminals", a
 	assert.deepEqual(calls, []);
 });
 
-test("app caller opens a caller-space tab and never execs a desktop terminal", async (t) => {
+test("app caller floats the viewer and never execs a desktop terminal", async (t) => {
 	const f = fixture(t, {}, { HC_TERMINAL_ID: "t1", VISUAL: "nvim -f" });
+	const { pi, calls } = fakePi([ok]);
+	assert.equal(await launchSkillEditor(pi, skillPath, { env: f.env, platform: "darwin", pluginRoot: "/tmp/viewer" }), "Herdr float");
+	assert.deepEqual(calls, []);
+	const run = f.calls().find(x => x.command === "hc" && x.args[0] === "run");
+	assert.ok(run.args.includes("/tmp/example skill"));
+	assert.ok(run.args.includes("PI_EXT_SKILL_PATH=/tmp/example skill/SKILL.md"));
+	assert.equal(run.args.at(-1), "/tmp/viewer/open-skill.sh");
+	assert.ok(f.calls().some(x => x.args[1] === "terminal.peek"));
+});
+
+test("rex caller floats the viewer in a rex layer", async (t) => {
+	const f = fixture(t, {}, { REX_SESSION: "session:s1", REX_BLOCK: "block:me", TMUX: "outer" });
+	const { pi, calls } = fakePi([ok]);
+	assert.equal(await launchSkillEditor(pi, skillPath, { env: f.env, platform: "darwin", pluginRoot: "/tmp/viewer" }), "rex float");
+	assert.deepEqual(calls, []);
+	assert.equal(f.calls().find(x => x.args[4] === "session.new_layer").input.layout.block.options.cwd, "/tmp/example skill");
+});
+
+test("app caller falls back to a caller-space tab when the float fails", async (t) => {
+	const f = fixture(t, { peekError: "boom" }, { HC_TERMINAL_ID: "t1", VISUAL: "nvim -f" });
 	const { pi, calls } = fakePi([ok, ok, ok]);
 	for (const platform of ["darwin", "linux"]) {
 		const target = await launchSkillEditor(pi, skillPath, { env: f.env, platform, pluginRoot: "/tmp/viewer" });
-		assert.equal(target, "Herdr tab");
+		assert.match(target, /^Herdr tab \(float failed: float_failed: /);
 	}
 	assert.deepEqual(calls, []);
-	const created = f.calls().filter(x => x.args[0] === "do");
+	const created = f.calls().filter(x => x.args[1] === "tab.new");
 	assert.deepEqual(created.map(x => x.args[1]), ["tab.new", "tab.new"]);
 	const request = JSON.parse(created[0].args[2]);
 	assert.equal(request.space, "sp1");
@@ -61,11 +81,11 @@ test("app caller opens a caller-space tab and never execs a desktop terminal", a
 	assert.equal(request.name, "Skill: example skill");
 	assert.ok(request.argv.includes("PI_EXT_SKILL_PATH=/tmp/example skill/SKILL.md"));
 	assert.equal(request.argv.at(-1), "/tmp/viewer/open-skill.sh");
-	assert.equal(f.calls().some(x => ["status", "plugin"].includes(x.args[0]) || x.args[1] === "terminal.peek" || x.args[1] === "overlay.close"), false);
+	assert.equal(f.calls().some(x => ["status", "plugin"].includes(x.args[0]) || x.args[1] === "overlay.close"), false);
 });
 
 test("app adapter errors surface without Ghostty, osascript or tmux fallback", async (t) => {
-	for (const [config, code] of [[{ listing: { spaces: [] } }, /stale_context|Reopen/], [{ fail: "herdr-app do" }, /:/]]) {
+	for (const [config, code] of [[{ listing: { spaces: [] } }, /stale_context|Reopen/], [{ fail: "herdr-app do" }, /Float failed.*tab fallback failed/]]) {
 		const f = fixture(t, config, { HC_TERMINAL_ID: "t1", TMUX: "outer" });
 		const { pi, calls } = fakePi([ok, ok, ok]);
 		await assert.rejects(launchSkillEditor(pi, skillPath, { env: f.env, platform: "darwin" }), code);

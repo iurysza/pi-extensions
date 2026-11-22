@@ -250,13 +250,24 @@ test("discovers sibling extension entrypoints from Pi package manifests", async 
 	}
 });
 
-test("app caller opens the explorer in a caller-space tab with no Ghostty or tmux exec", async (t) => {
-	const f = fixture(t, {}, { HC_TERMINAL_ID: "t1", TMUX: "outer" });
+test("app and rex callers float the explorer with no Ghostty or tmux exec", async (t) => {
+	const pi0 = { async exec() { throw new Error("no exec"); } };
+	const app = fixture(t, {}, { HC_TERMINAL_ID: "t1", TMUX: "outer" });
+	assert.equal(await launchExplorer(pi0, "/tmp/snapshot root", app.env), "Herdr float");
+	const run = app.calls().find(x => x.command === "hc" && x.args[0] === "run");
+	assert.ok(run.args.includes("HERDR_EXPLORER_ROOT=/tmp/snapshot root"));
+	const rex = fixture(t, {}, { REX_SESSION: "session:s1", REX_BLOCK: "block:me", TMUX: "outer" });
+	assert.equal(await launchExplorer(pi0, "/tmp/snapshot root", rex.env), "rex float");
+	assert.equal(rex.calls().find(x => x.args[4] === "session.new_layer").input.layout.block.label, "Agent Explorer");
+});
+
+test("app caller falls back to a caller-space tab when the float fails", async (t) => {
+	const f = fixture(t, { peekError: "boom" }, { HC_TERMINAL_ID: "t1", TMUX: "outer" });
 	const calls = [];
 	const pi = { async exec(command, args) { calls.push({ command, args }); return { code: 0, stdout: "", stderr: "" }; } };
-	assert.equal(await launchExplorer(pi, "/tmp/snapshot root", f.env), "Herdr tab");
+	assert.match(await launchExplorer(pi, "/tmp/snapshot root", f.env), /^Herdr tab \(float failed: float_failed/);
 	assert.deepEqual(calls, []);
-	const created = f.calls().filter(x => x.args[0] === "do");
+	const created = f.calls().filter(x => x.args[1] === "tab.new");
 	assert.deepEqual(created.map(x => x.args[1]), ["tab.new"]);
 	const request = JSON.parse(created[0].args[2]);
 	assert.deepEqual([request.name, request.space, request.folder], ["Agent Explorer", "sp1", "/tmp/snapshot root"]);

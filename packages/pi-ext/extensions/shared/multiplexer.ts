@@ -6,7 +6,8 @@ export type MultiplexerType = "app" | "legacy" | "tmux" | "cmux";
 
 export function detectMultiplexer(): MultiplexerType | null {
 	const result = createHerdrUi().resolveCaller();
-	return result.ok && result.value.backend !== "none" ? result.value.backend : null;
+	// rex supports float only, so it is not a split or tab launch target.
+	return result.ok && result.value.backend !== "none" && result.value.backend !== "rex" ? result.value.backend : null;
 }
 
 export function launchMultiplexer(request: LaunchRequest) {
