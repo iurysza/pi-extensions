@@ -65,6 +65,7 @@
       "./packages/pi-wtf/src/index.ts",
       "./packages/pi-mpl-chart/src/index.ts",
       "./packages/pi-herdr-attention/src/index.ts",
+      "./packages/pi-herdr-attention/src/session-label.ts",
       "./packages/pi-secret-env/src/index.ts",
       "./packages/pi-ghost-in-the-machine/src/index.ts",
       "./packages/artifact-explorer/index.ts",
