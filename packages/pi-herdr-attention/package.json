@@ -29,5 +29,5 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "check": "npm run typecheck && npm test"
   },
-  "pi": { "extensions": ["./src/index.ts"] }
+  "pi": { "extensions": ["./src/index.ts", "./src/session-label.ts"] }
 }
