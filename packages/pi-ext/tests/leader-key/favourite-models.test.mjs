@@ -141,6 +141,30 @@ describe("buildPickerViewModel", () => {
     assert.deepStrictEqual(view.entries.map((entry) => entry.label), ["Deep — GPT-5.6 Sol", "Coder — GPT-5.6 Sol"]);
     assert.strictEqual(view.fallbackHint, undefined);
   });
+
+  it("groups by explicit tier, preserving order within a tier and keeping untiered models", () => {
+    const sonnet = makeModel("claude-code", "sonnet", "sonnet-5.5");
+    const fable = makeModel("claude-code", "fable", "fable-5.2");
+    const luna = makeModel("openai-codex", "luna", "GPT-6 Luna");
+    const other = makeModel("other", "local", "Local model");
+    const entries = [
+      { nickname: "Test Claude", provider: sonnet.provider, model: sonnet.id, tier: "workhorse", thinking: "medium" },
+      { nickname: "Cheap", provider: luna.provider, model: luna.id, tier: "budget", thinking: "low" },
+      { nickname: "Budget in name only", provider: other.provider, model: other.id, thinking: "low" },
+      { nickname: "Strong Claude", provider: fable.provider, model: fable.id, tier: "frontier", thinking: "medium" },
+      { nickname: "Renamed Sol", provider: current.provider, model: current.id, tier: "workhorse", thinking: "high" },
+    ];
+    const view = buildPickerViewModel({
+      catalog: { entries }, availableModels: [sonnet, fable, luna, current, other], currentModel: current, currentThinking: "high",
+    });
+    assert.deepStrictEqual(view.entries.map(({ tier, label, thinking, active }) => [tier, label, thinking, active]), [
+      ["workhorse", "Sonnet 5.5", "medium", false],
+      ["workhorse", "GPT-5.6 Sol", "high", true],
+      ["frontier", "Fable 5.2", "medium", false],
+      ["budget", "GPT-6 Luna", "low", false],
+      [undefined, "Budget in name only — Local model", "low", false],
+    ]);
+  });
 });
 
 describe("helpers", () => {

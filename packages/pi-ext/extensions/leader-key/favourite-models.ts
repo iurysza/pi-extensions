@@ -1,24 +1,27 @@
 /**
  * Scoped Models Picker
  *
- * Reads the profile model-catalog sidecar and shows those entries in declared
- * order. If no sidecar exists, shows only the current model with a hint.
+ * Reads the profile model catalog, grouping by tier when configured.
+ * If no sidecar exists, shows only the current model with a hint.
  */
 
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import type { ThinkingLevel } from "@earendil-works/pi-agent-core";
-import { matchesKey, parseKey, Key } from "@earendil-works/pi-tui";
-import { OverlayFrame } from "../shared/overlay.js";
+import { matchesKey, parseKey, Key, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
+import { OverlayFrame, padToWidth } from "../shared/overlay.js";
 import { ALL_THINKING_LEVELS } from "./model-switcher.js";
 import { THINKING_ROLES } from "../shared/thinking-colors.js";
 import { buildPickerViewModel, loadModelCatalog } from "./model-catalog.mjs";
 import { withHerdrNavigationPassthrough } from "./herdr-navigation.js";
+
+const TIER_LABELS = { workhorse: "Workhorse", frontier: "Frontier", budget: "Budget" } as const;
 
 interface FavouriteModelEntry {
 	label: string;
 	provider: string;
 	model: string;
 	thinking?: ThinkingLevel;
+	tier?: keyof typeof TIER_LABELS;
 }
 
 interface ModelRow {
@@ -29,31 +32,26 @@ interface ModelRow {
 
 interface HeaderRow {
 	type: "header";
-	provider: string;
-	count: number;
+	label: string;
 }
 
 type DisplayRow = ModelRow | HeaderRow;
 
-function buildDisplayRows(favourites: FavouriteModelEntry[]): DisplayRow[] {
+function buildDisplayRows(favourites: FavouriteModelEntry[], tiered: boolean): DisplayRow[] {
 	const providerCounts = new Map<string, number>();
-	for (const favourite of favourites) {
-		providerCounts.set(favourite.provider, (providerCounts.get(favourite.provider) ?? 0) + 1);
+	if (!tiered) {
+		for (const { provider } of favourites) providerCounts.set(provider, (providerCounts.get(provider) ?? 0) + 1);
 	}
 
 	const rows: DisplayRow[] = [];
-	let lastProvider = "";
-	for (let i = 0; i < favourites.length; i++) {
-		const favourite = favourites[i];
-		if (favourite.provider !== lastProvider) {
-			rows.push({
-				type: "header",
-				provider: favourite.provider,
-				count: providerCounts.get(favourite.provider) ?? 0,
-			});
-			lastProvider = favourite.provider;
+	let lastGroup: string | undefined;
+	for (const [modelIndex, fav] of favourites.entries()) {
+		const group = tiered ? (fav.tier ? TIER_LABELS[fav.tier] : "Other") : fav.provider;
+		if (group !== lastGroup) {
+			rows.push({ type: "header", label: tiered ? group : `${group} (${providerCounts.get(group)})` });
+			lastGroup = group;
 		}
-		rows.push({ type: "model", fav: favourite, modelIndex: i });
+		rows.push({ type: "model", fav, modelIndex });
 	}
 	return rows;
 }
@@ -130,7 +128,9 @@ export async function runFavouriteModels(pi: ExtensionAPI, ctx: ExtensionContext
 		return idx >= 0 ? idx : ALL_THINKING_LEVELS.indexOf(currentThinking);
 	});
 
-	const rows = buildDisplayRows(favourites);
+	const tiered = favourites.some((fav) => fav.tier !== undefined);
+	const rows = buildDisplayRows(favourites, tiered);
+	const longestLabel = tiered ? Math.max(...favourites.map((fav) => visibleWidth(fav.label))) : 0;
 	const firstModelRow = rows.findIndex((r) => r.type === "model");
 
 	const selected = await withHerdrNavigationPassthrough(() => ctx.ui.custom<PickerResult | null>(
@@ -152,14 +152,14 @@ export async function runFavouriteModels(pi: ExtensionAPI, ctx: ExtensionContext
 					lines.push(f.row(th.fg("accent", th.bold("Scoped Models"))));
 					lines.push(f.separator());
 
-					let modelCounter = 0;
+					// Leave room for the shortcut, active dot, and longest thinking tag.
+					const labelWidth = Math.min(longestLabel, Math.max(0, f.innerWidth - 19));
 					for (let i = 0; i < rows.length; i++) {
 						const row = rows[i];
 
 						if (row.type === "header") {
-							const headerText = ` ${row.provider} ${row.count > 0 ? `(${row.count})` : ""} `;
-							const padded = headerText.padEnd(width - 4, "─");
-							lines.push(f.row(th.fg("dim", `──${padded}`)));
+							const header = tiered ? row.label : `──${` ${row.label} `.padEnd(f.innerWidth - 2, "─")}`;
+							lines.push(f.rowTruncated(tiered ? th.fg("muted", th.bold(header)) : th.fg("dim", header)));
 							continue;
 						}
 
@@ -171,28 +171,26 @@ export async function runFavouriteModels(pi: ExtensionAPI, ctx: ExtensionContext
 							currentModel?.provider === fav.provider &&
 							currentModel?.id === fav.model;
 
-						const label = isHighlighted
-							? th.fg("accent", th.bold(fav.label))
-							: th.fg("text", fav.label);
-
-						const currentBadge = isCurrent ? " " + th.fg("success", "●") : "";
+						const name = tiered ? truncateToWidth(fav.label, labelWidth) : fav.label;
+						const label = isHighlighted ? th.fg("accent", th.bold(name)) : th.fg("text", name);
+						const currentBadge = isCurrent ? th.fg("success", "●") : " ";
 
 						const thinking = ALL_THINKING_LEVELS[thinkingIndices[mi]];
 						const thinkingRole = THINKING_ROLES[thinking] ?? "dim";
 						const thinkingTag = isHighlighted
 							? th.fg("dim", "‹") + th.fg(thinkingRole, ` ${thinking} `) + th.fg("dim", "›")
-							: th.fg(thinkingRole, thinking);
+							: (tiered ? "  " : "") + th.fg(thinkingRole, thinking);
 
-						const num = modelCounter < 9 ? th.fg("dim", `${modelCounter + 1}`) : th.fg("dim", "·");
-						const line = `${isHighlighted ? "> " : "  "}${num} ${label}${currentBadge}  ${thinkingTag}`;
-						lines.push(f.rowTruncated(line));
-						modelCounter++;
+						const num = th.fg("dim", mi < 9 ? `${mi + 1}` : "·");
+						const nameAndBadge = tiered ? `${padToWidth(label, labelWidth)} ${currentBadge}` : `${label}${isCurrent ? ` ${currentBadge}` : ""}`;
+						lines.push(f.rowTruncated(`${isHighlighted ? "> " : "  "}${num} ${nameAndBadge}  ${thinkingTag}`));
 					}
 
 					lines.push(f.separator());
 					if (fallbackHint) lines.push(f.rowTruncated(th.fg("warning", fallbackHint)));
-					lines.push(f.row(th.fg("dim", "j/k navigate | 1-9 jump | left/right cycle thinking")));
-					lines.push(f.row(th.fg("dim", "o/i/l/m/h/x/a set thinking | enter select | esc cancel")));
+					const provider = tiered ? favourites[getModelIndex()]?.provider : undefined;
+					lines.push(f.rowTruncated(th.fg("dim", `${provider ? `${provider} · ` : ""}j/k move · 1–9 jump · ←/→ thinking`)));
+					lines.push(f.rowTruncated(th.fg("dim", "o/i/l/m/h/x/a thinking · Enter select · Esc cancel")));
 					lines.push(f.bottom());
 
 					return lines;

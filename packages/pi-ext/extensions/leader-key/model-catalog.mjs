@@ -7,12 +7,19 @@ import { join } from "node:path";
  * @typedef {import("@earendil-works/pi-ai").Model<any>} Model
  */
 
+const MODEL_TIERS = /** @type {const} */ (["workhorse", "frontier", "budget"]);
+
+/**
+ * @typedef {(typeof MODEL_TIERS)[number]} ModelTier
+ */
+
 /**
  * @typedef {Object} CatalogEntry
  * @property {string} nickname
  * @property {string} provider
  * @property {string} model
  * @property {ThinkingLevel} thinking
+ * @property {ModelTier} [tier]
  */
 
 /**
@@ -101,16 +108,22 @@ export function buildPickerViewModel({ catalog, availableModels, currentModel, c
     const key = `${entry.provider}/${entry.model}:${entry.thinking}`.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
+    const tier = MODEL_TIERS.find((tier) => tier === entry.tier);
+    const name = entry.matched.name.replace(/^(sonnet|opus|fable|haiku)-(\d[\d.]*)$/,
+      (_, family, version) => `${family[0].toUpperCase()}${family.slice(1)} ${version}`);
     entries.push({
-      label: `${entry.nickname} — ${entry.matched.name}`,
+      ...(tier ? { tier } : {}),
+      label: tier ? name : `${entry.nickname} — ${entry.matched.name}`,
       provider: entry.provider,
       model: entry.model,
       thinking: entry.thinking,
       active: currentModel?.provider === entry.provider && currentModel?.id === entry.model,
     });
   }
+  /** @param {ModelTier} [tier] */
+  const tierOrder = (tier) => tier ? MODEL_TIERS.indexOf(tier) : MODEL_TIERS.length;
   return {
-    entries,
+    entries: entries.sort((a, b) => tierOrder(a.tier) - tierOrder(b.tier)),
     fallbackHint: catalog.fallback ? setupHint : undefined,
   };
 }
