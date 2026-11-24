@@ -20,6 +20,12 @@ updates:
           - patch
         exclude-patterns:
           - "@earendil-works/*"
+    ignore:
+      # TypeScript 7 ships the native compiler. Its package entry is lib/version
+      # and does not export the JS compiler API the startup import-graph tests import.
+      - dependency-name: typescript
+        versions:
+          - ">=7"
 
   - package-ecosystem: github-actions
     directory: /
