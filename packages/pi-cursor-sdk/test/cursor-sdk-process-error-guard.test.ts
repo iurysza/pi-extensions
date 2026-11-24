@@ -367,8 +367,8 @@ describe("Cursor SDK process error guard", () => {
 		expect(localRuntimeBundle).toContain('this.name="WriteIterableClosedError"');
 		expect(localRuntimeBundle).toContain('"WritableIterable is closed"');
 		expect(localRuntimeBundle).toContain('SimpleControlledExecManager');
-		expect(localRuntimeBundle).toContain('catch(e){if(e instanceof P.W2)return;');
-		expect(localRuntimeBundle).toContain('await a.write(new x.$Y({message:{case:"throw"');
+		expect(localRuntimeBundle).toContain('catch(e){if(e instanceof h.W2)return;');
+		expect(localRuntimeBundle).toContain('await a.write(new d.$Y({message:{case:"throw"');
 	});
 
 	it("contains delayed exact SDK failures after the provider-turn guard is disposed in real Node", () => {
@@ -686,10 +686,9 @@ setTimeout(() => {
 	it("tracks the installed Cursor SDK local-executor stdin write contract", () => {
 		const shellExecBundle = readCursorSdkEsmBundleContaining("writeCommandHookStdinPayload", "Shell stdin not available");
 		// Background-shell writes still reject callback errors without attaching a
-		// stdin error listener. The observable spawn path also writes stdin directly.
+		// stdin error listener. 1.4.2 removed the observable spawn subscribe writer.
 		expect(shellExecBundle).toContain("r.stdin.write(e,(e=>{e?n(e):t(void 0)}))");
 		expect(shellExecBundle).toContain("r.stdin.write(t,(t=>{t?n(t):e(void 0)}))");
-		expect(shellExecBundle).toContain('if(l)if(u.stdin){const e=u.stdin;m.add(l.subscribe({next:t=>e.write(t),error:n.error.bind(n),complete:()=>e.end()}))}else');
 		const writeStart = shellExecBundle.indexOf("async writeStdin(e,t){");
 		const writeEnd = shellExecBundle.indexOf("new WeakMap", writeStart);
 		expect(writeStart).toBeGreaterThan(-1);
@@ -698,16 +697,16 @@ setTimeout(() => {
 
 		// 1.2.0 moved shell startup commands to a guarded fd-5 pipe. Hook
 		// payload writes now swallow only the three expected closed-stream errors.
-		expect(shellExecBundle).toContain('function or(e){e?.on("error",(()=>{}))}');
-		expect(shellExecBundle).toContain('const r=e.stdio.at(5);r instanceof Wt.default.Writable&&(or(r),r.end(`${t}\\0`))');
-		expect(shellExecBundle).toContain('function lr(e,t){e&&(or(e),e.write(t),e.end())}');
+		expect(shellExecBundle).toContain('function Qr(e){e?.on("error",(()=>{}))}');
+		expect(shellExecBundle).toContain('const r=e.stdio.at(5);r instanceof Ir.default.Writable&&(Qr(r),r.end(`${t}\\0`))');
+		expect(shellExecBundle).toContain('function on(e,t){e&&(Qr(e),e.write(t),e.end())}');
 		const hookStart = shellExecBundle.indexOf("async writeCommandHookStdinPayload(e,t){");
 		const hookEnd = shellExecBundle.indexOf("updateConfig(e){", hookStart);
 		expect(hookStart).toBeGreaterThan(-1);
 		expect(hookEnd).toBeGreaterThan(hookStart);
 		const hookWrite = shellExecBundle.slice(hookStart, hookEnd);
 		expect(hookWrite).toContain('e.end(Buffer.from(t,"utf8"))');
-		expect(hookWrite).toContain('await(0,oh.finished)(e)');
+		expect(hookWrite).toContain('await(0,ah.finished)(e)');
 		expect(hookWrite.match(/if\("EPIPE"===t\|\|"ERR_STREAM_DESTROYED"===t\|\|"ERR_STREAM_PREMATURE_CLOSE"===t\)return;throw e/g)).toHaveLength(2);
 		const mcpStdioBundle = readCursorSdkEsmBundleContaining('this._process.stdin?.on("error"');
 		expect(mcpStdioBundle).toContain('this._process.stdin?.on("error",(e=>{this.onerror?.(e)}))');

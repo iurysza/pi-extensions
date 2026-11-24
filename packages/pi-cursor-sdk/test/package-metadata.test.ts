@@ -86,17 +86,17 @@ describe("package metadata cutover baselines", () => {
 	});
 
 	it("pins Cursor SDK exactly", () => {
-		expect(packageJson.dependencies["@cursor/sdk"]).toBe("1.3.1");
-		expect(lockPackageVersion("@cursor/sdk")).toBe("1.3.1");
-		expect(readInstalledPackageVersion("@cursor/sdk")).toBe("1.3.1");
+		expect(packageJson.dependencies["@cursor/sdk"]).toBe("1.4.2");
+		expect(lockPackageVersion("@cursor/sdk")).toBe("1.4.2");
+		expect(readInstalledPackageVersion("@cursor/sdk")).toBe("1.4.2");
 	});
 
 	it("ships an exact MCP/Hono bundledDependencies closure for published installs", () => {
 		expect(packageJson.dependencies["@modelcontextprotocol/sdk"]).toBe("1.32.2");
 		expect(lockPackageVersion("@modelcontextprotocol/sdk")).toBe("1.32.2");
-		expect(packageJson.dependencies["@hono/node-server"]).toBe("2.1.6");
-		expect(lockPackageVersion("@hono/node-server")).toBe("2.1.6");
-		expect(readInstalledPackageVersion("@hono/node-server")).toBe("2.1.6");
+		expect(packageJson.dependencies["@hono/node-server"]).toBe("2.1.9");
+		expect(lockPackageVersion("@hono/node-server")).toBe("2.1.9");
+		expect(readInstalledPackageVersion("@hono/node-server")).toBe("2.1.9");
 		expect(packageJson.bundledDependencies).toEqual([...BUNDLED_MCP_HONO_CLOSURE]);
 	});
 
@@ -176,7 +176,7 @@ describe("package metadata cutover baselines", () => {
 			};
 			expect(packedPackageJson.bundledDependencies).toEqual([...BUNDLED_MCP_HONO_CLOSURE]);
 			expect(packedPackageJson.dependencies?.["@modelcontextprotocol/sdk"]).toBe("1.32.2");
-			expect(packedPackageJson.dependencies?.["@hono/node-server"]).toBe("2.1.6");
+			expect(packedPackageJson.dependencies?.["@hono/node-server"]).toBe("2.1.9");
 
 			const hostRoot = join(tempRoot, "host");
 			const hostNodeModules = join(hostRoot, "node_modules");
@@ -204,7 +204,7 @@ describe("package metadata cutover baselines", () => {
 			const resolvedVersion = (
 				JSON.parse(readFileSync(join(bundledHonoRoot, "package.json"), "utf8")) as { version: string }
 			).version;
-			expect(resolvedVersion).toBe("2.1.6");
+			expect(resolvedVersion).toBe("2.1.9");
 		} finally {
 			rmSync(tempRoot, { recursive: true, force: true });
 		}
@@ -232,8 +232,8 @@ describe("package metadata cutover baselines", () => {
 	});
 
 	it("pins the TypeBox devDependency to the installed baseline", () => {
-		expect(packageJson.devDependencies.typebox).toBe("^1.4.4");
-		expect(lockPackageVersion("typebox")).toBe("1.4.4");
+		expect(packageJson.devDependencies.typebox).toBe("^1.4.7");
+		expect(lockPackageVersion("typebox")).toBe("1.4.7");
 	});
 
 	it("tracks installed GPT-5.6 Codex metadata", () => {
