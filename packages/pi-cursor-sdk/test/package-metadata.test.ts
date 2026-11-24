@@ -29,9 +29,9 @@ const PI_PACKAGES = [
 ] as const;
 
 const PI_PACKAGE_VERSIONS: Record<(typeof PI_PACKAGES)[number], string> = {
-	"@earendil-works/pi-ai": "1.5.0",
-	"@earendil-works/pi-coding-agent": "1.5.0",
-	"@earendil-works/pi-tui": "1.5.0",
+	"@earendil-works/pi-ai": "1.5.2",
+	"@earendil-works/pi-coding-agent": "1.5.2",
+	"@earendil-works/pi-tui": "1.5.2",
 };
 
 const BUNDLED_MCP_HONO_CLOSURE = ["@hono/node-server", "@modelcontextprotocol/sdk"] as const;
@@ -227,7 +227,7 @@ describe("package metadata cutover baselines", () => {
 			const entries = Object.entries(packageLock.packages)
 				.filter(([path]) => path.endsWith(`node_modules/${packageName}`))
 				.map(([path, metadata]) => [path, metadata.version]);
-			expect(entries).toEqual([[`node_modules/${packageName}`, "1.5.0"]]);
+			expect(entries).toEqual([[`node_modules/${packageName}`, "1.5.2"]]);
 		}
 	});
 
