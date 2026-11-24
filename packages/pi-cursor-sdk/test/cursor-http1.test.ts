@@ -43,7 +43,7 @@ describe("Cursor SDK HTTP/1.1 configuration", () => {
 			/void 0!==([A-Za-z_$][\w$]*)\.local&&"useHttp1ForAgent"in \1\.local&&\(\w+=\1\.local\.useHttp1ForAgent\?\?void 0\)/,
 		);
 		expect(sdkImplementation).toContain('e.d(r,{Mu:()=>c,it:()=>u,xP:()=>a})');
-		const httpVersionSelection = sdkImplementation.indexOf('httpVersion:m?"1.1":"2"');
+		const httpVersionSelection = sdkImplementation.indexOf('httpVersion:o?"1.1":"2"');
 		expect(httpVersionSelection).toBeGreaterThan(-1);
 		expect(
 			sdkImplementation.slice(httpVersionSelection - 700, httpVersionSelection),
@@ -54,7 +54,7 @@ describe("Cursor SDK HTTP/1.1 configuration", () => {
 		expect(cacheKeyEnd).toBeGreaterThan(cacheKeyStart);
 		expect(sdkImplementation.slice(cacheKeyStart, cacheKeyEnd)).not.toContain("useHttp1ForAgent");
 		expect(sdkImplementation).toContain(
-			"r.refs-=1,!(r.refs>0||Or.get(t)!==r)){Or.delete(t)",
+			"r.refs-=1,!(r.refs>0||Dr.get(t)!==r)){Dr.delete(t)",
 		);
 	});
 

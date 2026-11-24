@@ -161,15 +161,15 @@ describe("Cursor MCP timeout override", () => {
 		);
 
 		expect(sdkMcpBundle).toContain('withName("McpSdkClient.callTool")');
-		// 1.3.1 still forwards request options and the abort signal through sendToolCall.
+		// 1.4.2 still forwards request options and the abort signal through sendToolCall.
 		// Output-schema passthrough is opt-in; the default branch remains client.callTool.
 		expect(sdkMcpBundle).toContain("this.sendToolCall({name:t,arguments:r},s.signal)");
 		expect(sdkMcpBundle).toContain("sendToolCall(e,t){const r=this._toolCallRequestOptions?.(e.name),n={...r,signal:void 0===r?.signal?t:AbortSignal.any([r.signal,t])}");
-		expect(sdkMcpBundle).toContain('!0===this._toolCallOutputSchemaPassthrough?.()?this.client.request({method:"tools/call",params:e},zb.TF,n):this.client.callTool(e,void 0,n)');
+		expect(sdkMcpBundle).toContain('!0===this._toolCallOutputSchemaPassthrough?.()?this.client.request({method:"tools/call",params:e},Mx.TF,n):this.client.callTool(e,void 0,n)');
 		expect(sdkMcpBundle).toContain('withName("McpSdkClient.getTools")');
 		// Paginated discovery still uses Client.listTools, now inside a schema-repair helper.
 		expect(sdkMcpBundle).toContain('async function(e,t,r){try{const r=await e.listTools({cursor:t});return{tools:r.tools,nextCursor:r.nextCursor');
-		expect(sdkMcpBundle).toContain('}(this.client,e,((e,t,n)=>{');
+		expect(sdkMcpBundle).toContain('}(this.client,t,((e,t,n)=>{');
 		expect(sdkProtocolBundle).toContain('this.request({method:"initialize"');
 		expect(sdkProtocolBundle).toContain('_setupTimeout(e,t,s,n,r=!1)');
 		expect(sdkProtocolBundle).toContain('timeoutId:setTimeout(n,t)');
